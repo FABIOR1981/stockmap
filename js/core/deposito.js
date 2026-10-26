@@ -17,7 +17,6 @@ const ROLES = ['admin', 'editor', 'lector'];
 const TIPOS = ['unidad', 'producto'];
 
 const porCodigo = (a, b) => a.codigo.localeCompare(b.codigo, 'es', { numeric: true });
-const pad = n => String(n).padStart(4, '0');
 const enteroPositivo = v => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null; };
 
 export class Deposito {
@@ -94,7 +93,7 @@ export class Deposito {
     const err = this._exigir('global'); if (err) return { error: err };
     const n = (nombre || '').trim();
     if (!n) return { error: 'Falta el nombre del cliente.' };
-    const e = this.almacen.insertar('establecimientos', { id: 'E' + this.almacen.siguiente('establecimientos'), nombre: n });
+    const e = this.almacen.insertar('establecimientos', { id: crypto.randomUUID(), nombre: n });
     return { establecimiento: e };
   }
 
@@ -102,7 +101,7 @@ export class Deposito {
     const err = this._exigir('global'); if (err) return { error: err };
     const n = (nombre || '').trim();
     if (!n) return { error: 'Falta el nombre del usuario.' };
-    const u = this.almacen.insertar('usuarios', { id: 'U' + this.almacen.siguiente('usuarios'), nombre: n, es_admin: !!esAdmin });
+    const u = this.almacen.insertar('usuarios', { id: crypto.randomUUID(), nombre: n, es_admin: !!esAdmin });
     return { usuario: u };
   }
 
@@ -112,7 +111,7 @@ export class Deposito {
     if (!this.usuarios.some(u => u.id === uid)) return 'Usuario inexistente.';
     const actual = this.membresias.find(m => m.uid === uid && m.eid === this.eid);
     if (actual) this.almacen.actualizar('membresias', actual.id, { rol });
-    else this.almacen.insertar('membresias', { id: 'A' + this.almacen.siguiente('membresias'), uid, eid: this.eid, rol });
+    else this.almacen.insertar('membresias', { id: crypto.randomUUID(), uid, eid: this.eid, rol });
     return null;
   }
 
@@ -173,7 +172,7 @@ export class Deposito {
     if (padre && this.tieneObjetos(padre)) return { error: 'Este lugar tiene objetos. Sacalos antes de subdividirlo.' };
     if (this.lugares.some(l => l.padre_id === (padreId || null) && l.codigo.toLowerCase() === cod.toLowerCase()))
       return { error: `Ya existe "${cod}" dentro de este lugar.` };
-    const id = 'L' + this.almacen.siguiente('lugares');
+    const id = crypto.randomUUID();
     this.almacen.insertar('lugares', {
       id, eid: this.eid, padre_id: padreId || null, codigo: cod,
       nombre: (def.nombreOpcional && nombre) ? nombre.trim() : '',
@@ -262,7 +261,7 @@ export class Deposito {
   copiarSubarbol(src, padreId, codigo) {
     let raiz = null;
     const copiar = (orig, padre, cod) => {
-      const id = 'L' + this.almacen.siguiente('lugares');
+      const id = crypto.randomUUID();
       if (!raiz) raiz = id;
       this.almacen.insertar('lugares', {
         id, eid: this.eid, padre_id: padre, codigo: cod, nombre: orig.nombre, niveles: structuredClone(orig.niveles)
@@ -336,9 +335,9 @@ export class Deposito {
     if (!cp && !de) return { error: 'Ingresá un código propio o una descripción.' };
     if (!TIPOS.includes(tipo)) return { error: 'Tipo de objeto inexistente.' };
     const min = tipo === 'producto' ? Math.max(0, Math.floor(Number(minimo) || 0)) : 0;
-    const n = this.almacen.siguiente('objetos');
+    const id = crypto.randomUUID();
     const objeto = this.almacen.insertar('objetos', {
-      id: 'O' + n, eid: this.eid, codigo_interno: 'OBJ-' + pad(n),
+      id, eid: this.eid, codigo_interno: 'OBJ-' + id.slice(0, 8).toUpperCase(),
       codigo_propio: cp || null, descripcion: de || null, tipo, minimo: min
     });
     return { objeto };
@@ -386,7 +385,7 @@ export class Deposito {
   _sumar(oid, lid, n) {
     const a = this.asignaciones.find(x => x.oid === oid && x.lid === lid);
     if (a) this.almacen.actualizar('asignaciones', a.id, { cantidad: a.cantidad + n });
-    else this.almacen.insertar('asignaciones', { id: 'S' + this.almacen.siguiente('asignaciones'), oid, lid, cantidad: n });
+    else this.almacen.insertar('asignaciones', { id: crypto.randomUUID(), oid, lid, cantidad: n });
   }
 
   _restar(oid, lid, n) {
@@ -398,7 +397,7 @@ export class Deposito {
 
   _registrar(tipo, oid, desde, hasta, cantidad, nota) {
     this.almacen.insertar('movimientos', {
-      id: 'M' + this.almacen.siguiente('movimientos'), eid: this.eid,
+      id: crypto.randomUUID(), eid: this.eid,
       fecha: new Date().toISOString(), tipo, oid, desde, hasta, cantidad,
       uid: this.uid, nota: (nota || '').trim()
     });
