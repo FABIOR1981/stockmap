@@ -1,0 +1,11 @@
+{
+  "name": "control-stock",
+  "version": "0.1.0",
+  "description": "Organización de depósitos: edificios, lugares y objetos.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/reglas.test.js",
+    "start": "python3 -m http.server 8080"
+  }
+}
