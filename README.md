@@ -72,6 +72,7 @@ Los niveles hoy viven dentro de cada edificio; en el esquema tienen su propia ta
 ## Pendiente
 
 - Inicio de sesión real (hoy el usuario se elige en la barra lateral, como demostración).
-- Actualizar `supabase/esquema.sql` con clientes, usuarios, membresías, stock y movimientos. Hoy todavía es el esquema anterior.
+- Aplicar `supabase/esquema.sql` en Supabase (ya está probado en PostgreSQL local).
+- Worker de Cloudflare que es el único que habla con la base.
 - Almacenamiento con Supabase.
 - Probar el arrastre del plano en pantallas táctiles.

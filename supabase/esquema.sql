@@ -1,30 +1,34 @@
 -- =====================================================================
--- Esquema Supabase v2: sistema de depósitos (multi-cliente)
--- Destino: /mnt/user-data/outputs/esquema_supabase_v2.sql
--- Ejecutar en: Supabase > SQL Editor. Reemplaza al esquema_supabase.sql
--- Cambios respecto de v1:
---   * un lugar puede tener varios objetos (sin límite de cantidad)
---   * un objeto puede estar en varios lugares
---   * un lugar con subdivisiones no tiene objetos directos
---   * un lugar con objetos no admite subdivisiones
---   * los edificios no tienen objetos directos
---   * sin tamaños de lugares ni de objetos
+-- stockmap: esquema de base de datos (Supabase / PostgreSQL)
+-- Ejecutar en Supabase > SQL Editor, de una vez.
+--
+-- Diseño de seguridad:
+--   La web NO habla con la base. Solo lo hace el Worker de Cloudflare,
+--   con la clave service_role (secreto del Worker, nunca en el navegador).
+--   RLS queda activado y SIN políticas, y se revocan permisos a anon y
+--   authenticated: si alguien obtiene la URL o la clave pública, no ve nada.
+--   Los permisos por cliente (admin, editor, lector) los aplica el Worker
+--   antes de escribir, y las triggers de abajo protegen las reglas del depósito.
 -- =====================================================================
 
-create extension if not exists "pgcrypto";
+create extension if not exists pgcrypto;
 
--- ---------- Perfiles ----------
+-- ---------------------------------------------------------------------
+-- Usuarios de la app. Cada cuenta de Supabase Auth tiene un perfil.
+-- ---------------------------------------------------------------------
 create table if not exists perfiles (
   id          uuid primary key references auth.users(id) on delete cascade,
-  nombre      text,
-  es_admin    boolean not null default false,
+  nombre      text not null default '',
+  es_admin    boolean not null default false,   -- administrador general
   creado_en   timestamptz not null default now()
 );
 
 create or replace function crear_perfil_nuevo() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
-  insert into perfiles (id, nombre) values (new.id, new.raw_user_meta_data->>'nombre');
+  insert into perfiles (id, nombre)
+  values (new.id, coalesce(new.raw_user_meta_data->>'nombre', new.email, ''))
+  on conflict (id) do nothing;
   return new;
 end $$;
 
@@ -33,29 +37,31 @@ create trigger al_crear_usuario
   after insert on auth.users
   for each row execute function crear_perfil_nuevo();
 
--- ---------- Establecimientos ----------
+-- ---------------------------------------------------------------------
+-- Clientes y accesos por cliente
+-- ---------------------------------------------------------------------
 create table if not exists establecimientos (
   id          uuid primary key default gen_random_uuid(),
   nombre      text not null,
   creado_en   timestamptz not null default now()
 );
 
--- ---------- Membresías ----------
 create table if not exists membresias (
-  usuario_id          uuid not null references auth.users(id) on delete cascade,
+  usuario_id          uuid not null references perfiles(id) on delete cascade,
   establecimiento_id  uuid not null references establecimientos(id) on delete cascade,
   rol                 text not null check (rol in ('admin', 'editor', 'lector')),
   primary key (usuario_id, establecimiento_id)
 );
 
--- ---------- Lugares (edificios y todo lo que hay dentro) ----------
--- Los niveles viven en cada edificio: se guardan en la tabla niveles_edificio.
+-- ---------------------------------------------------------------------
+-- Depósito: lugares en árbol (edificio > ... > lugar)
+-- ---------------------------------------------------------------------
 create table if not exists lugares (
   id                  uuid primary key default gen_random_uuid(),
   establecimiento_id  uuid not null references establecimientos(id) on delete cascade,
-  padre_id            uuid references lugares(id) on delete no action,   -- nulo = edificio
+  padre_id            uuid references lugares(id) on delete restrict,   -- null = edificio
   codigo              text not null,
-  nombre              text,
+  nombre              text not null default '',
   creado_en           timestamptz not null default now()
 );
 
@@ -64,23 +70,21 @@ create unique index if not exists lugares_codigo_hermanos
   on lugares (establecimiento_id,
               coalesce(padre_id, '00000000-0000-0000-0000-000000000000'::uuid),
               lower(codigo));
-
 create index if not exists lugares_padre on lugares (padre_id);
 
--- ---------- Niveles de cada edificio ----------
--- Cada edificio define sus propios niveles, en orden de profundidad.
--- orden = 1 es el nivel que va justo dentro del edificio.
+-- Niveles que define cada edificio: orden 1 = lo que va justo dentro del edificio
 create table if not exists niveles_edificio (
-  id              uuid primary key default gen_random_uuid(),
   edificio_id     uuid not null references lugares(id) on delete cascade,
-  orden           int not null check (orden >= 1),
+  orden           integer not null check (orden >= 1),
   nombre          text not null,
   formato         text not null check (formato in ('numero', 'letra', 'letra_min')),
   nombre_opcional boolean not null default false,
-  unique (edificio_id, orden)
+  primary key (edificio_id, orden)
 );
 
--- ---------- Objetos ----------
+-- ---------------------------------------------------------------------
+-- Objetos: unidades (una por una) y productos (hay varias iguales)
+-- ---------------------------------------------------------------------
 create sequence if not exists objetos_seq;
 
 create table if not exists objetos (
@@ -90,60 +94,85 @@ create table if not exists objetos (
                       default 'OBJ-' || lpad(nextval('objetos_seq')::text, 6, '0'),
   codigo_propio       text,
   descripcion         text,
+  tipo                text not null default 'unidad' check (tipo in ('unidad', 'producto')),
+  minimo              integer not null default 0 check (minimo >= 0),   -- alerta de stock (productos)
   creado_en           timestamptz not null default now()
 );
-
 create index if not exists objetos_establecimiento on objetos (establecimiento_id);
-create index if not exists objetos_codigo_propio on objetos (establecimiento_id, lower(codigo_propio));
 
--- ---------- Asignaciones ----------
--- Un lugar puede tener muchas asignaciones; un objeto puede estar en muchos lugares.
--- Un mismo objeto no se repite en el mismo lugar.
-create table if not exists asignaciones (
+-- Existencias: cuánto de un objeto hay en un lugar. Una fila por par (lugar, objeto).
+create table if not exists existencias (
+  id          uuid primary key default gen_random_uuid(),
+  lugar_id    uuid not null references lugares(id) on delete cascade,
+  objeto_id   uuid not null references objetos(id) on delete cascade,
+  cantidad    integer not null check (cantidad > 0),   -- sin existencias negativas ni filas en cero
+  unique (lugar_id, objeto_id)
+);
+create index if not exists existencias_objeto on existencias (objeto_id);
+
+-- ---------------------------------------------------------------------
+-- Movimientos: historial de entradas, salidas y transferencias
+-- ---------------------------------------------------------------------
+create table if not exists movimientos (
   id                  uuid primary key default gen_random_uuid(),
   establecimiento_id  uuid not null references establecimientos(id) on delete cascade,
-  objeto_id           uuid not null references objetos(id) on delete cascade,
-  lugar_id            uuid not null references lugares(id) on delete restrict,
-  asignado_en         timestamptz not null default now(),
-  unique (objeto_id, lugar_id)
+  objeto_id           uuid references objetos(id) on delete set null,
+  tipo                text not null check (tipo in ('entrada', 'salida', 'transferencia')),
+  desde_lugar_id      uuid references lugares(id) on delete set null,
+  hasta_lugar_id      uuid references lugares(id) on delete set null,
+  cantidad            integer not null check (cantidad > 0),
+  usuario_id          uuid references perfiles(id) on delete set null,
+  nota                text not null default '',
+  creado_en           timestamptz not null default now()
 );
-
-create index if not exists asignaciones_lugar on asignaciones (lugar_id);
+create index if not exists movimientos_establecimiento
+  on movimientos (establecimiento_id, creado_en desc);
 
 -- =====================================================================
--- Reglas de negocio (en la base, no solo en la interfaz)
+-- Reglas del depósito (en la base, no solo en la aplicación)
 -- =====================================================================
 
--- Al crear un lugar dentro de otro:
---  * el padre no puede tener objetos asignados (hay que sacarlos antes de subdividir)
---  * el nivel tiene que estar definido en el edificio
+-- Un lugar nuevo: el padre es del mismo cliente, no tiene stock arriba
+-- y el edificio define nivel para esa profundidad.
 create or replace function validar_lugar() returns trigger
 language plpgsql as $$
 declare
-  v_edificio uuid;
-  v_profundidad int;
+  v_orden  integer;
+  v_raiz   uuid;
 begin
   if new.padre_id is null then
-    return new;   -- edificio: no tiene reglas de objetos
+    return new;   -- edificio
   end if;
 
-  if exists (select 1 from asignaciones s where s.lugar_id = new.padre_id) then
-    raise exception 'Este lugar tiene objetos. Sacalos antes de subdividirlo.';
+  if not exists (select 1 from lugares p
+                 where p.id = new.padre_id and p.establecimiento_id = new.establecimiento_id) then
+    raise exception 'El lugar padre pertenece a otro cliente.';
   end if;
 
-  -- Subir desde el padre hasta el edificio. El nivel en que queda el edificio
-  -- indica la profundidad del nuevo lugar (1 = justo dentro del edificio).
-  with recursive ruta as (
-    select id, padre_id, 1 as nivel from lugares where id = new.padre_id
-    union all
-    select l.id, l.padre_id, r.nivel + 1 from lugares l join ruta r on l.id = r.padre_id
-  )
-  select id, nivel into v_edificio, v_profundidad from ruta where padre_id is null;
-
-  if not exists (
-    select 1 from niveles_edificio n where n.edificio_id = v_edificio and n.orden = v_profundidad
+  if exists (
+    with recursive anc as (
+      select id, padre_id from lugares where id = new.padre_id
+      union all
+      select l.id, l.padre_id from lugares l join anc a on l.id = a.padre_id
+    )
+    select 1 from existencias e join anc on e.lugar_id = anc.id
   ) then
-    raise exception 'El edificio no tiene nivel definido para esta profundidad. Agregalo en sus niveles.';
+    raise exception 'El lugar padre (o uno que lo contiene) tiene objetos. Sacalos antes de subdividirlo.';
+  end if;
+
+  -- Ruta hasta el edificio: count = profundidad del hijo nuevo; el edificio es la raíz
+  with recursive anc as (
+    select id, padre_id from lugares where id = new.padre_id
+    union all
+    select l.id, l.padre_id from lugares l join anc a on l.id = a.padre_id
+  )
+  select count(*), max(case when padre_id is null then id::text end)::uuid
+    into v_orden, v_raiz
+  from anc;
+
+  if not exists (select 1 from niveles_edificio n
+                 where n.edificio_id = v_raiz and n.orden = v_orden) then
+    raise exception 'El edificio no tiene nivel definido para esta profundidad.';
   end if;
 
   return new;
@@ -154,106 +183,110 @@ create trigger lugares_validar
   before insert on lugares
   for each row execute function validar_lugar();
 
--- Al asignar un objeto a un lugar:
---  * el lugar no puede ser un edificio
---  * el lugar no puede tener subdivisiones (los objetos van dentro de ellas)
---  * el objeto y el lugar tienen que ser del mismo establecimiento
-create or replace function validar_asignacion() returns trigger
+-- No se borra un lugar (ni lo que tiene adentro) si algo tiene stock.
+create or replace function validar_borrado_lugar() returns trigger
 language plpgsql as $$
 begin
-  if not exists (select 1 from lugares l where l.id = new.lugar_id and l.establecimiento_id = new.establecimiento_id) then
-    raise exception 'El lugar no pertenece a este establecimiento.';
+  if exists (
+    with recursive desc_ as (
+      select id from lugares where id = old.id
+      union all
+      select l.id from lugares l join desc_ d on l.padre_id = d.id
+    )
+    select 1 from existencias e join desc_ on e.lugar_id = desc_.id
+  ) then
+    raise exception 'Hay objetos dentro. Sacalos antes de borrar.';
   end if;
-  if not exists (select 1 from objetos o where o.id = new.objeto_id and o.establecimiento_id = new.establecimiento_id) then
-    raise exception 'El objeto no pertenece a este establecimiento.';
+  return old;
+end $$;
+
+drop trigger if exists lugares_validar_borrado on lugares;
+create trigger lugares_validar_borrado
+  before delete on lugares
+  for each row execute function validar_borrado_lugar();
+
+-- Existencias: solo en lugares hoja que no son edificio, del mismo cliente.
+-- Una unidad siempre tiene cantidad 1.
+create or replace function validar_existencia() returns trigger
+language plpgsql as $$
+declare
+  v_est_lugar  uuid;
+  v_padre      uuid;
+  v_est_obj    uuid;
+  v_tipo       text;
+begin
+  select establecimiento_id, padre_id into v_est_lugar, v_padre
+  from lugares where id = new.lugar_id;
+
+  select establecimiento_id, tipo into v_est_obj, v_tipo
+  from objetos where id = new.objeto_id;
+
+  if v_est_lugar is distinct from v_est_obj then
+    raise exception 'El objeto y el lugar son de clientes distintos.';
   end if;
-  if exists (select 1 from lugares l where l.id = new.lugar_id and l.padre_id is null) then
-    raise exception 'Los edificios no tienen objetos directos. Elegí un lugar dentro.';
+  if v_padre is null then
+    raise exception 'Los edificios no tienen objetos directos.';
   end if;
-  if exists (select 1 from lugares h where h.padre_id = new.lugar_id) then
+  if exists (select 1 from lugares where padre_id = new.lugar_id) then
     raise exception 'Este lugar tiene subdivisiones. Los objetos van dentro de ellas.';
+  end if;
+  if v_tipo = 'unidad' and new.cantidad <> 1 then
+    raise exception 'Una unidad ocupa cantidad 1.';
   end if;
   return new;
 end $$;
 
-drop trigger if exists asignaciones_validar on asignaciones;
-create trigger asignaciones_validar
-  before insert on asignaciones
-  for each row execute function validar_asignacion();
+drop trigger if exists existencias_validar on existencias;
+create trigger existencias_validar
+  before insert or update on existencias
+  for each row execute function validar_existencia();
+
+-- No se borra un objeto que tiene existencias.
+create or replace function validar_borrado_objeto() returns trigger
+language plpgsql as $$
+begin
+  if exists (select 1 from existencias where objeto_id = old.id) then
+    raise exception 'Ese objeto tiene existencias. Sacalas antes de borrarlo.';
+  end if;
+  return old;
+end $$;
+
+drop trigger if exists objetos_validar_borrado on objetos;
+create trigger objetos_validar_borrado
+  before delete on objetos
+  for each row execute function validar_borrado_objeto();
 
 -- =====================================================================
--- Seguridad: funciones de permiso
+-- Seguridad: nadie entra con anon ni authenticated.
+-- Solo el Worker (service_role, que salta RLS) lee y escribe.
 -- =====================================================================
+alter table perfiles            enable row level security;
+alter table establecimientos    enable row level security;
+alter table membresias          enable row level security;
+alter table lugares             enable row level security;
+alter table niveles_edificio    enable row level security;
+alter table objetos             enable row level security;
+alter table existencias         enable row level security;
+alter table movimientos         enable row level security;
 
-create or replace function es_admin() returns boolean
-language sql stable security definer set search_path = public as $$
-  select coalesce((select es_admin from perfiles where id = auth.uid()), false);
-$$;
-
-create or replace function puede_ver(est uuid) returns boolean
-language sql stable security definer set search_path = public as $$
-  select es_admin() or exists (
-    select 1 from membresias m where m.usuario_id = auth.uid() and m.establecimiento_id = est
-  );
-$$;
-
-create or replace function puede_editar(est uuid) returns boolean
-language sql stable security definer set search_path = public as $$
-  select es_admin() or exists (
-    select 1 from membresias m
-    where m.usuario_id = auth.uid() and m.establecimiento_id = est and m.rol in ('admin', 'editor')
-  );
-$$;
+revoke all on all tables    in schema public from anon, authenticated;
+revoke all on all sequences in schema public from anon, authenticated;
 
 -- =====================================================================
--- Row Level Security
+-- Puesta en marcha (después de ejecutar lo anterior)
 -- =====================================================================
-
-alter table perfiles         enable row level security;
-alter table establecimientos enable row level security;
-alter table membresias       enable row level security;
-alter table lugares          enable row level security;
-alter table niveles_edificio enable row level security;
-alter table objetos          enable row level security;
-alter table asignaciones     enable row level security;
-
-create policy perfiles_ver on perfiles for select
-  using (id = auth.uid() or es_admin());
-
-create policy establecimientos_ver on establecimientos for select using (puede_ver(id));
-create policy establecimientos_crear on establecimientos for insert with check (es_admin());
-create policy establecimientos_editar on establecimientos for update using (es_admin()) with check (es_admin());
-create policy establecimientos_borrar on establecimientos for delete using (es_admin());
-
-create policy membresias_ver on membresias for select using (usuario_id = auth.uid() or es_admin());
-create policy membresias_gestionar on membresias for all using (es_admin()) with check (es_admin());
-
--- Lugares: el establecimiento viene del edificio raíz
-create policy lugares_ver on lugares for select
-  using (puede_ver(establecimiento_id));
-create policy lugares_editar on lugares for all
-  using (puede_editar(establecimiento_id)) with check (puede_editar(establecimiento_id));
-
--- Niveles: se editan a través del edificio, con el mismo permiso
-create policy niveles_ver on niveles_edificio for select
-  using (exists (select 1 from lugares l where l.id = edificio_id and puede_ver(l.establecimiento_id)));
-create policy niveles_editar on niveles_edificio for all
-  using (exists (select 1 from lugares l where l.id = edificio_id and puede_editar(l.establecimiento_id)))
-  with check (exists (select 1 from lugares l where l.id = edificio_id and puede_editar(l.establecimiento_id)));
-
-create policy objetos_ver on objetos for select using (puede_ver(establecimiento_id));
-create policy objetos_editar on objetos for all
-  using (puede_editar(establecimiento_id)) with check (puede_editar(establecimiento_id));
-
-create policy asignaciones_ver on asignaciones for select using (puede_ver(establecimiento_id));
-create policy asignaciones_editar on asignaciones for all
-  using (puede_editar(establecimiento_id)) with check (puede_editar(establecimiento_id));
-
--- =====================================================================
--- Puesta en marcha
--- =====================================================================
--- 1) Registrate en la app y copiá tu UUID desde Authentication > Users.
--- 2) update perfiles set es_admin = true where id = 'TU-UUID-AQUI';
--- 3) insert into establecimientos (nombre) values ('Cliente de prueba') returning id;
--- 4) insert into membresias (usuario_id, establecimiento_id, rol)
---    values ('UUID-DEL-USUARIO', 'UUID-DEL-ESTABLECIMIENTO', 'editor');
+-- 1) En Supabase > Authentication > Sign In / Providers: desactivar
+--    "Allow new users to sign up". Así solo vos creás cuentas.
+-- 2) Crear tu usuario en Authentication > Users (email y contraseña).
+-- 3) Hacerte administrador general:
+--
+--    update perfiles set es_admin = true where id = 'TU-UUID-AQUI';
+--
+-- 4) Crear un cliente de prueba:
+--
+--    insert into establecimientos (nombre) values ('Cliente de prueba') returning id;
+--
+-- 5) Dar acceso a un usuario de cliente (rol: admin, editor o lector):
+--
+--    insert into membresias (usuario_id, establecimiento_id, rol)
+--    values ('UUID-DEL-USUARIO', 'UUID-DEL-CLIENTE', 'editor');
