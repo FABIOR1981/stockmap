@@ -1,4 +1,4 @@
-# controlStock
+# stockmap
 
 Organización de depósitos: edificios, lugares dentro de ellos (estanterías, estantes, divisiones…) y objetos asignados a lugares. Base para un futuro control de stock (cantidades y movimientos).
 

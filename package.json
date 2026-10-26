@@ -1,5 +1,5 @@
 {
-  "name": "control-stock",
+  "name": "stockmap",
   "version": "0.1.0",
   "description": "Organización de depósitos: edificios, lugares y objetos.",
   "private": true,
