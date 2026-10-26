@@ -1,24 +1,20 @@
-// Arranque: crea el depósito, dibuja la interfaz y conecta los eventos.
+// Arranque: pide ingreso, carga los datos del servidor, dibuja la interfaz y
+// manda al servidor cada cambio. La web nunca habla con la base: solo con /api/*.
 
 import { Deposito } from './core/deposito.js';
 import { crearAlmacenMemoria } from './almacen/memoria.js';
-import { ctx, S, $, esc, aviso } from './ui/estado.js';
+import { api, cargarDesdeServidor, sincronizar, nuevoEstadoSincronizacion } from './almacen/nube.js';
+import { ctx, S, $, esc, aviso, msgHTML } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
 import { vistaStock, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { centrarPlano, instalarArrastre } from './ui/plano.js';
 import { ACCIONES } from './ui/acciones.js';
 
-// Almacenamiento en memoria por ahora. Para Supabase se cambia esta línea
-// (ver js/almacen/supabase.js).
+// El almacén en memoria es la copia de trabajo; la verdad está en el servidor.
 const almacen = crearAlmacenMemoria();
 ctx.dep = new Deposito(almacen);
-
-// Arranque vacío: un administrador general para poder crear clientes y usuarios.
-{
-  const admin = almacen.insertar('usuarios', { id: 'U' + almacen.siguiente('usuarios'), nombre: 'Administrador', es_admin: true });
-  ctx.dep.uid = admin.id;
-}
+let estadoSync = null;
 
 const NAV = [
   ['estructura', 'Edificios', 'edificio'],
@@ -28,19 +24,19 @@ const NAV = [
   ['accesos', 'Accesos', 'mas']
 ];
 
-// Selectores de sesión: usuario y cliente.
+// Acciones que no cambian datos: no disparan sincronización.
+const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir']);
+
 function sesionHTML() {
   const d = ctx.dep;
-  const usuarios = d.usuarios.map(u => `<option value="${u.id}" ${u.id === d.uid ? 'selected' : ''}>${esc(u.nombre)}${u.es_admin ? ' (general)' : ''}</option>`).join('');
   const clientes = d.establecimientosVisibles().map(e => `<option value="${e.id}" ${e.id === d.eid ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('');
-  return `<div class="etiqueta" style="margin:0 10px 6px">Usuario</div>
-    <div class="stack"><select data-act="usuario" aria-label="Usuario">${usuarios}</select></div>
+  return `<div class="etiqueta" style="margin:0 10px 6px">${esc(ctx.sesion?.nombre || '')}${ctx.sesion?.es_admin ? ' (general)' : ''}</div>
     <div class="etiqueta" style="margin:12px 10px 6px">Cliente</div>
     <div class="stack"><select data-act="cliente" aria-label="Cliente"><option value="">— ninguno —</option>${clientes}</select></div>`;
 }
 
 function render() {
-  // La interfaz oculta lo que el usuario no puede hacer. El modelo sigue siendo la barrera real.
+  // La interfaz oculta lo que el usuario no puede hacer. El servidor es la barrera real.
   document.body.classList.toggle('solo-lectura', !ctx.dep.puedeEditar());
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
@@ -52,7 +48,7 @@ function render() {
 
   const vistas = { stock: vistaStock, plano: vistaPlano, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
   const cuerpo = (vistas[S.vista] || vistaEstructura)();
-  $('#contenido').innerHTML = bloquePruebas() + cuerpo;
+  $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
   if (S.vista === 'plano' && !S.nodo) centrarPlano();
 
   const dlg = $('#modal');
@@ -69,14 +65,87 @@ function render() {
 }
 ctx.render = render;
 
+// ---------- Sincronización ----------
+// Una sola cola: los envíos van en orden y no se pisan.
+let cola = Promise.resolve();
+
+function sincronizarAhora() {
+  cola = cola.then(async () => {
+    try {
+      await sincronizar(almacen, estadoSync);
+      if (S.msg.global) { delete S.msg.global; render(); }
+    } catch (e) {
+      // Si el servidor rechazó algo, se descarta lo local y se vuelve a lo guardado.
+      aviso('global', `No se pudo guardar: ${e.message}. Se recargaron los datos guardados.`);
+      await recargar();
+    }
+  });
+  return cola;
+}
+
+// Vuelve a cargar todo desde el servidor (después de crear usuarios o si algo falló).
+async function recargar() {
+  await cargarDesdeServidor(almacen);
+  ctx.dep.uid = ctx.sesion.uid;
+  estadoSync = nuevoEstadoSincronizacion(almacen);
+  render();
+}
+ctx.recargar = recargar;
+
+// ---------- Ingreso ----------
+const pantallaIngreso = $('#ingreso');
+const partes = () => ({ side: document.querySelector('aside.side'), main: document.querySelector('main.main'), modal: $('#modal') });
+
+function mostrarIngreso() {
+  const p = partes();
+  p.side.style.display = 'none';
+  p.main.style.display = 'none';
+  p.modal.style.display = 'none';
+  pantallaIngreso.style.cssText = 'display:grid;place-items:center;min-height:100vh;padding:16px';
+}
+
+function mostrarApp() {
+  const p = partes();
+  p.side.style.display = '';
+  p.main.style.display = '';
+  p.modal.style.display = '';
+  pantallaIngreso.style.display = 'none';
+}
+
+// Carga los datos del usuario que ingresó y muestra la aplicación.
+async function entrar() {
+  const sesion = await cargarDesdeServidor(almacen);
+  ctx.sesion = sesion;
+  ctx.dep.uid = sesion.uid;
+  const visibles = ctx.dep.establecimientosVisibles();
+  if (!ctx.dep.eid && visibles.length) ctx.dep.elegirEstablecimiento(visibles[0].id);
+  estadoSync = nuevoEstadoSincronizacion(almacen);
+  mostrarApp();
+  render();
+}
+
+$('#formIngreso').addEventListener('submit', async e => {
+  e.preventDefault();
+  const error = $('#ingError');
+  error.hidden = true;
+  try {
+    await api.login($('#ingEmail').value.trim(), $('#ingClave').value);
+    $('#ingClave').value = '';
+    await entrar();
+  } catch (x) {
+    error.textContent = x.message;
+    error.hidden = false;
+  }
+});
+
 // ---------- Eventos ----------
-// Clics en botones y vínculos. Los selects e inputs se manejan en 'change'.
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]');
   if (!b || b.matches('select, input')) return;
   const fn = ACCIONES[b.dataset.act];
-  if (fn) fn(b.dataset);
+  if (fn) await fn(b.dataset);
   render();
+  if (!SIN_SYNC.has(b.dataset.act) && ctx.sesion) sincronizarAhora();
 });
 
 document.addEventListener('input', e => {
@@ -110,6 +179,7 @@ document.addEventListener('change', e => {
     S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
   }
   render();
+  if (ctx.sesion) sincronizarAhora();
 });
 
 // Esc o la X cierran la ventana.
@@ -118,4 +188,13 @@ $('#modal').addEventListener('close', () => {
 });
 
 instalarArrastre();
-render();
+
+// Al abrir la página: si ya hay una sesión válida, entra directo; si no, pide ingreso.
+(async () => {
+  try {
+    await api.sesion();
+    await entrar();
+  } catch {
+    mostrarIngreso();
+  }
+})();

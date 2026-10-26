@@ -17,7 +17,7 @@ export const S = {
     edCodigo: '', edNombre: '', objAqui: '',
     lugarPara: {}, cantPara: {},          // por objeto (fila de la tabla de stock)
     cantMov: '1', mvHasta: '',            // ventana de mover
-    nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioAdmin: false,
+    nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,
     accUid: '', accRol: 'editor'
   },
   pruebas: null,           // resultado de la última corrida de pruebas

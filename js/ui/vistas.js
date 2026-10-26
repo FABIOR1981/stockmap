@@ -286,7 +286,9 @@ export function vistaAccesos() {
     <p class="ayuda">Un usuario puede tener acceso a varios clientes. El administrador general ve todo.</p>
     <div class="dlg-lista">${d.usuarios.map(x => `<div class="r"><span><strong>${esc(x.nombre)}</strong>${x.es_admin ? ' <span class="chip sub">General</span>' : ''}</span></div>`).join('')}</div>
     <div class="form" style="margin-top:16px">
-      ${campo('Nuevo usuario', `<input data-f="nuevoUsuario" value="${esc(S.f.nuevoUsuario)}" placeholder="Nombre">`)}
+      ${campo('Nombre', `<input data-f="nuevoUsuario" value="${esc(S.f.nuevoUsuario)}" placeholder="Nombre">`)}
+      ${campo('Email', `<input data-f="nuevoUsuarioEmail" type="email" value="${esc(S.f.nuevoUsuarioEmail)}" placeholder="correo@ejemplo.com">`)}
+      ${campo('Contraseña inicial', `<input data-f="nuevoUsuarioClave" type="password" value="${esc(S.f.nuevoUsuarioClave)}" placeholder="Mínimo 8 caracteres" autocomplete="new-password">`)}
       <label class="campo"><span>&nbsp;</span><span><input type="checkbox" data-f="nuevoUsuarioAdmin" ${S.f.nuevoUsuarioAdmin ? 'checked' : ''}> Administrador general</span></label>
       <button class="btn sm" data-act="crearUsuario">Crear usuario</button>
     </div>

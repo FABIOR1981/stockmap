@@ -4,6 +4,7 @@
 
 import { ctx, S, aviso } from './estado.js';
 import { correrPruebas } from '../core/pruebas.js';
+import { api } from '../almacen/nube.js';
 
 const d = () => ctx.dep;
 
@@ -32,11 +33,18 @@ export const ACCIONES = {
     S.f.nuevoCliente = '';
     aviso('cliente', null, `Cliente creado: ${r.establecimiento.nombre}. Elegilo en la barra lateral para cargar su depósito.`);
   },
-  crearUsuario: () => {
-    const r = d().crearUsuario(S.f.nuevoUsuario, S.f.nuevoUsuarioAdmin);
-    if (r.error) return aviso('usuario', r.error);
-    S.f.nuevoUsuario = ''; S.f.nuevoUsuarioAdmin = false;
-    aviso('usuario', null, `Usuario creado: ${r.usuario.nombre}.`);
+  // El usuario se crea en Supabase Auth a través de la API (solo administrador general).
+  crearUsuario: async () => {
+    const f = S.f;
+    if (!f.nuevoUsuarioEmail || !f.nuevoUsuarioClave) return aviso('usuario', 'Email y contraseña son obligatorios.');
+    try {
+      await api.crearUsuario({ email: f.nuevoUsuarioEmail.trim(), password: f.nuevoUsuarioClave, nombre: f.nuevoUsuario, es_admin: !!f.nuevoUsuarioAdmin });
+    } catch (e) {
+      return aviso('usuario', e.message);
+    }
+    f.nuevoUsuario = ''; f.nuevoUsuarioEmail = ''; f.nuevoUsuarioClave = ''; f.nuevoUsuarioAdmin = false;
+    await ctx.recargar();
+    aviso('usuario', null, 'Usuario creado. Ya puede ingresar con su email y contraseña.');
   },
 
   // Accesos del cliente
@@ -138,14 +146,15 @@ export const ACCIONES = {
     aviso('obj', d().borrarObjeto(el.oid), 'Objeto borrado.');
   },
 
-  // Ventanas, pruebas y datos de ejemplo
+  // Ventanas y pruebas
   modalCerrar:   () => limpiarModal(),
   pruebas:       () => { S.pruebas = correrPruebas(d()); },
   cerrarPruebas: () => { S.pruebas = null; },
-  ejemplo:       () => {
-    d().cargarEjemplo();
-    S.vista = 'estructura'; S.nodo = null; S.msg = {};
-    S.f.lugarPara = {}; S.f.cantPara = {}; S.posiciones = {};
+
+  // Sesión
+  salir: async () => {
+    await api.logout().catch(() => {});
+    location.reload();
   }
 };
 

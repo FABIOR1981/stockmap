@@ -14,7 +14,8 @@ js/core/              Lógica sin DOM (se puede probar con Node)
   pruebas.js          Pruebas de reglas (también se ejecutan desde la app)
 js/almacen/           Capa de almacenamiento
   memoria.js          Implementación en memoria (la que se usa hoy)
-  supabase.js         Pendiente: misma interfaz sobre Supabase
+  memoria.js          Copia de trabajo en memoria (el modelo trabaja acá)
+  nube.js             Traducción a tablas de Supabase, cálculo de cambios y llamadas a /api
 js/ui/                Interfaz
   estado.js           Estado de la interfaz y utilidades de presentación
   iconos.js           Iconos SVG en línea
@@ -22,7 +23,9 @@ js/ui/                Interfaz
   vistas.js           Vistas y ventanas (modales)
   plano.js            Plano: posiciones y arrastre
   acciones.js         Acciones de los botones (data-act)
-tests/reglas.test.js  Pruebas de reglas con el test runner de Node
+functions/api/[[ruta]].js  API (Cloudflare Pages Function): única que habla con Supabase
+tests/reglas.test.js  Pruebas de reglas del modelo
+tests/nube.test.js    Pruebas de traducción y cálculo de cambios
 supabase/esquema.sql  Esquema de base de datos, tablas, triggers y RLS
 docs/modelo_datos.md  Modelo de datos y reglas de negocio
 ```
@@ -59,20 +62,20 @@ npm test         # corre las pruebas de reglas
 - No se borra un objeto con existencias, ni un lugar con objetos adentro.
 - Clonar copia niveles y estructura, nunca stock; los códigos nuevos se asignan solos.
 
-## Almacenamiento
+## Almacenamiento y seguridad
 
-Hoy todo vive en memoria: se pierde al recargar. El contrato del almacén está documentado en `js/almacen/memoria.js`. Para pasar a Supabase hay que:
+La web no habla con la base. El navegador trabaja con el modelo en memoria y, después de cada acción, manda solo los cambios a `/api/sincronizar`. La API (`functions/api/[[ruta]].js`) corre en Cloudflare Pages, guarda la clave `service_role` como secreto y revisa cada cambio antes de escribirlo: sesión firmada, rol por cliente y pertenencia de cada registro.
 
-1. Implementar `js/almacen/supabase.js` con la misma interfaz, pero asíncrona.
-2. Hacer `async/await` en `js/core/deposito.js` y en las acciones de la interfaz.
-3. Aplicar `supabase/esquema.sql` en el proyecto de Supabase.
+Variables en Cloudflare Pages (Settings > Environment variables):
 
-Los niveles hoy viven dentro de cada edificio; en el esquema tienen su propia tabla `niveles_edificio`.
+- `SUPABASE_URL` (texto)
+- `SUPABASE_SERVICE_KEY` (secreto, clave service_role)
+- `SESSION_SECRET` (secreto, texto aleatorio de 32 caracteres o más)
+
+Puesta en marcha de la base: ver `supabase/esquema.sql` (al final del archivo).
 
 ## Pendiente
 
-- Inicio de sesión real (hoy el usuario se elige en la barra lateral, como demostración).
-- Aplicar `supabase/esquema.sql` en Supabase (ya está probado en PostgreSQL local).
-- Worker de Cloudflare que es el único que habla con la base.
-- Almacenamiento con Supabase.
+- Probar de punta a punta contra el proyecto real de Supabase (la API todavía no se probó con la base real).
+- Revisar cargas grandes: hoy `/api/datos` trae hasta 2000 movimientos por cliente.
 - Probar el arrastre del plano en pantallas táctiles.

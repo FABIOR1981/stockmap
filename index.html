@@ -18,11 +18,22 @@
   <div>
     <h4>Herramientas</h4>
     <div class="stack">
-      <button class="btn sec sm" data-act="ejemplo">Cargar ejemplo</button>
       <button class="btn sec sm" data-act="pruebas">Probar reglas</button>
+      <button class="btn sec sm" data-act="salir">Salir</button>
     </div>
   </div>
 </aside>
+
+<section id="ingreso" class="ingreso" hidden>
+  <form id="formIngreso" class="ingreso-caja">
+    <h1>Depósito</h1>
+    <p class="sub">Ingresá con tu usuario.</p>
+    <label class="campo"><span>Email</span><input id="ingEmail" type="email" required autocomplete="username"></label>
+    <label class="campo"><span>Contraseña</span><input id="ingClave" type="password" required autocomplete="current-password"></label>
+    <p class="msg err" id="ingError" role="alert" hidden></p>
+    <button class="btn" type="submit">Ingresar</button>
+  </form>
+</section>
 
 <main class="main">
   <header class="top">
