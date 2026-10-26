@@ -4,14 +4,22 @@
 export const ctx = { dep: null, render: () => {} };
 
 export const S = {
-  vista: 'estructura',     // 'estructura' | 'plano' | 'objetos'
+  vista: 'estructura',     // 'estructura' | 'plano' | 'stock' | 'movimientos' | 'accesos'
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
-  modal: null,             // 'crear' | 'editar' | 'clonar' | 'objetos' | 'nuevoObjeto' | null
+  modal: null,             // 'crear' | 'editar' | 'clonar' | 'objetos' | 'mover' | 'nuevoObjeto' | null
   editar: null, clon: null, verObj: null,
-  f: { codigo: '', nombre: '', desde: '', hasta: '', codigoP: '', desc: '', cantClon: '1',
-       edCodigo: '', edNombre: '', objAqui: '', lugarPara: {} },
+  mover: null,             // { oid, lid } del objeto que se mueve
+  f: {
+    codigo: '', nombre: '', desde: '', hasta: '', cantClon: '1',
+    codigoP: '', desc: '', tipoNuevo: 'unidad', minimoNuevo: '',
+    edCodigo: '', edNombre: '', objAqui: '',
+    lugarPara: {}, cantPara: {},          // por objeto (fila de la tabla de stock)
+    cantMov: '1', mvHasta: '',            // ventana de mover
+    nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioAdmin: false,
+    accUid: '', accRol: 'editor'
+  },
   pruebas: null,           // resultado de la última corrida de pruebas
   posiciones: {}           // posición en pantalla de cada edificio en el plano (solo UI)
 };

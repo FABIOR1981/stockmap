@@ -5,25 +5,53 @@ import { crearAlmacenMemoria } from './almacen/memoria.js';
 import { ctx, S, $, esc, aviso } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
-import { vistaObjetos, vistaPlano, vistaEstructura, bloquePruebas, ventana } from './ui/vistas.js';
+import { vistaStock, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { centrarPlano, instalarArrastre } from './ui/plano.js';
 import { ACCIONES } from './ui/acciones.js';
 
 // Almacenamiento en memoria por ahora. Para Supabase se cambia esta línea
 // (ver js/almacen/supabase.js).
-ctx.dep = new Deposito(crearAlmacenMemoria());
+const almacen = crearAlmacenMemoria();
+ctx.dep = new Deposito(almacen);
+
+// Arranque vacío: un administrador general para poder crear clientes y usuarios.
+{
+  const admin = almacen.insertar('usuarios', { id: 'U' + almacen.siguiente('usuarios'), nombre: 'Administrador', es_admin: true });
+  ctx.dep.uid = admin.id;
+}
+
+const NAV = [
+  ['estructura', 'Edificios', 'edificio'],
+  ['plano', 'Plano', 'plano'],
+  ['stock', 'Stock', 'caja'],
+  ['movimientos', 'Movimientos', 'estante'],
+  ['accesos', 'Accesos', 'mas']
+];
+
+// Selectores de sesión: usuario y cliente.
+function sesionHTML() {
+  const d = ctx.dep;
+  const usuarios = d.usuarios.map(u => `<option value="${u.id}" ${u.id === d.uid ? 'selected' : ''}>${esc(u.nombre)}${u.es_admin ? ' (general)' : ''}</option>`).join('');
+  const clientes = d.establecimientosVisibles().map(e => `<option value="${e.id}" ${e.id === d.eid ? 'selected' : ''}>${esc(e.nombre)}</option>`).join('');
+  return `<div class="etiqueta" style="margin:0 10px 6px">Usuario</div>
+    <div class="stack"><select data-act="usuario" aria-label="Usuario">${usuarios}</select></div>
+    <div class="etiqueta" style="margin:12px 10px 6px">Cliente</div>
+    <div class="stack"><select data-act="cliente" aria-label="Cliente"><option value="">— ninguno —</option>${clientes}</select></div>`;
+}
 
 function render() {
-  const navItems = [['estructura', 'Edificios', 'edificio'], ['plano', 'Plano', 'plano'], ['objetos', 'Objetos', 'caja']];
-  $('#nav').innerHTML = navItems.map(([v, txt, icono]) =>
+  // La interfaz oculta lo que el usuario no puede hacer. El modelo sigue siendo la barrera real.
+  document.body.classList.toggle('solo-lectura', !ctx.dep.puedeEditar());
+  document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
+  $('#sesion').innerHTML = sesionHTML();
+  $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
     `<button data-act="vista" data-v="${v}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span>${txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const cuerpo = S.vista === 'objetos' ? vistaObjetos()
-               : S.vista === 'plano' ? vistaPlano()
-               : vistaEstructura();
+  const vistas = { stock: vistaStock, plano: vistaPlano, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
+  const cuerpo = (vistas[S.vista] || vistaEstructura)();
   $('#contenido').innerHTML = bloquePruebas() + cuerpo;
   if (S.vista === 'plano' && !S.nodo) centrarPlano();
 
@@ -42,9 +70,10 @@ function render() {
 ctx.render = render;
 
 // ---------- Eventos ----------
+// Clics en botones y vínculos. Los selects e inputs se manejan en 'change'.
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
-  if (!b) return;
+  if (!b || b.matches('select, input')) return;
   const fn = ACCIONES[b.dataset.act];
   if (fn) fn(b.dataset);
   render();
@@ -60,13 +89,17 @@ document.addEventListener('input', e => {
     el.setSelectionRange(el.value.length, el.value.length);
     return;
   }
-  if (t.tagName === 'INPUT' && t.dataset.f) S.f[t.dataset.f] = t.value;
+  if (t.dataset.cantoid) { S.f.cantPara[t.dataset.cantoid] = t.value; return; }
+  if (t.tagName === 'INPUT' && t.dataset.f) S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
 });
 
 document.addEventListener('change', e => {
   const t = e.target;
+  // Selects de sesión, roles y similares: llaman a su acción con el valor elegido.
+  if (t.dataset.act && t.tagName === 'SELECT') {
+    ACCIONES[t.dataset.act]({ ...t.dataset, value: t.value });
   // Campos de un nivel de edificio: se guardan al instante.
-  if (t.dataset.nivel !== undefined) {
+  } else if (t.dataset.nivel !== undefined) {
     if (S.nodo) {
       const valor = t.type === 'checkbox' ? t.checked : t.value;
       aviso('niveles', ctx.dep.editarNivel(S.nodo, +t.dataset.nivel, t.dataset.campo, valor));
@@ -74,14 +107,14 @@ document.addEventListener('change', e => {
   } else if (t.dataset.oid) {
     S.f.lugarPara[t.dataset.oid] = t.value;
   } else if (t.dataset.f) {
-    S.f[t.dataset.f] = t.value;
+    S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
   }
   render();
 });
 
 // Esc o la X cierran la ventana.
 $('#modal').addEventListener('close', () => {
-  if (S.modal) { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; render(); }
+  if (S.modal) { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; render(); }
 });
 
 instalarArrastre();

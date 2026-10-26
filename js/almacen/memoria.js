@@ -9,13 +9,17 @@
 //   vaciar()                      -> deja todas las tablas y secuencias en cero
 //   snapshot() / restaurar(s)     -> copia y vuelta atrás (lo usan las pruebas)
 //
-// Tablas: 'lugares', 'objetos', 'asignaciones'.
+// Tablas: 'establecimientos', 'usuarios', 'membresias', 'lugares', 'objetos',
+// 'asignaciones' (existencias por lugar) y 'movimientos' (historial).
 // Hoy las filas son objetos planos en memoria. Con Supabase, cada método
 // pasa a ser una consulta asíncrona a la tabla equivalente de supabase/esquema.sql.
 
 export function crearAlmacenMemoria() {
   const vacio = () => ({
-    datos: { lugares: [], objetos: [], asignaciones: [] },
+    datos: {
+      establecimientos: [], usuarios: [], membresias: [],
+      lugares: [], objetos: [], asignaciones: [], movimientos: []
+    },
     secuencias: {}
   });
   let estado = vacio();

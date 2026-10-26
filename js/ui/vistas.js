@@ -6,9 +6,22 @@ import { ilustracion } from './iconos.js';
 import { tarjetaLugar, bloquePlano, leyenda } from './componentes.js';
 import { posDe } from './plano.js';
 
-// ---------- Edificios (raíz de la vista Edificios) ----------
+const ROLES = { admin: 'Admin', editor: 'Editor', lector: 'Lector' };
+const TIPOS = { unidad: 'Unidad', producto: 'Producto' };
+const fecha = iso => new Date(iso).toLocaleString('es-UY', { dateStyle: 'short', timeStyle: 'short' });
+
+// Sin cliente elegido, el depósito no muestra nada: se lo indica.
+function sinCliente() {
+  return `<div class="vacio"><span class="ilu">${ilustracion()}</span>
+    <p>Elegí un cliente para ver su depósito</p>
+    <small>Si todavía no hay clientes, creá uno desde Accesos.</small>
+    <button class="btn" data-act="vista" data-v="accesos">Ir a Accesos</button></div>`;
+}
+
+// ---------- Edificios ----------
 export function vistaEdificios() {
   const edificios = ctx.dep.hijos(null);
+  if (!ctx.dep.eid) return `<h1>Edificios</h1>${sinCliente()}`;
   if (!edificios.length) {
     return `<h1>Edificios</h1>
       <p class="sub">Cada edificio define sus propios niveles.</p>
@@ -56,7 +69,7 @@ function editorNiveles(ed) {
   </section>`;
 }
 
-// ---------- Contenido de un lugar (vista Edificios, al entrar) ----------
+// ---------- Contenido de un lugar ----------
 export function vistaEstructura() {
   const d = ctx.dep;
   const nodo = d.porId(S.nodo);
@@ -85,6 +98,7 @@ export function vistaEstructura() {
 // ---------- Plano ----------
 export function vistaPlano() {
   const d = ctx.dep;
+  if (!d.eid) return `<h1>Plano</h1>${sinCliente()}`;
   const foco = S.nodo ? d.porId(S.nodo) : null;
   const { def } = d.nivelParaHijo(S.nodo);
   if (!foco) {
@@ -109,12 +123,13 @@ export function vistaPlano() {
     ${leyenda()}${msgHTML('borrar')}`;
 }
 
-// ---------- Objetos ----------
-export function vistaObjetos() {
+// ---------- Stock (unidades y productos) ----------
+export function vistaStock() {
   const d = ctx.dep;
+  if (!d.eid) return `<h1>Stock</h1>${sinCliente()}`;
   const q = S.q.trim().toLowerCase();
-  const lugaresOpciones = d.lugares.filter(l => d.esHoja(l))
-    .map(l => `<option value="${l.id}">${esc(d.dir(l))}</option>`).join('');
+  const hojas = d.lugares.filter(l => d.esHoja(l));
+  const opciones = hojas.map(l => `<option value="${l.id}">${esc(d.dir(l))}</option>`).join('');
 
   const buscador = `<div class="panel">
     <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código, código propio o descripción" aria-label="Buscar objeto">
@@ -122,39 +137,54 @@ export function vistaObjetos() {
   </div>`;
 
   if (!d.objetos.length) {
-    return `<h1>Objetos</h1><p class="sub">Todo lo que se guarda en el depósito.</p>
+    return `<h1>Stock</h1><p class="sub">Unidades que se identifican una por una y productos de los que hay varias.</p>
       ${buscador}
-      <div class="vacio" style="margin-top:16px"><p>Todavía no hay objetos.</p>
+      <div class="vacio" style="margin-top:16px"><p>Todavía no hay objetos en este cliente.</p>
         <button class="btn" data-act="abrirNuevoObjeto">+ Nuevo objeto</button></div>
       ${msgHTML('obj')}`;
   }
 
   const filas = d.objetos.map(o => {
     const ub = d.ubicacionesDe(o.id);
+    const total = d.existenciaTotal(o.id);
+    const alerta = d.bajoMinimo(o) ? `<span class="chip falta">Bajo mínimo (${o.minimo})</span>` : '';
+    const existencias = o.tipo === 'producto'
+      ? `<strong>${total}</strong> ${alerta}`
+      : `<span class="dim">${total ? 'Sí' : 'No'}</span>`;
     const ubicaciones = ub.length
-      ? ub.map(l => `<span class="ubic">${esc(d.dir(l))}<button class="btn x" data-act="liberarPar" data-oid="${o.id}" data-lid="${l.id}" aria-label="Sacar de ${esc(d.dir(l))}">×</button></span>`).join('')
+      ? ub.map(l => {
+          const c = d.cantidadEn(o.id, l.id);
+          return `<span class="ubic">${esc(d.dir(l))}${o.tipo === 'producto' ? ` · <strong>${c}</strong>` : ''}
+            <button class="btn sm txt" data-act="moverAbrir" data-oid="${o.id}" data-lid="${l.id}">Mover</button></span>`;
+        }).join('')
       : `<span class="dim">Sin ubicación</span>`;
+    const cantidad = o.tipo === 'producto'
+      ? `<input type="number" min="1" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad" style="width:72px;min-width:0">`
+      : '';
     return `<tr>
       <td><strong>${esc(o.codigo_interno)}</strong></td>
+      <td><span class="chip ${o.tipo === 'producto' ? 'obj' : 'sub'}">${TIPOS[o.tipo] || 'Unidad'}</span></td>
       <td>${esc(o.codigo_propio) || '<span class="dim">—</span>'}</td>
       <td>${esc(o.descripcion) || '<span class="dim">—</span>'}</td>
+      <td>${existencias}</td>
       <td>${ubicaciones}</td>
       <td><div class="acciones-fila">
         <select data-f="lugarPara" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}">
-          <option value="">Elegir lugar…</option>${lugaresOpciones}
+          <option value="">Elegir lugar…</option>${opciones}
         </select>
+        ${cantidad}
         <button class="btn sm sec" data-act="asignarObj" data-oid="${o.id}">Agregar</button>
         <button class="btn sm peligro" data-act="borrarObjeto" data-oid="${o.id}">Borrar</button>
       </div></td>
     </tr>`;
   }).join('');
 
-  return `<h1>Objetos</h1>
-    <p class="sub">${d.objetos.length} ${d.objetos.length === 1 ? 'objeto' : 'objetos'} registrados.</p>
+  return `<h1>Stock</h1>
+    <p class="sub">${d.objetos.length} ${d.objetos.length === 1 ? 'objeto' : 'objetos'} en ${esc(d.establecimientoActual()?.nombre || '')}.</p>
     ${buscador}
     <section class="panel" style="margin-top:16px;padding:0;overflow:auto">
       <table>
-        <thead><tr><th>Interno</th><th>Propio</th><th>Descripción</th><th>Ubicación</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Interno</th><th>Tipo</th><th>Propio</th><th>Descripción</th><th>Existencias</th><th>Ubicación</th><th>Acciones</th></tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </section>
@@ -172,6 +202,102 @@ export function resultadosBusqueda(q) {
   }).join('')}</div>`;
 }
 
+// ---------- Movimientos ----------
+export function vistaMovimientos() {
+  const d = ctx.dep;
+  if (!d.eid) return `<h1>Movimientos</h1>${sinCliente()}`;
+  const lista = d.movimientosRecientes(200);
+  if (!lista.length) {
+    return `<h1>Movimientos</h1><p class="sub">Historial de entradas, salidas y transferencias.</p>
+      <div class="vacio"><p>Todavía no hay movimientos.</p><small>Cada vez que se agrega, saca o mueve stock, queda registrado acá.</small></div>`;
+  }
+  const nombreObj = id => { const o = d.objetoPorId(id); return o ? `${o.codigo_interno}${o.codigo_propio ? ' · ' + o.codigo_propio : ''}` : '(borrado)'; };
+  const lugar = id => id ? esc(d.porId(id) ? d.dir(d.porId(id)) : '—') : '<span class="dim">—</span>';
+  const filas = lista.map(m => `<tr>
+    <td>${fecha(m.fecha)}</td>
+    <td><span class="chip ${m.tipo === 'salida' ? 'falta' : m.tipo === 'entrada' ? 'libre' : 'obj'}">${m.tipo}</span></td>
+    <td>${esc(nombreObj(m.oid))}</td>
+    <td>${lugar(m.desde)}</td>
+    <td>${lugar(m.hasta)}</td>
+    <td><strong>${m.cantidad}</strong></td>
+    <td>${esc(d.nombreUsuario(m.uid))}</td>
+    <td class="dim">${esc(m.nota)}</td>
+  </tr>`).join('');
+  return `<h1>Movimientos</h1>
+    <p class="sub">${lista.length} ${lista.length === 1 ? 'movimiento' : 'movimientos'}, del más reciente al más antiguo.</p>
+    <section class="panel" style="padding:0;overflow:auto">
+      <table>
+        <thead><tr><th>Fecha</th><th>Tipo</th><th>Objeto</th><th>Desde</th><th>Hasta</th><th>Cant.</th><th>Usuario</th><th>Nota</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+    </section>`;
+}
+
+// ---------- Accesos: clientes, usuarios y roles ----------
+export function vistaAccesos() {
+  const d = ctx.dep;
+  const u = d.usuarioActual();
+  const esGeneral = !!u?.es_admin;
+  const visibles = d.establecimientosVisibles();
+
+  const clientes = `<section class="panel">
+    <h2>Clientes</h2>
+    <p class="ayuda">Cada cliente tiene su propio depósito. Solo ves los que te corresponden.</p>
+    ${visibles.length ? `<div class="dlg-lista">${visibles.map(e => `<div class="r">
+        <span><strong>${esc(e.nombre)}</strong>${e.id === d.eid ? ' <span class="chip libre">Abierto</span>' : ''}</span>
+        <button class="btn sm sec" data-act="cliente" data-value="${e.id}">${e.id === d.eid ? 'Seguir aquí' : 'Abrir'}</button>
+      </div>`).join('')}</div>` : '<p class="dim">No tenés acceso a ningún cliente todavía.</p>'}
+    ${esGeneral ? `<div class="form" style="margin-top:16px">
+      ${campo('Nuevo cliente', `<input data-f="nuevoCliente" value="${esc(S.f.nuevoCliente)}" placeholder="Nombre">`)}
+      <button class="btn sm" data-act="crearCliente">Crear cliente</button>
+    </div>` : ''}
+    ${msgHTML('cliente')}
+  </section>`;
+
+  let acceso = '';
+  if (d.eid) {
+    const miembros = d.accesosDelCliente();
+    const yaEsta = new Set(miembros.map(m => m.uid));
+    const candidatos = d.usuarios.filter(x => !yaEsta.has(x.id));
+    const filas = miembros.length ? miembros.map(m => `<div class="r">
+        <span><strong>${esc(m.nombre)}</strong></span>
+        <span class="acciones-fila">
+          <select data-act="cambiarRol" data-uid="${m.uid}" aria-label="Rol de ${esc(m.nombre)}">
+            ${Object.keys(ROLES).map(k => `<option value="${k}" ${m.rol === k ? 'selected' : ''}>${ROLES[k]}</option>`).join('')}
+          </select>
+          <button class="btn sm peligro" data-act="quitarAcceso" data-uid="${m.uid}">Quitar</button>
+        </span></div>`).join('')
+      : '<p class="dim">Nadie tiene acceso a este cliente todavía.</p>';
+    acceso = `<section class="panel">
+      <h2>Accesos a ${esc(d.establecimientoActual()?.nombre || '')}</h2>
+      <p class="ayuda">Admin: gestiona accesos y datos. Editor: carga y mueve stock. Lector: solo mira.</p>
+      <div class="dlg-lista">${filas}</div>
+      ${candidatos.length ? `<div class="form" style="margin-top:16px">
+        ${campo('Dar acceso a', `<select data-f="accUid"><option value="">Elegir…</option>${candidatos.map(x => `<option value="${x.id}">${esc(x.nombre)}</option>`).join('')}</select>`)}
+        ${campo('Rol', `<select data-f="accRol">${Object.keys(ROLES).map(k => `<option value="${k}" ${S.f.accRol === k ? 'selected' : ''}>${ROLES[k]}</option>`).join('')}</select>`)}
+        <button class="btn sm" data-act="darAcceso">Dar acceso</button>
+      </div>` : ''}
+      ${msgHTML('acceso')}
+    </section>`;
+  }
+
+  const usuarios = esGeneral ? `<section class="panel">
+    <h2>Usuarios</h2>
+    <p class="ayuda">Un usuario puede tener acceso a varios clientes. El administrador general ve todo.</p>
+    <div class="dlg-lista">${d.usuarios.map(x => `<div class="r"><span><strong>${esc(x.nombre)}</strong>${x.es_admin ? ' <span class="chip sub">General</span>' : ''}</span></div>`).join('')}</div>
+    <div class="form" style="margin-top:16px">
+      ${campo('Nuevo usuario', `<input data-f="nuevoUsuario" value="${esc(S.f.nuevoUsuario)}" placeholder="Nombre">`)}
+      <label class="campo"><span>&nbsp;</span><span><input type="checkbox" data-f="nuevoUsuarioAdmin" ${S.f.nuevoUsuarioAdmin ? 'checked' : ''}> Administrador general</span></label>
+      <button class="btn sm" data-act="crearUsuario">Crear usuario</button>
+    </div>
+    ${msgHTML('usuario')}
+  </section>` : '';
+
+  return `<h1>Accesos</h1>
+    <p class="sub">${esGeneral ? 'Administrador general: controlás clientes, usuarios y accesos.' : 'Accesos a los clientes que te corresponden.'}</p>
+    ${clientes}${acceso}${usuarios}`;
+}
+
 // ---------- Resultado de las pruebas de reglas ----------
 export function bloquePruebas() {
   if (!S.pruebas) return '';
@@ -185,7 +311,6 @@ export function bloquePruebas() {
 }
 
 // ---------- Ventanas (modales) ----------
-// Devuelve { titulo, cuerpo, pie } o null si no hay ventana que mostrar.
 export function ventana() {
   const d = ctx.dep;
   const nodo = S.nodo ? d.porId(S.nodo) : null;
@@ -224,7 +349,7 @@ export function ventana() {
             ${campo('Código', `<input data-f="edCodigo" value="${esc(S.f.edCodigo)}">`)}
             ${def.nombreOpcional ? campo('Nombre (opcional)', `<input data-f="edNombre" value="${esc(S.f.edNombre)}">`) : ''}
           </div>
-          <p class="dim" style="font-size:13px;margin:12px 0 0">El nivel no cambia. Los objetos que tiene el lugar se mantienen.</p>
+          <p class="dim" style="font-size:13px;margin:12px 0 0">El nivel no cambia. El stock que tiene el lugar se mantiene.</p>
           ${msgHTML('editar')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
               <button class="btn" data-act="editarGuardar">Guardar</button>`
@@ -235,7 +360,7 @@ export function ventana() {
       if (!src) return null;
       return {
         titulo: `Clonar ${d.dir(src)}`,
-        cuerpo: `<p class="dim" style="margin:0 0 14px">Se copian los niveles y los lugares de adentro. Los objetos no se copian. Los códigos nuevos se asignan solos.</p>
+        cuerpo: `<p class="dim" style="margin:0 0 14px">Se copian los niveles y los lugares de adentro. El stock no se copia. Los códigos nuevos se asignan solos.</p>
           <div class="form">${campo('Cantidad de copias', `<input data-f="cantClon" value="${esc(S.f.cantClon)}" size="5">`)}</div>
           ${msgHTML('clon')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
@@ -250,7 +375,8 @@ export function ventana() {
       const filas = objs.length
         ? `<div class="dlg-lista">${objs.map(o => `<div class="r">
             <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
-            <button class="btn sm sec" data-act="liberarPar" data-oid="${o.id}" data-lid="${l.id}">Sacar</button>
+            <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>
+            <button class="btn sm sec" data-act="liberarPar" data-oid="${o.id}" data-lid="${l.id}">Sacar todo</button></span>
           </div>`).join('')}</div>`
         : `<p class="vacio" style="border:0;padding:12px">Este lugar no tiene objetos.</p>`;
       const agregar = fuera.length
@@ -265,12 +391,33 @@ export function ventana() {
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>`
       };
     }
+    case 'mover': {
+      const o = S.mover ? d.objetoPorId(S.mover.oid) : null;
+      const origen = S.mover ? d.porId(S.mover.lid) : null;
+      if (!o || !origen) return null;
+      const disp = d.cantidadEn(o.id, origen.id);
+      const destinos = d.lugares.filter(l => l.id !== origen.id && d.esHoja(l));
+      const unidad = o.tipo === 'unidad';
+      return {
+        titulo: `Mover ${o.codigo_interno}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}`,
+        cuerpo: `<p class="dim" style="margin:0 0 14px">Desde <strong>${esc(d.dir(origen))}</strong>. Hay ${disp} ${unidad ? '' : 'unidades'} aquí.</p>
+          <div class="form">
+            ${unidad ? '' : campo('Cantidad', `<input type="number" min="1" max="${disp}" data-f="cantMov" value="${esc(S.f.cantMov)}" style="width:110px;min-width:0">`)}
+            ${campo('Destino', `<select data-f="mvHasta"><option value="">Retirar del depósito (sin destino)</option>${destinos.map(l => `<option value="${l.id}" ${S.f.mvHasta === l.id ? 'selected' : ''}>${esc(d.dir(l))}</option>`).join('')}</select>`)}
+          </div>
+          ${msgHTML('mover')}`,
+        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>
+              <button class="btn" data-act="moverEjecutar">Confirmar</button>`
+      };
+    }
     case 'nuevoObjeto':
       return {
         titulo: 'Nuevo objeto',
         cuerpo: `<div class="form">
+            ${campo('Tipo', `<select data-f="tipoNuevo"><option value="unidad" ${S.f.tipoNuevo === 'unidad' ? 'selected' : ''}>Unidad (cada una tiene su código)</option><option value="producto" ${S.f.tipoNuevo === 'producto' ? 'selected' : ''}>Producto (hay varias iguales)</option></select>`)}
             ${campo('Código propio (opcional)', `<input data-f="codigoP" value="${esc(S.f.codigoP)}">`)}
             ${campo('Descripción', `<input data-f="desc" value="${esc(S.f.desc)}" size="30">`)}
+            ${S.f.tipoNuevo === 'producto' ? campo('Mínimo (alerta)', `<input type="number" min="0" data-f="minimoNuevo" value="${esc(S.f.minimoNuevo)}" style="width:110px;min-width:0">`) : ''}
           </div>
           <p class="dim" style="font-size:13px;margin:12px 0 0">El código interno se asigna solo. Después lo podés ubicar en un lugar.</p>
           ${msgHTML('obj')}`,

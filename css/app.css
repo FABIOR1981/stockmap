@@ -147,3 +147,25 @@ dialog#modal::backdrop { background: rgba(28,35,48,.35); backdrop-filter: blur(4
   .plano-flow { grid-template-columns: 1fr; }
   .pruebas { columns: 1; }
 }
+
+/* ---------- Stock, movimientos y accesos ---------- */
+.sesion select { width: 100%; min-width: 0; font-size: 13px; padding: 7px 8px; }
+.sesion .stack { padding: 0 10px; }
+.chip.falta { background: color-mix(in srgb, var(--peligro) 12%, transparent); color: var(--peligro); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--peligro) 22%, transparent); margin-left: 6px; }
+.dlg-lista .r .acciones-fila { justify-content: flex-end; }
+
+/* Sin permiso de edición (rol lector): se ocultan los controles de cambio. */
+.solo-lectura [data-act="editarAbrir"], .solo-lectura [data-act="clonarAbrir"], .solo-lectura [data-act="borrarLugar"],
+.solo-lectura [data-act="borrarObjeto"], .solo-lectura [data-act="abrirCrear"], .solo-lectura [data-act="abrirNuevoObjeto"],
+.solo-lectura [data-act="moverAbrir"], .solo-lectura [data-act="asignarObj"], .solo-lectura [data-act="asignarAqui"],
+.solo-lectura [data-act="liberarPar"], .solo-lectura [data-act="agregarNivel"], .solo-lectura [data-act="quitarNivel"],
+.solo-lectura [data-act="nivelesTipicos"], .solo-lectura [data-act="lote"], .solo-lectura [data-act="crear"],
+.solo-lectura [data-act="clonarEjecutar"], .solo-lectura [data-act="editarGuardar"], .solo-lectura [data-act="moverEjecutar"],
+.solo-lectura [data-act="crearObjeto"], .solo-lectura select[data-f="lugarPara"], .solo-lectura [data-cantoid],
+.solo-lectura [data-nivel], .solo-lectura [data-f="objAqui"], .solo-lectura [data-f="codigo"], .solo-lectura [data-f="nombre"],
+.solo-lectura [data-f="desde"], .solo-lectura [data-f="hasta"], .solo-lectura [data-f="mvHasta"],
+.solo-lectura [data-f="edCodigo"], .solo-lectura [data-f="edNombre"], .solo-lectura [data-f="cantClon"] { display: none !important; }
+
+/* Sin permiso de gestionar accesos: se ocultan los controles de roles. */
+.sin-gestion [data-act="darAcceso"], .sin-gestion [data-act="cambiarRol"], .sin-gestion [data-act="quitarAcceso"],
+.sin-gestion [data-f="accUid"], .sin-gestion [data-f="accRol"] { display: none !important; }

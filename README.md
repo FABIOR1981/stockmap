@@ -36,15 +36,28 @@ npm start        # sirve en http://localhost:8080
 npm test         # corre las pruebas de reglas
 ```
 
+## Conceptos
+
+- **Cliente**: cada uno tiene sus propios edificios, lugares, objetos y movimientos. Nunca se ven entre sí.
+- **Usuario**: el administrador general ve y hace todo. Los demás tienen un rol en cada cliente:
+  - **Admin del cliente**: gestiona accesos y datos.
+  - **Editor**: carga, saca y mueve stock.
+  - **Lector**: solo mira.
+- **Objeto de tipo unidad**: se identifica uno por uno (cada caja tiene su código). Cantidad 0 o 1.
+- **Objeto de tipo producto**: hay N unidades repartidas en lugares (por ejemplo, 12 resmas en un estante). Puede tener un mínimo y avisa cuando baja de ahí.
+- **Movimiento**: cada entrada, salida o transferencia queda registrada con fecha, usuario y cantidad.
+
 ## Reglas principales
 
 - Cada edificio define sus propios niveles (tipo de lugar, formato del código y si el nombre es opcional).
 - Los códigos son únicos entre hermanos.
-- Un lugar con objetos no se puede subdividir. Un lugar con subdivisiones no admite objetos.
-- Los edificios no tienen objetos directos.
-- Un objeto puede estar en varios lugares; un lugar admite varios objetos.
-- Borrar un lugar borra también lo que tiene adentro, solo si nada de eso tiene objetos.
-- Clonar copia niveles y estructura, nunca objetos; los códigos nuevos se asignan solos.
+- Un lugar con stock no se puede subdividir. Un lugar con subdivisiones no admite stock.
+- Los edificios no tienen stock directo.
+- Un objeto puede estar en varios lugares. Una unidad no se repite en el mismo lugar.
+- Nunca hay existencias negativas: no se saca más de lo que hay.
+- Transferir mueve stock sin cambiar el total.
+- No se borra un objeto con existencias, ni un lugar con objetos adentro.
+- Clonar copia niveles y estructura, nunca stock; los códigos nuevos se asignan solos.
 
 ## Almacenamiento
 
@@ -58,6 +71,7 @@ Los niveles hoy viven dentro de cada edificio; en el esquema tienen su propia ta
 
 ## Pendiente
 
+- Inicio de sesión real (hoy el usuario se elige en la barra lateral, como demostración).
+- Actualizar `supabase/esquema.sql` con clientes, usuarios, membresías, stock y movimientos. Hoy todavía es el esquema anterior.
 - Almacenamiento con Supabase.
 - Probar el arrastre del plano en pantallas táctiles.
-- Cantidades y movimientos de stock.

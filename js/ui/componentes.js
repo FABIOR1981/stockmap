@@ -56,10 +56,12 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   </div>`;
 }
 
+const NOMBRES_VISTA = { estructura: 'Edificios', plano: 'Plano', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
+
 export function migasHTML() {
   const d = ctx.dep;
-  const raiz = { estructura: 'Edificios', plano: 'Plano', objetos: 'Objetos' }[S.vista];
-  if (S.vista === 'objetos') return `<b>${raiz}</b>`;
+  if (!['estructura', 'plano'].includes(S.vista)) return `<b>${NOMBRES_VISTA[S.vista] || ''}</b>`;
+  const raiz = NOMBRES_VISTA[S.vista];
   const nodo = S.nodo ? d.porId(S.nodo) : null;
   const ruta = nodo ? d.ruta(nodo) : [];
   const accion = S.vista === 'plano' ? 'planoIr' : 'nodo';
@@ -71,7 +73,9 @@ export function migasHTML() {
 }
 
 export function accionPrincipal() {
-  if (S.vista === 'objetos') return `<button class="btn" data-act="abrirNuevoObjeto">${ic('mas', 14)} Nuevo objeto</button>`;
+  if (!ctx.dep.eid) return '';
+  if (S.vista === 'stock') return `<button class="btn" data-act="abrirNuevoObjeto">${ic('mas', 14)} Nuevo objeto</button>`;
+  if (!['estructura', 'plano'].includes(S.vista)) return '';
   const { def } = ctx.dep.nivelParaHijo(S.nodo);
   if (!def) return '';
   const texto = S.nodo ? `Agregar ${def.nombre.toLowerCase()}` : 'Nuevo edificio';

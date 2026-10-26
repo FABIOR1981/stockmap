@@ -1,22 +1,128 @@
-// Modelo del depósito: consultas y reglas. No toca el DOM.
-// Todo cambio pasa por el almacén (ver js/almacen/memoria.js).
-// Las funciones de cambio devuelven null si salió bien o un texto con el error.
+// Modelo de stock de depósitos: clientes, usuarios, lugares, objetos y movimientos.
+// No toca el DOM. Todo cambio pasa por el almacén (js/almacen/memoria.js).
+// Las funciones de cambio devuelven null si salió bien, o un texto con el error.
+//
+// Conceptos:
+//   - Cliente (establecimiento): cada uno tiene sus propios edificios, lugares y objetos.
+//   - Usuario: puede ser administrador general (ve y hace todo) o tener un rol en cada cliente:
+//       admin (gestiona accesos y datos), editor (carga y mueve), lector (solo mira).
+//   - Objeto de tipo 'unidad': un elemento identificado (cada caja tiene su código). Cantidad 0 o 1.
+//   - Objeto de tipo 'producto': un artículo del que hay N unidades repartidas en lugares.
+//   - Asignación: cuánto de un objeto hay en un lugar (cantidad > 0).
+//   - Movimiento: registro de entrada, salida o transferencia. Es el historial de todo cambio de stock.
 
 import { FORMATOS, NIVEL_EDIFICIO } from './formatos.js';
 
+const ROLES = ['admin', 'editor', 'lector'];
+const TIPOS = ['unidad', 'producto'];
+
 const porCodigo = (a, b) => a.codigo.localeCompare(b.codigo, 'es', { numeric: true });
 const pad = n => String(n).padStart(4, '0');
+const enteroPositivo = v => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null; };
 
 export class Deposito {
   constructor(almacen) {
     this.almacen = almacen;
+    this.uid = null;   // usuario con el que se opera (sesión)
+    this.eid = null;   // cliente que se está mirando
   }
 
-  // ---------- Lectura ----------
-  get lugares()      { return this.almacen.filas('lugares'); }
-  get objetos()      { return this.almacen.filas('objetos'); }
-  get asignaciones() { return this.almacen.filas('asignaciones'); }
+  // ---------- Lectura (todo lo de un cliente sale filtrado por this.eid) ----------
+  get establecimientos() { return this.almacen.filas('establecimientos'); }
+  get usuarios()         { return this.almacen.filas('usuarios'); }
+  get membresias()       { return this.almacen.filas('membresias'); }
+  get lugares()          { return this.almacen.filas('lugares').filter(l => l.eid === this.eid); }
+  get objetos()          { return this.almacen.filas('objetos').filter(o => o.eid === this.eid); }
+  get asignaciones() {
+    const ids = new Set(this.lugares.map(l => l.id));
+    return this.almacen.filas('asignaciones').filter(a => ids.has(a.lid));
+  }
+  get movimientos()      { return this.almacen.filas('movimientos').filter(m => m.eid === this.eid); }
 
+  usuarioActual()         { return this.usuarios.find(u => u.id === this.uid) || null; }
+  establecimientoActual() { return this.establecimientos.find(e => e.id === this.eid) || null; }
+  nombreUsuario(uid)      { const u = this.usuarios.find(x => x.id === uid); return u ? u.nombre : '—'; }
+  rolEn(eid = this.eid)   { const m = this.membresias.find(x => x.uid === this.uid && x.eid === eid); return m ? m.rol : null; }
+
+  puedeVer(eid) {
+    const u = this.usuarioActual();
+    if (!u) return false;
+    return u.es_admin || this.membresias.some(m => m.uid === u.id && m.eid === eid);
+  }
+  establecimientosVisibles() { return this.establecimientos.filter(e => this.puedeVer(e.id)); }
+  puedeEditar()   { return this._exigir('editar') === null; }
+  puedeGestionar() { return this._exigir('gestionar') === null; }
+
+  accesosDelCliente() {
+    return this.membresias.filter(m => m.eid === this.eid)
+      .map(m => ({ ...m, nombre: this.nombreUsuario(m.uid) }));
+  }
+
+  // Devuelve null si el usuario actual puede hacer la acción, o un texto con el motivo.
+  // Acciones: 'global' (solo administrador general), 'gestionar' (admin del cliente), 'editar'.
+  _exigir(accion) {
+    const u = this.usuarioActual();
+    if (!u) return 'Elegí un usuario.';
+    if (accion === 'global') return u.es_admin ? null : 'Solo el administrador general puede hacer esto.';
+    if (!this.eid) return 'Elegí un cliente primero.';
+    if (u.es_admin) return null;
+    const rol = this.rolEn();
+    if (!rol) return 'No tenés acceso a este cliente.';
+    if (accion === 'gestionar' && rol !== 'admin') return 'Solo un admin del cliente puede gestionar accesos.';
+    if (accion === 'editar' && rol === 'lector') return 'Tu rol es de solo lectura en este cliente.';
+    return null;
+  }
+
+  // ---------- Sesión ----------
+  elegirUsuario(uid) {
+    if (!this.usuarios.some(u => u.id === uid)) return 'Usuario inexistente.';
+    this.uid = uid;
+    if (this.eid && !this.puedeVer(this.eid)) {
+      this.eid = this.establecimientosVisibles()[0]?.id || null;
+    }
+    return null;
+  }
+
+  elegirEstablecimiento(eid) {
+    if (eid && !this.puedeVer(eid)) return 'No tenés acceso a ese cliente.';
+    this.eid = eid || null;
+    return null;
+  }
+
+  // ---------- Clientes, usuarios y accesos ----------
+  crearEstablecimiento(nombre) {
+    const err = this._exigir('global'); if (err) return { error: err };
+    const n = (nombre || '').trim();
+    if (!n) return { error: 'Falta el nombre del cliente.' };
+    const e = this.almacen.insertar('establecimientos', { id: 'E' + this.almacen.siguiente('establecimientos'), nombre: n });
+    return { establecimiento: e };
+  }
+
+  crearUsuario(nombre, esAdmin = false) {
+    const err = this._exigir('global'); if (err) return { error: err };
+    const n = (nombre || '').trim();
+    if (!n) return { error: 'Falta el nombre del usuario.' };
+    const u = this.almacen.insertar('usuarios', { id: 'U' + this.almacen.siguiente('usuarios'), nombre: n, es_admin: !!esAdmin });
+    return { usuario: u };
+  }
+
+  darAcceso(uid, rol) {
+    const err = this._exigir('gestionar'); if (err) return err;
+    if (!ROLES.includes(rol)) return 'Rol inexistente.';
+    if (!this.usuarios.some(u => u.id === uid)) return 'Usuario inexistente.';
+    const actual = this.membresias.find(m => m.uid === uid && m.eid === this.eid);
+    if (actual) this.almacen.actualizar('membresias', actual.id, { rol });
+    else this.almacen.insertar('membresias', { id: 'A' + this.almacen.siguiente('membresias'), uid, eid: this.eid, rol });
+    return null;
+  }
+
+  quitarAcceso(uid) {
+    const err = this._exigir('gestionar'); if (err) return err;
+    this.almacen.borrarDonde('membresias', m => m.uid === uid && m.eid === this.eid);
+    return null;
+  }
+
+  // ---------- Lugares ----------
   porId(id)       { return this.lugares.find(l => l.id === id); }
   objetoPorId(id) { return this.objetos.find(o => o.id === id); }
 
@@ -34,12 +140,10 @@ export class Deposito {
   prof(l)        { return this.ancestros(l).length; }
   edificioDe(l)  { return this.ruta(l)[0]; }
 
-  // Nivel que define un lugar (su tipo). Los edificios usan NIVEL_EDIFICIO.
   nivelDe(l) {
     const p = this.prof(l);
     return p === 0 ? NIVEL_EDIFICIO : this.edificioDe(l).niveles[p - 1];
   }
-  // Nivel que tendrían los hijos de un lugar (o los edificios si padreId es null).
   nivelParaHijo(padreId) {
     if (!padreId) return { def: NIVEL_EDIFICIO, ed: null };
     const padre = this.porId(padreId), ed = this.edificioDe(padre);
@@ -51,20 +155,14 @@ export class Deposito {
     while (pila.length) { const x = pila.pop(); r.push(x); pila.push(...this.hijos(x.id)); }
     return r;
   }
-  tieneObjetos(l)    { return this.asignaciones.some(a => a.lid === l.id); }
-  objetosDe(lid)     { return this.asignaciones.filter(a => a.lid === lid)
-                           .map(a => this.objetoPorId(a.oid)).filter(Boolean); }
-  ubicacionesDe(oid) { return this.asignaciones.filter(a => a.oid === oid)
-                           .map(a => this.porId(a.lid)).filter(Boolean); }
-  esHoja(l)          { return this.prof(l) > 0 && this.hijos(l.id).length === 0; }
+  esHoja(l) { return this.prof(l) > 0 && this.hijos(l.id).length === 0; }
 
-  // ¿Hay lugares en esa profundidad dentro de este edificio?
   usadoEn(edId, profundidad) {
     return this.lugares.some(l => l.padre_id && this.edificioDe(l).id === edId && this.prof(l) === profundidad);
   }
 
-  // ---------- Lugares ----------
   crearLugar(padreId, codigo, nombre) {
+    const err = this._exigir('editar'); if (err) return { error: err };
     const { def, ed } = this.nivelParaHijo(padreId);
     if (!def) return { error: `Este edificio no tiene nivel para esta profundidad. Agregalo en "Niveles de ${ed.codigo}".` };
     const F = FORMATOS[def.formato];
@@ -77,7 +175,7 @@ export class Deposito {
       return { error: `Ya existe "${cod}" dentro de este lugar.` };
     const id = 'L' + this.almacen.siguiente('lugares');
     this.almacen.insertar('lugares', {
-      id, padre_id: padreId || null, codigo: cod,
+      id, eid: this.eid, padre_id: padreId || null, codigo: cod,
       nombre: (def.nombreOpcional && nombre) ? nombre.trim() : '',
       niveles: []
     });
@@ -85,6 +183,7 @@ export class Deposito {
   }
 
   crearLote(padreId, desde, hasta) {
+    const err = this._exigir('editar'); if (err) return { error: err };
     const { def } = this.nivelParaHijo(padreId);
     if (!def) return { error: 'Este edificio no tiene nivel para esta profundidad.' };
     const cods = this.rango(desde, hasta, def.formato);
@@ -114,6 +213,7 @@ export class Deposito {
   }
 
   borrarLugar(id) {
+    const err = this._exigir('editar'); if (err) return err;
     const l = this.porId(id);
     if (!l) return 'Lugar inexistente.';
     const todos = [l, ...this.descendientes(l)];
@@ -124,6 +224,7 @@ export class Deposito {
   }
 
   editarLugar(id, cambios) {
+    const err = this._exigir('editar'); if (err) return err;
     const l = this.porId(id);
     if (!l) return 'Lugar inexistente.';
     const def = this.nivelDe(l);
@@ -157,14 +258,14 @@ export class Deposito {
     return null;
   }
 
-  // Copia un lugar con todo lo que tiene adentro, sin objetos. Devuelve el id de la copia.
+  // Copia un lugar con todo lo que tiene adentro, sin stock. Devuelve el id de la copia.
   copiarSubarbol(src, padreId, codigo) {
     let raiz = null;
     const copiar = (orig, padre, cod) => {
       const id = 'L' + this.almacen.siguiente('lugares');
       if (!raiz) raiz = id;
       this.almacen.insertar('lugares', {
-        id, padre_id: padre, codigo: cod, nombre: orig.nombre, niveles: structuredClone(orig.niveles)
+        id, eid: this.eid, padre_id: padre, codigo: cod, nombre: orig.nombre, niveles: structuredClone(orig.niveles)
       });
       this.hijos(orig.id).forEach(h => copiar(h, id, h.codigo));
     };
@@ -173,6 +274,7 @@ export class Deposito {
   }
 
   clonar(srcId, cantidad) {
+    const err = this._exigir('editar'); if (err) return { error: err };
     const src = this.porId(srcId);
     if (!src) return { error: 'Lugar inexistente.' };
     const n = parseInt(cantidad, 10);
@@ -190,6 +292,7 @@ export class Deposito {
 
   // ---------- Niveles de un edificio ----------
   agregarNivel(edId) {
+    const err = this._exigir('editar'); if (err) return err;
     const ed = this.porId(edId);
     if (ed.niveles.length >= 6) return 'Máximo 6 niveles por edificio.';
     const nuevo = { nombre: `Nivel ${ed.niveles.length + 1}`, formato: 'numero', nombreOpcional: false };
@@ -198,6 +301,7 @@ export class Deposito {
   }
 
   editarNivel(edId, i, campo, valor) {
+    const err = this._exigir('editar'); if (err) return err;
     const ed = this.porId(edId);
     if (campo === 'formato' && this.usadoEn(edId, i + 1)) return 'Ese nivel ya tiene lugares. No se puede cambiar su formato.';
     const niveles = ed.niveles.map((n, k) => k === i ? { ...n, [campo]: valor } : n);
@@ -206,6 +310,7 @@ export class Deposito {
   }
 
   quitarNivel(edId) {
+    const err = this._exigir('editar'); if (err) return err;
     const ed = this.porId(edId);
     const i = ed.niveles.length - 1;
     if (i < 0) return 'No hay niveles para quitar.';
@@ -215,49 +320,164 @@ export class Deposito {
   }
 
   ponerNivelesTipicos(edId) {
+    const err = this._exigir('editar'); if (err) return err;
     this.almacen.actualizar('lugares', edId, { niveles: [
       { nombre: 'Estantería', formato: 'letra',     nombreOpcional: false },
       { nombre: 'Estante',    formato: 'numero',    nombreOpcional: false },
       { nombre: 'División',   formato: 'letra_min', nombreOpcional: false }
     ] });
-  }
-
-  // ---------- Asignaciones ----------
-  asignar(oid, lid) {
-    if (!this.objetoPorId(oid)) return 'Objeto inexistente.';
-    const l = this.porId(lid);
-    if (!l) return 'Lugar inexistente.';
-    if (this.prof(l) === 0) return 'Los edificios no tienen objetos directos. Elegí un lugar dentro.';
-    if (this.hijos(l.id).length) return 'Este lugar tiene subdivisiones. Los objetos van dentro de ellas.';
-    if (this.asignaciones.some(a => a.oid === oid && a.lid === lid)) return 'Ese objeto ya está en este lugar.';
-    this.almacen.insertar('asignaciones', { oid, lid });
     return null;
   }
 
-  liberar(oid, lid) {
-    this.almacen.borrarDonde('asignaciones', a => a.oid === oid && a.lid === lid);
-  }
-
   // ---------- Objetos ----------
-  crearObjeto(codigoPropio, descripcion) {
+  crearObjeto(codigoPropio, descripcion, tipo = 'unidad', minimo = 0) {
+    const err = this._exigir('editar'); if (err) return { error: err };
     const cp = (codigoPropio || '').trim(), de = (descripcion || '').trim();
     if (!cp && !de) return { error: 'Ingresá un código propio o una descripción.' };
+    if (!TIPOS.includes(tipo)) return { error: 'Tipo de objeto inexistente.' };
+    const min = tipo === 'producto' ? Math.max(0, Math.floor(Number(minimo) || 0)) : 0;
     const n = this.almacen.siguiente('objetos');
     const objeto = this.almacen.insertar('objetos', {
-      id: 'O' + n, codigo_interno: 'OBJ-' + pad(n),
-      codigo_propio: cp || null, descripcion: de || null
+      id: 'O' + n, eid: this.eid, codigo_interno: 'OBJ-' + pad(n),
+      codigo_propio: cp || null, descripcion: de || null, tipo, minimo: min
     });
     return { objeto };
   }
 
   borrarObjeto(oid) {
-    this.almacen.borrarDonde('asignaciones', a => a.oid === oid);
-    this.almacen.borrarDonde('objetos', o => o.id === oid);
+    const err = this._exigir('editar'); if (err) return err;
+    if (this.existenciaTotal(oid) > 0) return 'Ese objeto tiene existencias. Sacalas antes de borrarlo.';
+    this.almacen.borrarDonde('objetos', o => o.id === oid && o.eid === this.eid);
+    return null;
+  }
+
+  // ---------- Stock: consultas ----------
+  cantidadEn(oid, lid) {
+    const a = this.asignaciones.find(x => x.oid === oid && x.lid === lid);
+    return a ? a.cantidad : 0;
+  }
+  existenciaTotal(oid) {
+    return this.asignaciones.filter(a => a.oid === oid).reduce((s, a) => s + a.cantidad, 0);
+  }
+  bajoMinimo(o) {
+    return o.tipo === 'producto' && o.minimo > 0 && this.existenciaTotal(o.id) < o.minimo;
+  }
+  tieneObjetos(l) { return this.asignaciones.some(a => a.lid === l.id && a.cantidad > 0); }
+  objetosDe(lid) {
+    return this.asignaciones.filter(a => a.lid === lid && a.cantidad > 0)
+      .map(a => this.objetoPorId(a.oid)).filter(Boolean);
+  }
+  ubicacionesDe(oid) {
+    return this.asignaciones.filter(a => a.oid === oid && a.cantidad > 0)
+      .map(a => this.porId(a.lid)).filter(Boolean);
+  }
+  movimientosRecientes(limite = 100) { return [...this.movimientos].reverse().slice(0, limite); }
+
+  // Lugar donde se puede guardar stock: hoja que no es edificio. Devuelve el lugar o un texto de error.
+  _lugarHoja(lid) {
+    const l = this.porId(lid);
+    if (!l) return 'Lugar inexistente.';
+    if (this.prof(l) === 0) return 'Los edificios no tienen objetos directos. Elegí un lugar dentro.';
+    if (this.hijos(l.id).length) return 'Este lugar tiene subdivisiones. Los objetos van dentro de ellas.';
+    return l;
+  }
+
+  // ---------- Stock: cambios (cada uno deja un movimiento) ----------
+  _sumar(oid, lid, n) {
+    const a = this.asignaciones.find(x => x.oid === oid && x.lid === lid);
+    if (a) this.almacen.actualizar('asignaciones', a.id, { cantidad: a.cantidad + n });
+    else this.almacen.insertar('asignaciones', { id: 'S' + this.almacen.siguiente('asignaciones'), oid, lid, cantidad: n });
+  }
+
+  _restar(oid, lid, n) {
+    const a = this.asignaciones.find(x => x.oid === oid && x.lid === lid);
+    const nuevo = a.cantidad - n;
+    if (nuevo > 0) this.almacen.actualizar('asignaciones', a.id, { cantidad: nuevo });
+    else this.almacen.borrarDonde('asignaciones', x => x.id === a.id);
+  }
+
+  _registrar(tipo, oid, desde, hasta, cantidad, nota) {
+    this.almacen.insertar('movimientos', {
+      id: 'M' + this.almacen.siguiente('movimientos'), eid: this.eid,
+      fecha: new Date().toISOString(), tipo, oid, desde, hasta, cantidad,
+      uid: this.uid, nota: (nota || '').trim()
+    });
+  }
+
+  // Entrada: pone objetos en un lugar. Las unidades entran de a una y no se repiten en el mismo lugar.
+  asignar(oid, lid, cantidad = 1, nota = '') {
+    const err = this._exigir('editar'); if (err) return err;
+    const o = this.objetoPorId(oid);
+    if (!o) return 'Objeto inexistente.';
+    const l = this._lugarHoja(lid);
+    if (typeof l === 'string') return l;
+    const n = o.tipo === 'unidad' ? 1 : enteroPositivo(cantidad);
+    if (!n) return 'La cantidad tiene que ser un número entero mayor que 0.';
+    if (o.tipo === 'unidad' && this.cantidadEn(oid, lid) > 0) return 'Ese objeto ya está en este lugar.';
+    this._sumar(oid, lid, n);
+    this._registrar('entrada', oid, null, lid, n, nota);
+    return null;
+  }
+
+  // Salida: saca objetos de un lugar. Nunca deja existencias negativas.
+  retirar(oid, lid, cantidad, nota = '') {
+    const err = this._exigir('editar'); if (err) return err;
+    const o = this.objetoPorId(oid);
+    if (!o) return 'Objeto inexistente.';
+    const n = enteroPositivo(cantidad);
+    if (!n) return 'La cantidad tiene que ser un número entero mayor que 0.';
+    const disp = this.cantidadEn(oid, lid);
+    if (!disp) return 'Ese objeto no está en este lugar.';
+    if (n > disp) return `Solo hay ${disp} en este lugar.`;
+    this._restar(oid, lid, n);
+    this._registrar('salida', oid, lid, null, n, nota);
+    return null;
+  }
+
+  // Saca todo lo que haya del objeto en ese lugar.
+  liberar(oid, lid) {
+    const c = this.cantidadEn(oid, lid);
+    if (!c) return 'Ese objeto no está en este lugar.';
+    return this.retirar(oid, lid, c);
+  }
+
+  // Mueve objetos de un lugar a otro. El total no cambia.
+  transferir(oid, desde, hasta, cantidad, nota = '') {
+    const err = this._exigir('editar'); if (err) return err;
+    const o = this.objetoPorId(oid);
+    if (!o) return 'Objeto inexistente.';
+    if (desde === hasta) return 'El origen y el destino son el mismo lugar.';
+    const destino = this._lugarHoja(hasta);
+    if (typeof destino === 'string') return destino;
+    const n = o.tipo === 'unidad' ? 1 : enteroPositivo(cantidad);
+    if (!n) return 'La cantidad tiene que ser un número entero mayor que 0.';
+    const disp = this.cantidadEn(oid, desde);
+    if (!disp) return 'Ese objeto no está en el lugar de origen.';
+    if (n > disp) return `Solo hay ${disp} en el origen.`;
+    if (o.tipo === 'unidad' && this.cantidadEn(oid, hasta) > 0) return 'Ese objeto ya está en el destino.';
+    this._restar(oid, desde, n);
+    this._sumar(oid, hasta, n);
+    this._registrar('transferencia', oid, desde, hasta, n, nota);
+    return null;
   }
 
   // ---------- Datos de ejemplo ----------
   cargarEjemplo() {
     this.almacen.vaciar();
+    const fabio = this.almacen.insertar('usuarios', { id: 'U' + this.almacen.siguiente('usuarios'), nombre: 'Fabio', es_admin: true });
+    const ana   = this.almacen.insertar('usuarios', { id: 'U' + this.almacen.siguiente('usuarios'), nombre: 'Ana', es_admin: false });
+    const luis  = this.almacen.insertar('usuarios', { id: 'U' + this.almacen.siguiente('usuarios'), nombre: 'Luis', es_admin: false });
+    const cA = this.almacen.insertar('establecimientos', { id: 'E' + this.almacen.siguiente('establecimientos'), nombre: 'Cliente A' });
+    const cB = this.almacen.insertar('establecimientos', { id: 'E' + this.almacen.siguiente('establecimientos'), nombre: 'Cliente B' });
+    this.almacen.insertar('membresias', { id: 'A' + this.almacen.siguiente('membresias'), uid: ana.id, eid: cA.id, rol: 'editor' });
+    this.almacen.insertar('membresias', { id: 'A' + this.almacen.siguiente('membresias'), uid: luis.id, eid: cA.id, rol: 'lector' });
+
+    this.uid = fabio.id;
+    this.eid = cB.id;
+    const e0B = this.crearLugar(null, '0').id;
+    this.ponerNivelesTipicos(e0B);
+
+    this.eid = cA.id;
     const e0 = this.crearLugar(null, '0').id;
     this.ponerNivelesTipicos(e0);
     const A = this.crearLugar(e0, 'A').id;
@@ -275,11 +495,17 @@ export class Deposito {
     const caja2 = this.crearObjeto('CAJA-779', 'Cajas de archivo 2020').objeto;
     const armario = this.crearObjeto('ARM-12', 'Armario metálico').objeto;
     const mesa = this.crearObjeto('', 'Mesa plegable').objeto;
+    const resma = this.crearObjeto('RES-A4', 'Resma A4 75 g', 'producto', 10).objeto;
+    const tinta = this.crearObjeto('TIN-N', 'Tinta negra', 'producto', 5).objeto;
     const divA = this.hijos(a3)[0].id;
     this.asignar(caja1.id, divA);
     this.asignar(caja2.id, divA);
     this.asignar(caja1.id, this.hijos(B)[1].id);
     this.asignar(armario.id, this.hijos(e1)[0].id);
     this.asignar(mesa.id, this.hijos(e1)[1].id);
+    this.asignar(resma.id, this.hijos(B)[0].id, 12);
+    this.asignar(tinta.id, this.hijos(e1)[0].id, 2);
+
+    this.eid = cA.id;
   }
 }
