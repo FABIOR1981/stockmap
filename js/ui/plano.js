@@ -21,8 +21,8 @@ export function tamanoPlano(lugares) {
     ancho = Math.max(ancho, p.x + ANCHO);
     alto = Math.max(alto, p.y + ALTO);
   });
-  // Un bloque de espacio libre a la derecha y abajo, para poder arrastrar hacia allí.
-  return { ancho: ancho + MARGEN + PASO, alto: alto + MARGEN + PASO_V };
+  // Espacio libre abajo, para poder arrastrar hacia allí. A la derecha solo el margen: el plano no se ensancha de más.
+  return { ancho: ancho + MARGEN, alto: alto + MARGEN + PASO_V };
 }
 
 // Posición de un lugar dentro de su plano (según su lugar entre los hermanos).

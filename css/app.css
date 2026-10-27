@@ -148,8 +148,8 @@ tbody tr:hover { background: var(--hov-2); }
 .dim { color: var(--mut); }
 
 /* ---------- Plano ---------- */
-.plano { position: relative; background-color: var(--sur-2); background-image: radial-gradient(var(--punto) 1px, transparent 1px); background-size: 18px 18px; border: 1px solid var(--lin); border-radius: var(--r); height: auto; max-height: min(66vh, 620px); overflow: auto; }
-.plano-lienzo { position: relative; min-width: 100%; }
+.plano { position: relative; width: fit-content; max-width: 100%; background-color: var(--sur-2); background-image: radial-gradient(var(--punto) 1px, transparent 1px); background-size: 18px 18px; border: 1px solid var(--lin); border-radius: var(--r); height: auto; max-height: min(66vh, 620px); overflow: auto; }
+.plano-lienzo { position: relative; }
 button.bloque { font: inherit; text-align: left; cursor: pointer; color: var(--ink); }
 button.bloque:hover { border-color: var(--acc); }
 .bloque.salida { border-style: dashed; background: var(--sur-2); border-top-color: var(--mut-2); }
