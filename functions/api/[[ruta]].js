@@ -373,15 +373,16 @@ export async function onRequest({ request, env, params }) {
     const ruta = '/' + (params.ruta || []).join('/');
     const m = request.method;
 
-    if (ruta === '/login'      && m === 'POST') return login(env, request);
+    // Los "return await" son necesarios: sin await, el error de estas rutas no pasa por el catch.
+    if (ruta === '/login'      && m === 'POST') return await login(env, request);
     if (ruta === '/logout'     && m === 'POST') return json({ ok: true }, 200, { 'Set-Cookie': cookieSesion('', 0) });
     if (ruta === '/sesion'     && m === 'GET') {
       const s = await sesionActual(env, request);
       return s ? json({ uid: s.uid, nombre: s.nombre, es_admin: s.es_admin }) : json({ error: 'Sin sesión.' }, 401);
     }
-    if (ruta === '/datos'      && m === 'GET')  return datos(env, request);
-    if (ruta === '/usuarios'   && m === 'POST') return crearUsuario(env, request);
-    if (ruta === '/sincronizar' && m === 'POST') return sincronizar(env, request);
+    if (ruta === '/datos'      && m === 'GET')  return await datos(env, request);
+    if (ruta === '/usuarios'   && m === 'POST') return await crearUsuario(env, request);
+    if (ruta === '/sincronizar' && m === 'POST') return await sincronizar(env, request);
 
     return json({ error: 'Ruta no encontrada.' }, 404);
   } catch (e) {
