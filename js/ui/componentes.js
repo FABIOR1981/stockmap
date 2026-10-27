@@ -4,15 +4,23 @@ import { ctx, S, esc, plural } from './estado.js';
 import { ic } from './iconos.js';
 
 // Estado visible de un lugar: edificio, subdividido, con objetos o libre.
+// Hay algo en el lugar o en cualquier nivel de adentro.
+const tieneAlgo = (d, l) => d.objetosDe(l.id).length > 0 || d.descendientes(l).some(x => d.objetosDe(x.id).length > 0);
+
 export function estadoDe(l) {
   const d = ctx.dep;
-  if (d.prof(l) === 0) return { cls: 'sub', chip: 'Edificio' };
-  const hijos = d.hijos(l.id).length;
-  if (hijos) {
+  const hijos = d.hijos(l.id);
+  // Lleno: tiene lugares adentro y cada uno tiene algo (en cualquier nivel).
+  const lleno = hijos.length > 0 && hijos.every(h => tieneAlgo(d, h));
+  const ocupado = tieneAlgo(d, l);
+  if (d.prof(l) === 0) return { cls: lleno ? 'lleno' : ocupado ? 'obj' : 'libre', chip: 'Edificio' };
+  if (hijos.length) {
     // Cuenta con el nombre del nivel de adentro: "10 estanterías", "1 estante".
     const def = d.nivelParaHijo(l.id).def;
     const nombre = def ? def.nombre.toLowerCase() : 'dentro';
-    return { cls: 'sub', chip: def ? `${hijos} ${hijos === 1 ? nombre : plural(nombre)}` : `${hijos} dentro` };
+    const n = hijos.length;
+    const chip = def ? `${n} ${n === 1 ? nombre : plural(nombre)}` : `${n} dentro`;
+    return { cls: lleno ? 'lleno' : ocupado ? 'obj' : 'libre', chip };
   }
   const n = d.objetosDe(l.id).length;
   if (n) return { cls: 'obj', chip: n === 1 ? '1 objeto' : `${n} objetos` };
@@ -99,5 +107,6 @@ export function leyenda() {
   return `<div class="leyenda">
     <span class="muestra libre">Libre</span>
     <span class="muestra obj">Con objetos</span>
+    <span class="muestra lleno">Lleno</span>
   </div>`;
 }

@@ -100,6 +100,7 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .chip.libre { background: color-mix(in srgb, var(--ok) 12%, transparent); color: var(--ok-tx); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ok) 22%, transparent); }
 .chip.obj   { background: color-mix(in srgb, var(--obj) 12%, transparent); color: var(--obj); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--obj) 22%, transparent); }
 .chip.sub   { background: color-mix(in srgb, var(--sub) 10%, transparent); color: var(--sub); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sub) 18%, transparent); }
+.chip.lleno { background: color-mix(in srgb, var(--peligro) 12%, transparent); color: var(--peligro); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--peligro) 22%, transparent); }
 
 /* ---------- Tarjetas cuadradas (edificios y lugares) ---------- */
 .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
@@ -122,6 +123,7 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .tarjeta.libre { background: var(--ok-f); border-color: var(--ok-l); }
 .tarjeta.obj   { background: var(--obj-f); border-color: var(--obj-l); }
 .tarjeta.sub   { background: var(--sub-f); border-color: var(--sub-l); }
+.tarjeta.lleno { background: color-mix(in srgb, var(--peligro) 9%, var(--sur)); border-color: color-mix(in srgb, var(--peligro) 35%, transparent); }
 
 /* ---------- Formularios ---------- */
 .form { display:flex; flex-wrap:wrap; gap: 12px; align-items: flex-end; }
@@ -160,6 +162,7 @@ button.bloque:hover { border-color: var(--acc); }
 .bloque.libre { background: var(--ok-f); border-color: var(--ok-l); border-top-color: var(--ok); }
 .bloque.obj   { background: var(--obj-f); border-color: var(--obj-l); border-top-color: var(--obj); }
 .bloque.sub   { background: var(--sub-f); border-color: var(--sub-l); border-top-color: var(--sub); }
+.bloque.lleno { background: color-mix(in srgb, var(--peligro) 9%, var(--sur)); border-color: color-mix(in srgb, var(--peligro) 35%, transparent); border-top-color: var(--peligro); }
 .bloque .nivel { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); font-weight: 600; }
 .bloque .codigo { font-size: 26px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
 .bloque .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
@@ -167,6 +170,7 @@ button.bloque:hover { border-color: var(--acc); }
 .muestra { display:inline-flex; align-items:center; padding: 4px 10px; border: 1px solid; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--ink); }
 .muestra.libre { background: var(--ok-f); border-color: var(--ok-l); }
 .muestra.obj { background: var(--obj-f); border-color: var(--obj-l); }
+.muestra.lleno { background: color-mix(in srgb, var(--peligro) 9%, var(--sur)); border-color: color-mix(in srgb, var(--peligro) 35%, transparent); }
 .leyenda { display:flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; color: var(--mut); font-size: 13px; }
 
 /* ---------- Ventanas ---------- */
