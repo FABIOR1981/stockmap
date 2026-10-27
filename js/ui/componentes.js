@@ -60,8 +60,9 @@ export function bloquePlano(l, estilo = '', atributos = '') {
     </div>
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
     <div class="pie">
-      <span class="chip ${st.cls}">${esc(st.chip)}</span>
-      ${objs ? `<button class="btn sm sec" data-act="verObjetos" data-id="${l.id}">Objetos (${objs})</button>` : ''}
+      ${objs && !hijos
+        ? `<button class="chip ${st.cls} chip-btn" data-act="verObjetos" data-id="${l.id}" title="Ver objetos">${esc(st.chip)}</button>`
+        : `<span class="chip ${st.cls}">${esc(st.chip)}</span>`}
     </div>
   </div>`;
 }
