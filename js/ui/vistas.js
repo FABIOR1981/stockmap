@@ -3,7 +3,7 @@
 import { ctx, S, esc, campo, msgHTML, plural } from './estado.js';
 import { FORMATOS } from '../core/formatos.js';
 import { ilustracion } from './iconos.js';
-import { tarjetaLugar, bloquePlano, leyenda } from './componentes.js';
+import { tarjetaLugar, bloquePlano, leyenda, estadoDe } from './componentes.js';
 import { posDe, tamanoPlano } from './plano.js';
 
 const ROLES = { admin: 'Admin', editor: 'Editor', lector: 'Lector' };
@@ -142,7 +142,7 @@ export function vistaStock() {
   if (!d.eid) return `<h1>Stock</h1>${sinCliente()}`;
   const q = S.q.trim().toLowerCase();
   const hojas = d.lugares.filter(l => d.esHoja(l));
-  const opciones = hojas.map(l => `<option value="${l.id}">${esc(d.dir(l))}</option>`).join('');
+  const opciones = oid => hojas.map(l => `<option value="${l.id}" ${S.f.lugarPara[oid] === l.id ? 'selected' : ''}>${esc(d.dir(l))}</option>`).join('');
 
   const buscador = `<div class="panel">
     <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código, código propio o descripción" aria-label="Buscar objeto">
@@ -183,8 +183,9 @@ export function vistaStock() {
       <td>${ubicaciones}</td>
       <td><div class="acciones-fila">
         <select data-f="lugarPara" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}">
-          <option value="">Elegir lugar…</option>${opciones}
+          <option value="">Elegir lugar…</option>${opciones(o.id)}
         </select>
+        <button class="btn sm sec" data-act="elegirEnPlano" data-oid="${o.id}">En el plano</button>
         ${cantidad}
         <button class="btn sm sec" data-act="asignarObj" data-oid="${o.id}">Agregar</button>
         <button class="btn sm peligro" data-act="borrarObjeto" data-oid="${o.id}">Borrar</button>
@@ -423,6 +424,37 @@ export function ventana() {
         titulo: `Objetos en ${d.dir(l)} (${objs.length})`,
         cuerpo: `${filas}${agregar}${msgHTML('objetos')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>`
+      };
+    }
+    case 'elegirLugar': {
+      const o = S.elegirPara ? d.objetoPorId(S.elegirPara) : null;
+      if (!o) return null;
+      const padre = S.elegirNodo ? d.porId(S.elegirNodo) : null;
+      const hijos = d.hijos(S.elegirNodo || null);
+      const { ancho, alto } = tamanoPlano(hijos);
+      const bloques = hijos.map((l, i) => {
+        const p = posDe(l, i);
+        const hoja = d.esHoja(l);
+        const est = estadoDe(l);
+        const nombre = `${hoja ? 'Elegir' : 'Entrar en'} ${d.dir(l)}`;
+        return `<button class="bloque ${est.cls}" style="left:${p.x}px;top:${p.y}px" data-act="${hoja ? 'elegir' : 'elegirIr'}" data-id="${l.id}" aria-label="${esc(nombre)}">
+          <span class="nivel">${esc(d.nivelDe(l).nombre)}</span>
+          <span class="codigo">${esc(l.codigo)}</span>
+          <span class="pie"><span class="chip ${est.cls}">${esc(est.chip)}</span></span>
+          <span class="accion">${hoja ? 'Elegir aquí' : 'Entrar →'}</span>
+        </button>`;
+      }).join('');
+      return {
+        titulo: `Elegir lugar para ${o.codigo_interno}`,
+        cuerpo: `<div class="acciones-fila" style="margin-bottom:12px">
+            ${padre ? `<button class="btn sm sec" data-act="elegirIr" data-id="${esc(padre.padre_id || '')}">← Volver</button>` : ''}
+            <span class="dim">${padre ? esc(d.dir(padre)) : 'Edificios del cliente'}</span></div>
+          <p class="ayuda" style="margin:0 0 12px">Elegí el lugar donde va. Los que tienen algo adentro se abren con "Entrar".</p>
+          ${hijos.length
+            ? `<div class="plano" style="height:min(50vh,420px)"><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}</div></div>`
+            : '<p class="vacio" style="border:0">No hay lugares aquí.</p>'}
+          ${msgHTML('elegir')}`,
+        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>`
       };
     }
     case 'mover': {

@@ -13,7 +13,7 @@ const cuentasDelFormulario = () => S.f.usarEstructura
   ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))
   : [];
 
-const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.msg = {}; };
+const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; S.msg = {}; };
 
 export const ACCIONES = {
   // Navegación
@@ -137,6 +137,17 @@ export const ACCIONES = {
     if (err) return aviso('mover', err);
     S.modal = null; S.mover = null;
     aviso('obj', null, S.f.mvHasta ? 'Movido.' : 'Retirado del depósito.');
+  },
+
+  // Elegir el lugar de un objeto mirando el plano (solo se navega y se elige; Agregar confirma).
+  elegirEnPlano: el => { S.elegirPara = el.oid; S.elegirNodo = null; S.modal = 'elegirLugar'; S.msg = {}; },
+  elegirIr: el => { S.elegirNodo = el.id || null; S.msg = {}; },
+  elegir: el => {
+    const l = d().porId(el.id);
+    if (!l || !S.elegirPara) return;
+    S.f.lugarPara[S.elegirPara] = l.id;
+    S.modal = null; S.elegirPara = null; S.elegirNodo = null;
+    aviso('obj', null, `Lugar elegido: ${d().dir(l)}. Tocá Agregar para confirmar.`);
   },
 
   abrirNuevoObjeto: () => { S.modal = 'nuevoObjeto'; S.msg = {}; },
