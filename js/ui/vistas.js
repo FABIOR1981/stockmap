@@ -335,6 +335,7 @@ export function ventana() {
             ${campo('Desde', `<input data-f="desde" value="${esc(S.f.desde)}" placeholder="${FORMATOS[def.formato].ej}">`)}
             ${campo('Hasta', `<input data-f="hasta" value="${esc(S.f.hasta)}" placeholder="${FORMATOS[def.formato].ej}">`)}
           </div>
+          <p class="dim" style="font-size:13px;margin:8px 0 0">Con "Varios" se crean solo los códigos del rango, sin nombre. Después podés ponerles nombre editándolos.</p>
           ${msgHTML('lote')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
               <button class="btn sec" data-act="lote">Crear varios</button>
