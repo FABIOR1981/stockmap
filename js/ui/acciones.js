@@ -117,6 +117,15 @@ export const ACCIONES = {
 
   // Objetos dentro de un lugar (ventana)
   verObjetos: el => { S.verObj = el.id; S.modal = 'objetos'; S.msg = {}; },
+  // Lugar elegido para un objeto sin lugar (selector de un estante o estantería).
+  ponerEn: el => { S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: el.value || null }; },
+  ponerObjeto: el => {
+    const lid = S.f.ponerEn?.[el.oid];
+    if (!lid) return aviso('objetos', 'Elegí el lugar donde va.');
+    const err = d().asignar(el.oid, lid);
+    aviso('objetos', err, 'Puesto en el lugar.');
+    if (!err) S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: null };
+  },
   // Pone un objeto en el lugar: el de la fila (data-oid) o el elegido en el selector.
   asignarAqui: el => {
     const oid = el.oid || S.f.objAqui;
@@ -128,7 +137,7 @@ export const ACCIONES = {
   sacarDeLugar: el => {
     const o = d().objetoPorId(el.oid);
     const cant = o?.tipo === 'producto' ? (S.f.cantPara[el.oid] || '1') : '1';
-    aviso(S.modal === 'objetos' ? 'objetos' : 'obj', d().retirar(el.oid, el.lid, cant), 'Sacado de ese lugar.');
+    aviso(S.modal === 'objetos' || S.vista === 'plano' ? 'objetos' : 'obj', d().retirar(el.oid, el.lid, cant), 'Sacado de ese lugar.');
   },
 
   // Stock desde la tabla

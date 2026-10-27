@@ -38,38 +38,58 @@ export function vistaEdificios() {
 }
 
 // ---------- Niveles de un edificio ----------
-// Objetos de un lugar: lista para sacar y selector para agregar. Lo usan la ventana de objetos y el plano.
+// Objetos de un lugar, desde su página: los propios (último nivel), los que hay adentro (si no es del último nivel),
+// y los que todavía no tienen lugar, para ponerlos en una de las divisiones de adentro o aquí mismo.
 function contenidoObjetos(l) {
   const d = ctx.dep;
-  const objs = d.objetosDe(l.id);
-      const fuera = d.objetos.filter(o => !objs.some(x => x.id === o.id));
-      const filas = objs.length
-        ? `<div class="dlg-lista">${objs.map(o => `<div class="r">
-            <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
-            <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>
-            ${o.tipo === 'producto' ? `<input type="number" min="1" max="${d.cantidadEn(o.id, l.id)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad a sacar de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">` : ''}
-            <button class="btn sm sec" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${l.id}">Sacar</button></span>
-          </div>`).join('')}</div>`
-        : `<p class="vacio" style="border:0;padding:12px">Este lugar no tiene objetos.</p>`;
-      const agregar = fuera.length
-        ? `<div class="form" style="margin-top:16px">
-            ${campo('Agregar un objeto', `<select data-f="objAqui" aria-label="Objeto a agregar"><option value="">Elegir…</option>${fuera.map(o => `<option value="${o.id}">${esc(o.codigo_interno)}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}</option>`).join('')}</select>`)}
-            <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}">Agregar</button>
-          </div>`
-        : `<p class="dim" style="font-size:13px;margin:16px 0 0">Todos los objetos ya están en este lugar.</p>`;
-  // Objetos que todavía no tienen ningún lugar: se ven para poder ponerlos acá.
-  // Los objetos van solo en lugares del último nivel: en otros lugares se avisa en vez de ofrecer agregar.
   const hoja = d.esHoja(l);
-  const sinLugar = hoja ? d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0) : [];
-  const sueltos = sinLugar.length
-    ? `<h3 class="sub-titulo">Sin lugar asignado (${sinLugar.length})</h3>
-       <div class="dlg-lista">${sinLugar.map(o => `<div class="r">
-          <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
-          <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}" data-oid="${o.id}">Poner aquí</button>
-        </div>`).join('')}</div>`
+  const etiqueta = o => `<strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}`;
+  const detalle = o => o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : '';
+  const sacar = (o, lid) => `${o.tipo === 'producto' ? `<input type="number" min="1" max="${d.cantidadEn(o.id, lid)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad a sacar de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">` : ''}
+    <button class="btn sm sec" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${lid}">Sacar</button>`;
+
+  // Lugares del último nivel adentro de este (si este no es del último nivel).
+  const hojas = hoja ? [] : d.descendientes(l).filter(x => d.esHoja(x));
+  const propios = hoja ? d.objetosDe(l.id) : [];
+  const filas = propios.length
+    ? `<div class="dlg-lista">${propios.map(o => `<div class="r">
+        <span>${etiqueta(o)}${detalle(o)}</span>
+        <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>${sacar(o, l.id)}</span>
+      </div>`).join('')}</div>`
+    : (hoja ? `<p class="vacio" style="border:0;padding:12px">Este lugar no tiene objetos.</p>` : '');
+
+  const adentro = hojas.flatMap(h => d.objetosDe(h.id).map(o => ({ o, h })));
+  const adentroHTML = adentro.length
+    ? `<h3 class="sub-titulo">Adentro (${adentro.length})</h3><div class="dlg-lista">${adentro.map(({ o, h }) => `<div class="r">
+        <span>${etiqueta(o)}<br><span class="dim" style="font-size:13px">en ${esc(d.dir(h))}</span></span>
+        <span class="acciones-fila">${sacar(o, h.id)}</span>
+      </div>`).join('')}</div>`
     : '';
-  const aviso2 = hoja ? '' : `<p class="dim" style="font-size:13px;margin:16px 0 0">Los objetos van en los lugares del último nivel. Entrá a uno para ponerlos.</p>`;
-  return `${filas}${hoja ? sueltos : ''}${hoja ? agregar : aviso2}${msgHTML('objetos')}`;
+
+  // Objetos que todavía no tienen ningún lugar.
+  const sinLugar = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
+  const sueltos = sinLugar.length && (hoja || hojas.length)
+    ? `<h3 class="sub-titulo">Sin lugar asignado (${sinLugar.length})</h3><div class="dlg-lista">${sinLugar.map(o => `<div class="r">
+        <span>${etiqueta(o)}${detalle(o)}</span>
+        ${hoja
+          ? `<button class="btn sm" data-act="asignarAqui" data-lid="${l.id}" data-oid="${o.id}">Poner aquí</button>`
+          : `<span class="acciones-fila"><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${hojas.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}</option>`).join('')}</select>
+              <button class="btn sm" data-act="ponerObjeto" data-oid="${o.id}">Poner</button></span>`}
+      </div>`).join('')}</div>`
+    : '';
+
+  // Solo en lugares del último nivel se agrega desde el selector (los demás se ubican en sus divisiones).
+  const fuera = hoja ? d.objetos.filter(o => !propios.some(x => x.id === o.id)) : [];
+  const agregar = hoja && fuera.length
+    ? `<div class="form" style="margin-top:16px">
+        ${campo('Agregar un objeto', `<select data-f="objAqui" aria-label="Objeto a agregar"><option value="">Elegir…</option>${fuera.map(o => `<option value="${o.id}">${esc(o.codigo_interno)}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}</option>`).join('')}</select>`)}
+        <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}">Agregar</button>
+      </div>`
+    : '';
+  const sinNada = !hoja && !hojas.length
+    ? `<p class="dim" style="font-size:13px;margin:16px 0 0">Este lugar no tiene lugares del último nivel adentro, así que no se le pueden poner objetos.</p>`
+    : '';
+  return `${filas}${adentroHTML}${sueltos}${agregar}${sinNada}${msgHTML('objetos')}`;
 }
 
 function editorNiveles(ed) {

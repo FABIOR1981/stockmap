@@ -20,6 +20,7 @@ export const S = {
     codigoP: '', desc: '', tipoNuevo: 'producto', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
+    ponerEn: {},                          // por objeto sin lugar: lugar elegido para ponerlo (desde un estante)
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,
     accUid: '', accRol: 'editor'
   },
