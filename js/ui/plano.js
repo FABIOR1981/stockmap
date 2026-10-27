@@ -21,7 +21,8 @@ export function tamanoPlano(lugares) {
     ancho = Math.max(ancho, p.x + ANCHO);
     alto = Math.max(alto, p.y + ALTO);
   });
-  return { ancho: ancho + MARGEN, alto: alto + MARGEN };
+  // Un bloque de espacio libre a la derecha y abajo, para poder arrastrar hacia allí.
+  return { ancho: ancho + MARGEN + PASO, alto: alto + MARGEN + PASO_V };
 }
 
 // Posición de un lugar dentro de su plano (según su lugar entre los hermanos).
@@ -60,8 +61,11 @@ export function instalarArrastre() {
     // El lienzo es el padre del bloque: se mide en cada movimiento, así sigue bien si la página se desplaza.
     const r = arrastre.el.parentElement.getBoundingClientRect();
     arrastre.movido = true;
-    arrastre.el.style.left = Math.max(0, Math.round(e.clientX - r.left - arrastre.dx)) + 'px';
-    arrastre.el.style.top  = Math.max(0, Math.round(e.clientY - r.top - arrastre.dy)) + 'px';
+    // No se puede sacar el bloque del lienzo.
+    const x = Math.min(Math.max(0, e.clientX - r.left - arrastre.dx), r.width - arrastre.el.offsetWidth);
+    const y = Math.min(Math.max(0, e.clientY - r.top - arrastre.dy), r.height - arrastre.el.offsetHeight);
+    arrastre.el.style.left = Math.round(x) + 'px';
+    arrastre.el.style.top  = Math.round(y) + 'px';
   });
 
   document.addEventListener('pointerup', () => {
