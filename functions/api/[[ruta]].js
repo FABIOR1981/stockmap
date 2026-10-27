@@ -134,13 +134,16 @@ async function rolEn(env, sesion, eid) {
   return m ? m.rol : null;
 }
 
-async function eidDeLugar(env, id) {
+// Primero la base; si no está todavía, lo que llega en el mismo envío (se guarda después de autorizar todo).
+async function eidDeLugar(env, id, pend) {
   const [l] = await db(env, `lugares?id=eq.${validarUUID(id)}&select=establecimiento_id`);
-  return l ? l.establecimiento_id : null;
+  if (l) return l.establecimiento_id;
+  return pend?.lugares.get(id) ?? null;
 }
-async function eidDeObjeto(env, id) {
+async function eidDeObjeto(env, id, pend) {
   const [o] = await db(env, `objetos?id=eq.${validarUUID(id)}&select=establecimiento_id`);
-  return o ? o.establecimiento_id : null;
+  if (o) return o.establecimiento_id;
+  return pend?.objetos.get(id) ?? null;
 }
 // Cliente al que pertenece una fila que ya existe en la base (null si no existe).
 async function eidExistente(env, tabla, id) {
@@ -159,7 +162,7 @@ async function eidExistente(env, tabla, id) {
 
 // ---------- Validación de cada operación ----------
 // Devuelve el cliente de la operación, o null si no hay nada que hacer (borrar algo que no existe).
-async function autorizar(env, sesion, op) {
+async function autorizar(env, sesion, op, pend) {
   if (op.op !== 'upsert' && op.op !== 'delete') throw new ErrorApi('Operación inválida.');
   const info = TABLAS[op.tabla];
   if (!info) throw new ErrorApi(`Tabla no permitida: ${op.tabla}.`, 403);
@@ -183,15 +186,15 @@ async function autorizar(env, sesion, op) {
 
     case 'niveles_edificio': {
       const edificio = validarUUID(datos.edificio_id);
-      eid = await eidDeLugar(env, edificio);
+      eid = await eidDeLugar(env, edificio, pend);
       if (!eid) throw new ErrorApi('El edificio no existe.', 400);
       break;
     }
 
     case 'existencias': {
       if (op.op === 'upsert') {
-        const eLugar = await eidDeLugar(env, validarUUID(datos.lugar_id));
-        const eObj = await eidDeObjeto(env, validarUUID(datos.objeto_id));
+        const eLugar = await eidDeLugar(env, validarUUID(datos.lugar_id), pend);
+        const eObj = await eidDeObjeto(env, validarUUID(datos.objeto_id), pend);
         if (!eLugar || eLugar !== eObj) throw new ErrorApi('El objeto y el lugar no son del mismo cliente.', 403);
         eid = eLugar;
         validarUUID(datos.id);
@@ -207,9 +210,9 @@ async function autorizar(env, sesion, op) {
         eid = validarUUID(datos.establecimiento_id);
         if (datos.usuario_id !== sesion.uid) throw new ErrorApi('El movimiento tiene que quedar a nombre de quien lo registra.', 403);
         const refs = [];
-        if (datos.objeto_id) refs.push(eidDeObjeto(env, datos.objeto_id));
-        if (datos.desde_lugar_id) refs.push(eidDeLugar(env, datos.desde_lugar_id));
-        if (datos.hasta_lugar_id) refs.push(eidDeLugar(env, datos.hasta_lugar_id));
+        if (datos.objeto_id) refs.push(eidDeObjeto(env, datos.objeto_id, pend));
+        if (datos.desde_lugar_id) refs.push(eidDeLugar(env, datos.desde_lugar_id, pend));
+        if (datos.hasta_lugar_id) refs.push(eidDeLugar(env, datos.hasta_lugar_id, pend));
         for (const r of await Promise.all(refs)) if (r !== eid) throw new ErrorApi('Un dato del movimiento es de otro cliente.', 403);
         validarUUID(datos.id);
       } else {
@@ -357,7 +360,13 @@ async function sincronizar(env, request) {
 
   // Primero se valida todo; si algo no está permitido, no se escribe nada.
   const verificadas = [];
-  for (const op of ops) verificadas.push({ op, valida: await autorizar(env, s, op) });
+  // Lo que se crea en este mismo envío (lugares y objetos nuevos) cuenta como existente para lo que lo usa.
+  const pend = { lugares: new Map(), objetos: new Map() };
+  for (const op of ops) {
+    if (op?.op === 'upsert' && (op.tabla === 'lugares' || op.tabla === 'objetos') && op.fila?.id && op.fila?.establecimiento_id)
+      pend[op.tabla].set(op.fila.id, op.fila.establecimiento_id);
+  }
+  for (const op of ops) verificadas.push({ op, valida: await autorizar(env, s, op, pend) });
 
   let aplicadas = 0;
   for (const { op, valida } of verificadas) {
