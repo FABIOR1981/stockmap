@@ -171,3 +171,10 @@ dialog#modal::backdrop { background: rgba(28,35,48,.35); backdrop-filter: blur(4
 .sin-gestion [data-f="accUid"], .sin-gestion [data-f="accRol"] { display: none !important; }
 
 .cab-niveles { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* Movimiento reducido: sin entradas animadas ni desplazamientos; los cambios de color y sombra se mantienen. */
+@media (prefers-reduced-motion: reduce) {
+  .contenido, dialog#modal { animation: none; }
+  .btn, .tarjeta { transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease; }
+  .btn:active, .tarjeta:hover { transform: none; }
+}
