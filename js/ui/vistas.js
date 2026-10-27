@@ -329,16 +329,17 @@ export function ventana() {
           </div>
           <p class="dim" style="font-size:13px;margin:8px 0 0">Formato: ${FORMATOS[def.formato].txt}.</p>
           ${msgHTML('crear')}
-          <hr class="sep-linea">
-          <div class="etiqueta" style="margin-bottom:10px">Varios a la vez</div>
-          <div class="form">
-            ${campo('Desde', `<input data-f="desde" value="${esc(S.f.desde)}" placeholder="${FORMATOS[def.formato].ej}">`)}
-            ${campo('Hasta', `<input data-f="hasta" value="${esc(S.f.hasta)}" placeholder="${FORMATOS[def.formato].ej}">`)}
-          </div>
-          <p class="dim" style="font-size:13px;margin:8px 0 0">Con "Varios" se crean solo los códigos del rango, sin nombre. Después podés ponerles nombre editándolos.</p>
-          ${msgHTML('lote')}`,
+          <button class="btn sec sm" data-act="verVarios" style="margin-top:14px">${S.f.verVarios ? 'Ocultar varios' : 'Crear varios de una vez'}</button>
+          ${S.f.verVarios ? `<div class="panel" style="margin-top:12px">
+            <div class="form">
+              ${campo('Desde', `<input data-f="desde" value="${esc(S.f.desde)}" placeholder="${FORMATOS[def.formato].ej}">`)}
+              ${campo('Hasta', `<input data-f="hasta" value="${esc(S.f.hasta)}" placeholder="${FORMATOS[def.formato].ej}">`)}
+            </div>
+            <p class="dim" style="font-size:13px;margin:8px 0 0">Crea solo los códigos del rango, sin nombre. El nombre se pone después editando cada uno.</p>
+            ${msgHTML('lote')}
+          </div>` : ''}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
-              <button class="btn sec" data-act="lote">Crear varios</button>
+              ${S.f.verVarios ? '<button class="btn sec" data-act="lote">Crear varios</button>' : ''}
               <button class="btn" data-act="crear">Crear</button>`
       };
     }
@@ -406,7 +407,7 @@ export function ventana() {
         cuerpo: `<p class="dim" style="margin:0 0 14px">Desde <strong>${esc(d.dir(origen))}</strong>. Hay ${disp} ${unidad ? '' : 'unidades'} aquí.</p>
           <div class="form">
             ${unidad ? '' : campo('Cantidad', `<input type="number" min="1" max="${disp}" data-f="cantMov" value="${esc(S.f.cantMov)}" style="width:110px;min-width:0">`)}
-            ${campo('Destino', `<select data-f="mvHasta"><option value="">Retirar del depósito (sin destino)</option>${destinos.map(l => `<option value="${l.id}" ${S.f.mvHasta === l.id ? 'selected' : ''}>${esc(d.dir(l))}</option>`).join('')}</select>`)}
+            ${campo('Destino', `<select data-f="mvHasta"><option value="">Sacar del depósito (sin destino)</option>${destinos.map(l => `<option value="${l.id}" ${S.f.mvHasta === l.id ? 'selected' : ''}>${esc(d.dir(l))}</option>`).join('')}</select>`)}
           </div>
           ${msgHTML('mover')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>

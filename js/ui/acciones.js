@@ -64,6 +64,7 @@ export const ACCIONES = {
     aviso('crear', r.error, 'Creado.');
     if (!r.error) { S.f.codigo = ''; S.f.nombre = ''; }
   },
+  verVarios: () => { S.f.verVarios = !S.f.verVarios; S.msg = {}; },
   lote: () => {
     const r = d().crearLote(S.nodo, S.f.desde, S.f.hasta);
     if (r.error) return aviso('lote', r.error);
