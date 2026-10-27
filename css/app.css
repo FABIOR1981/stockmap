@@ -140,6 +140,8 @@ tbody tr:hover { background: var(--hov-2); }
 .plano-lienzo { position: relative; min-width: 100%; }
 button.bloque { font: inherit; text-align: left; cursor: pointer; color: var(--ink); }
 button.bloque:hover { border-color: var(--acc); }
+.bloque.elegido { outline: 3px solid var(--acc); outline-offset: 2px; }
+.bloque.lejos { opacity: .45; }
 .bloque .accion { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--acc-tx); }
 .bloque { position: absolute; width: 184px; height: 184px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
 .bloque[data-drag] { cursor: grab; user-select: none; touch-action: none; }

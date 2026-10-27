@@ -5,6 +5,7 @@
 import { ctx, S, aviso } from './estado.js';
 import { correrPruebas } from '../core/pruebas.js';
 import { api } from '../almacen/nube.js';
+import { sonAledanos } from './plano.js';
 
 const d = () => ctx.dep;
 
@@ -13,7 +14,8 @@ const cuentasDelFormulario = () => S.f.usarEstructura
   ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))
   : [];
 
-const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; S.msg = {}; };
+const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.msg = {}; };
+const cerrarElegir = mensaje => { limpiarModal(); aviso('obj', null, mensaje); };
 
 export const ACCIONES = {
   // Navegación
@@ -134,17 +136,36 @@ export const ACCIONES = {
   },
 
   // Elegir el lugar de un objeto mirando el plano (solo se navega y se elige; Agregar confirma).
-  elegirEnPlano: el => { S.elegirPara = el.oid; S.elegirNodo = null; S.modal = 'elegirLugar'; S.msg = {}; },
+  elegirEnPlano: el => { S.elegirPara = el.oid; S.elegirNodo = null; S.elegirLugares = []; S.modal = 'elegirLugar'; S.msg = {}; },
   elegirIr: el => { S.elegirNodo = el.id || null; S.msg = {}; },
-  // Elegir un lugar del plano asigna el objeto ahí de una vez.
+  // Una unidad va en un solo lugar: se asigna de una vez. Un producto puede ir en varios lugares
+  // aledaños: el primero que se toca manda, y los siguientes tienen que estar cerca de él.
   elegir: el => {
     const l = d().porId(el.id);
     if (!l || !S.elegirPara) return;
     const o = d().objetoPorId(S.elegirPara);
-    const err = d().asignar(S.elegirPara, l.id, S.f.cantPara[S.elegirPara] || '1');
-    if (err) return aviso('elegir', err);
-    S.modal = null; S.elegirPara = null; S.elegirNodo = null;
-    aviso('obj', null, `${o.codigo_interno} agregado en ${d().dir(l)}.`);
+    if (o.tipo === 'unidad') {
+      const err = d().asignar(o.id, l.id, '1');
+      if (err) return aviso('elegir', err);
+      return cerrarElegir(`${o.codigo_interno} agregado en ${d().dir(l)}.`);
+    }
+    const elegidos = S.elegirLugares;
+    if (elegidos.includes(l.id)) { S.elegirLugares = elegidos.filter(x => x !== l.id); aviso('elegir', null); return; }
+    if (elegidos.length && !sonAledanos(d().porId(elegidos[0]), l)) {
+      return aviso('elegir', 'Ese lugar no está cerca del primero. Los lugares tienen que estar en el mismo plano y uno al lado del otro.');
+    }
+    S.elegirLugares = [...elegidos, l.id];
+    aviso('elegir', null);
+  },
+  elegirConfirmar: () => {
+    const oid = S.elegirPara, ids = S.elegirLugares;
+    if (!oid || !ids.length) return aviso('elegir', 'Elegí al menos un lugar.');
+    const cant = S.f.cantPara[oid] || '1';
+    for (const lid of ids) {
+      const err = d().asignar(oid, lid, cant);
+      if (err) return aviso('elegir', err);
+    }
+    cerrarElegir(`${d().objetoPorId(oid).codigo_interno} agregado en ${ids.length} ${ids.length > 1 ? 'lugares' : 'lugar'}.`);
   },
 
   abrirNuevoObjeto: () => { S.modal = 'nuevoObjeto'; S.msg = {}; },

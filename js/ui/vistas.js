@@ -4,7 +4,7 @@ import { ctx, S, esc, campo, msgHTML, plural } from './estado.js';
 import { FORMATOS } from '../core/formatos.js';
 import { ilustracion } from './iconos.js';
 import { tarjetaLugar, bloquePlano, leyenda, estadoDe } from './componentes.js';
-import { posDe, tamanoPlano } from './plano.js';
+import { posDe, tamanoPlano, sonAledanos } from './plano.js';
 
 const ROLES = { admin: 'Admin', editor: 'Editor', lector: 'Lector' };
 const TIPOS = { unidad: 'Unidad', producto: 'Producto' };
@@ -423,6 +423,9 @@ export function ventana() {
     case 'elegirLugar': {
       const o = S.elegirPara ? d.objetoPorId(S.elegirPara) : null;
       if (!o) return null;
+      const producto = o.tipo === 'producto';
+      const elegidos = S.elegirLugares;
+      const primero = elegidos.length ? d.porId(elegidos[0]) : null;
       const padre = S.elegirNodo ? d.porId(S.elegirNodo) : null;
       const hijos = d.hijos(S.elegirNodo || null);
       const { ancho, alto } = tamanoPlano(hijos);
@@ -430,25 +433,35 @@ export function ventana() {
         const p = posDe(l, i);
         const hoja = d.esHoja(l);
         const est = estadoDe(l);
-        const nombre = `${hoja ? 'Elegir' : 'Entrar en'} ${d.dir(l)}`;
-        return `<button class="bloque ${est.cls}" style="left:${p.x}px;top:${p.y}px" data-act="${hoja ? 'elegir' : 'elegirIr'}" data-id="${l.id}" aria-label="${esc(nombre)}">
+        const marcado = elegidos.includes(l.id);
+        const lejos = hoja && primero && !marcado && !sonAledanos(primero, l);
+        const accion = !hoja ? 'Entrar →' : marcado ? 'Quitar' : 'Elegir aquí';
+        const nombre = `${accion} ${d.dir(l)}`;
+        return `<button class="bloque ${est.cls}${marcado ? ' elegido' : ''}${lejos ? ' lejos' : ''}" style="left:${p.x}px;top:${p.y}px"
+            data-act="${hoja ? 'elegir' : 'elegirIr'}" data-id="${l.id}" ${hoja ? `aria-pressed="${marcado}"` : ''} aria-label="${esc(nombre)}">
           <span class="nivel">${esc(d.nivelDe(l).nombre)}</span>
           <span class="codigo">${esc(l.codigo)}</span>
           <span class="pie"><span class="chip ${est.cls}">${esc(est.chip)}</span></span>
-          <span class="accion">${hoja ? 'Elegir aquí' : 'Entrar →'}</span>
+          <span class="accion">${accion}</span>
         </button>`;
       }).join('');
+      const n = elegidos.length;
+      const ayuda = producto
+        ? 'Podés elegir varios lugares. El primero que toques manda: los siguientes tienen que estar al lado, en el mismo plano. Tocá de nuevo para quitar uno.'
+        : 'Elegí el lugar donde va. Los que tienen algo adentro se abren con "Entrar".';
       return {
         titulo: `Elegir lugar para ${o.codigo_interno}`,
         cuerpo: `<div class="acciones-fila" style="margin-bottom:12px">
             ${padre ? `<button class="btn sm sec" data-act="elegirIr" data-id="${esc(padre.padre_id || '')}">← Volver</button>` : ''}
             <span class="dim">${padre ? esc(d.dir(padre)) : 'Edificios del cliente'}</span></div>
-          <p class="ayuda" style="margin:0 0 12px">Elegí el lugar donde va. Los que tienen algo adentro se abren con "Entrar".</p>
+          <p class="ayuda" style="margin:0 0 12px">${ayuda}</p>
           ${hijos.length
             ? `<div class="plano" style="height:min(50vh,420px)"><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}</div></div>`
             : '<p class="vacio" style="border:0">No hay lugares aquí.</p>'}
           ${msgHTML('elegir')}`,
-        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>`
+        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>${producto
+          ? `<button class="btn" data-act="elegirConfirmar" ${n ? '' : 'disabled'}>${n ? `Asignar a ${n} ${n > 1 ? 'lugares' : 'lugar'}` : 'Asignar'}</button>`
+          : ''}`
       };
     }
     case 'mover': {

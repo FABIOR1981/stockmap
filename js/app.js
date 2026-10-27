@@ -194,7 +194,7 @@ document.addEventListener('change', e => {
 
 // Esc o la X cierran la ventana.
 $('#modal').addEventListener('close', () => {
-  if (S.modal) { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; render(); }
+  if (S.modal) { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; render(); }
 });
 
 instalarArrastre();

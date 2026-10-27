@@ -11,6 +11,7 @@ export const S = {
   modal: null,             // 'crear' | 'editar' | 'clonar' | 'objetos' | 'mover' | 'nuevoObjeto' | 'elegirLugar' | null
   elegirPara: null,        // objeto al que se le elige lugar en el plano
   elegirNodo: null,        // lugar que se muestra dentro de esa ventana (null = edificios)
+  elegirLugares: [],       // lugares elegidos para el objeto (productos pueden tener varios, aledaños)
   editar: null, clon: null, verObj: null,
   mover: null,             // { oid, lid } del objeto que se mueve
   f: {

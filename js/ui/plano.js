@@ -23,6 +23,19 @@ export function tamanoPlano(lugares) {
   return { ancho: ancho + MARGEN, alto: alto + MARGEN };
 }
 
+// Posición de un lugar dentro de su plano (según su lugar entre los hermanos).
+export function posEnPlano(l) {
+  const hermanos = ctx.dep.hijos(l.padre_id || null);
+  return posDe(l, Math.max(0, hermanos.findIndex(h => h.id === l.id)));
+}
+
+// Aledaños: están en el mismo plano y a una distancia de un bloque o menos.
+export function sonAledanos(a, b) {
+  if ((a.padre_id || null) !== (b.padre_id || null)) return false;
+  const pa = posEnPlano(a), pb = posEnPlano(b);
+  return Math.hypot(pa.x - pb.x, pa.y - pb.y) <= PASO * 1.5;
+}
+
 let arrastre = null;
 
 export function instalarArrastre() {
