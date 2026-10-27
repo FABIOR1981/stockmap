@@ -181,8 +181,58 @@ export class Deposito {
     return { id };
   }
 
-  crearLote(padreId, desde, hasta) {
+  // Niveles que tendría dentro un hijo nuevo de padreId (los que define el edificio debajo de él).
+  nivelesBajo(padreId) {
+    if (!padreId) return [];
+    const padre = this.porId(padreId);
+    return this.edificioDe(padre).niveles.slice(this.prof(padre) + 1);
+  }
+
+  // Cantidades para la estructura de un lugar nuevo: cuentas[0] = hijos, cuentas[1] = nietos, etc.
+  validarCuentas(padreId, cuentas) {
+    if (!cuentas.length) return null;
+    if (!padreId) return 'Primero definí los niveles del edificio.';
+    if (cuentas.length > this.nivelesBajo(padreId).length) return 'La estructura del edificio tiene menos niveles.';
+    if (cuentas.some(n => !Number.isInteger(n) || n < 1)) return 'Indicá cantidades de 1 o más.';
+    return null;
+  }
+
+  codigosPara(formato, n) {
+    if (formato === 'numero') return Array.from({ length: n }, (_, i) => String(i + 1));
+    if (n > 26) return null;
+    const base = formato === 'letra' ? 65 : 97;
+    return Array.from({ length: n }, (_, i) => String.fromCharCode(base + i));
+  }
+
+  // Crea un lugar y, si hay cuentas, sus hijos y nietos según la estructura del edificio.
+  crearArbol(padreId, codigo, nombre, cuentas = []) {
+    const err = this.validarCuentas(padreId, cuentas);
+    if (err) return { error: err };
+    const r = this.crearLugar(padreId, codigo, nombre);
+    if (r.error) return r;
+    let creados = 1;
+    const hijos = (padre, k) => {
+      if (k >= cuentas.length) return null;
+      const { def } = this.nivelParaHijo(padre);
+      const cods = this.codigosPara(def.formato, cuentas[k]);
+      if (!cods) return { error: `No hay códigos suficientes para ${cuentas[k]} ${def.nombre.toLowerCase()}s.` };
+      for (const c of cods) {
+        const h = this.crearLugar(padre, c, '');
+        if (h.error) return { error: `${c}: ${h.error}` };
+        creados++;
+        const e = hijos(h.id, k + 1);
+        if (e) return e;
+      }
+      return null;
+    };
+    const e = hijos(r.id, 0);
+    return e ? { ...e, id: r.id, creados } : { id: r.id, creados };
+  }
+
+  crearLote(padreId, desde, hasta, cuentas = []) {
     const err = this._exigir('editar'); if (err) return { error: err };
+    const errCuentas = this.validarCuentas(padreId, cuentas);
+    if (errCuentas) return { error: errCuentas };
     const { def } = this.nivelParaHijo(padreId);
     if (!def) return { error: 'Este edificio no tiene nivel para esta profundidad.' };
     const cods = this.rango(desde, hasta, def.formato);
@@ -191,8 +241,8 @@ export class Deposito {
     let creados = 0;
     const errores = [];
     cods.forEach(c => {
-      const r = this.crearLugar(padreId, c, '');
-      r.error ? errores.push(`${c}: ${r.error}`) : creados++;
+      const r = this.crearArbol(padreId, c, '', cuentas);
+      r.error ? errores.push(`${c}: ${r.error}`) : (creados += r.creados);
     });
     return { creados, errores };
   }

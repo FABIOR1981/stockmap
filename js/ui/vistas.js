@@ -1,6 +1,6 @@
 // Vistas de la interfaz. Cada una devuelve HTML a partir del modelo y del estado.
 
-import { ctx, S, esc, campo, msgHTML } from './estado.js';
+import { ctx, S, esc, campo, msgHTML, plural } from './estado.js';
 import { FORMATOS } from '../core/formatos.js';
 import { ilustracion } from './iconos.js';
 import { tarjetaLugar, bloquePlano, leyenda } from './componentes.js';
@@ -79,7 +79,7 @@ export function vistaEstructura() {
   const { def } = d.nivelParaHijo(nodo.id);
   const kids = d.hijos(nodo.id);
 
-  const cabecera = `<h1>${esc(def ? def.nombre + 's' : 'Contenido')} de ${esc(d.dir(nodo))}</h1>
+  const cabecera = `<h1>${esc(def ? plural(def.nombre) : 'Contenido')} de ${esc(d.dir(nodo))}</h1>
     <p class="sub">${esEdificio ? 'Definí los niveles y después cargá lo que hay adentro.'
       : `Niveles del edificio ${esc(ed.codigo)}: ${esc(ed.niveles.map(n => n.nombre).join(' › ') || '—')}.`}</p>`;
 
@@ -88,7 +88,7 @@ export function vistaEstructura() {
     ? `<div class="aviso">Primero definí los niveles de este edificio, más arriba.</div>`
     : kids.length
       ? `<section class="panel"><h2>Contenido</h2><p class="ayuda">${kids.length} ${kids.length === 1 ? 'elemento' : 'elementos'}. Tocá Abrir para entrar.</p><div class="grid">${kids.map(tarjetaLugar).join('')}</div></section>`
-      : `<div class="vacio"><span class="ilu">${ilustracion()}</span><p>Todavía no hay ${esc(def.nombre.toLowerCase())}s aquí</p>
+      : `<div class="vacio"><span class="ilu">${ilustracion()}</span><p>Todavía no hay ${esc(plural(def.nombre.toLowerCase()))} aquí</p>
           <small>Agregá el primero y empezá a armar el contenido.</small>
           <button class="btn" data-act="abrirCrear">+ Agregar ${esc(def.nombre.toLowerCase())}</button></div>`;
 
@@ -114,7 +114,7 @@ export function vistaPlano() {
   }
   const kids = d.hijos(foco.id);
   return `<h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
-    <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(def.nombre.toLowerCase())}s.` : 'No tiene niveles para contener lugares.'}</p>
+    <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}.` : 'No tiene niveles para contener lugares.'}</p>
     <div class="plano">
       <div class="plano-flow">${kids.length
         ? kids.map(l => bloquePlano(l)).join('')
@@ -312,6 +312,22 @@ export function bloquePruebas() {
   </section>`;
 }
 
+// ---------- Estructura opcional al crear un lugar ----------
+// Si el edificio define niveles debajo de este lugar, se pueden crear también sus hijos y nietos.
+function bloqueEstructura(padre, def) {
+  const bajo = padre ? ctx.dep.nivelesBajo(padre.id) : [];
+  if (!bajo.length) return '';
+  const fila = (nivel, i) => {
+    const de = i === 0 ? def.nombre : bajo[i - 1].nombre;
+    return `<div class="form" style="margin-top:8px">${campo(`Cuántos ${esc(plural(nivel.nombre.toLowerCase()))} por ${esc(de.toLowerCase())}`,
+      `<input data-f="cuenta${i}" type="number" min="1" value="${esc(S.f['cuenta' + i])}" style="width:110px;min-width:0">`)}</div>`;
+  };
+  return `<div class="panel" style="margin-top:12px">
+    <label class="campo"><span>&nbsp;</span><span><input type="checkbox" data-f="usarEstructura" ${S.f.usarEstructura ? 'checked' : ''}> Usar la estructura del edificio (crea sus ${esc(bajo.map(n => plural(n.nombre.toLowerCase())).join(' y '))})</span></label>
+    ${S.f.usarEstructura ? bajo.map(fila).join('') : ''}
+  </div>`;
+}
+
 // ---------- Ventanas (modales) ----------
 export function ventana() {
   const d = ctx.dep;
@@ -328,6 +344,7 @@ export function ventana() {
             ${def.nombreOpcional ? campo('Nombre (opcional)', `<input data-f="nombre" value="${esc(S.f.nombre)}">`) : ''}
           </div>
           <p class="dim" style="font-size:13px;margin:8px 0 0">Formato: ${FORMATOS[def.formato].txt}.</p>
+          ${bloqueEstructura(nodo, def)}
           ${msgHTML('crear')}
           <button class="btn sec sm" data-act="verVarios" style="margin-top:14px">${S.f.verVarios ? 'Ocultar varios' : 'Crear varios de una vez'}</button>
           ${S.f.verVarios ? `<div class="panel" style="margin-top:12px">

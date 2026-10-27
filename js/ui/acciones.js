@@ -8,6 +8,11 @@ import { api } from '../almacen/nube.js';
 
 const d = () => ctx.dep;
 
+// Cantidades de la estructura, si el usuario la eligió (vacío = sin estructura).
+const cuentasDelFormulario = () => S.f.usarEstructura
+  ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))
+  : [];
+
 const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.msg = {}; };
 
 export const ACCIONES = {
@@ -60,13 +65,13 @@ export const ACCIONES = {
   // Crear lugares
   abrirCrear: () => { S.modal = 'crear'; S.msg = {}; },
   crear: () => {
-    const r = d().crearLugar(S.nodo, S.f.codigo, S.f.nombre);
-    aviso('crear', r.error, 'Creado.');
+    const r = d().crearArbol(S.nodo, S.f.codigo, S.f.nombre, cuentasDelFormulario());
+    aviso('crear', r.error, r.creados > 1 ? `Creados: ${r.creados}.` : 'Creado.');
     if (!r.error) { S.f.codigo = ''; S.f.nombre = ''; }
   },
   verVarios: () => { S.f.verVarios = !S.f.verVarios; S.msg = {}; },
   lote: () => {
-    const r = d().crearLote(S.nodo, S.f.desde, S.f.hasta);
+    const r = d().crearLote(S.nodo, S.f.desde, S.f.hasta, cuentasDelFormulario());
     if (r.error) return aviso('lote', r.error);
     aviso('lote', r.errores.length ? r.errores.join(' · ') : null, `${r.creados} creados.`);
   },

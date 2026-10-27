@@ -39,3 +39,6 @@ export function msgHTML(clave) {
   const m = S.msg[clave] || {};
   return `${m.err ? `<p class="msg err" role="alert">${esc(m.err)}</p>` : ''}${m.ok ? `<p class="msg ok" role="status">${esc(m.ok)}</p>` : ''}`;
 }
+
+// Plural de un nombre de nivel: estante → estantes, división → divisiones, estantería → estanterías.
+export const plural = s => (/[aeiouáéíóú]$/i.test(s) ? s + 's' : s.replace(/ón$/, 'on') + 'es');
