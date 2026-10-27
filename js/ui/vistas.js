@@ -347,7 +347,7 @@ function bloqueEstructura(padre, def) {
 // ---------- Ventanas (modales) ----------
 // SALIDA: lugar fijo para los objetos que salen del sistema. No se guarda en la base.
 const bloqueSalida = (pos, interactivo) => {
-  const cuerpo = '<span class="nivel">Salida</span><span class="codigo">SALIDA</span><span class="nombre">Los objetos que salen del sistema</span>';
+  const cuerpo = '<span class="nivel">Salida</span><span class="codigo">SALIDA</span><span class="nombre">Sale del sistema</span>';
   const estilo = `left:${pos.x}px;top:${pos.y}px`;
   return interactivo
     ? `<button class="bloque salida" style="${estilo}" data-act="elegir" data-id="SALIDA" aria-label="Sacar del sistema (salida)">${cuerpo}</button>`
@@ -397,7 +397,8 @@ export function ventana() {
           </div>
           <p class="dim" style="font-size:13px;margin:12px 0 0">El nivel no cambia. El stock que tiene el lugar se mantiene.</p>
           ${msgHTML('editar')}`,
-        pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
+        pie: `<button class="btn peligro" data-act="borrarLugar" data-id="${l.id}" style="margin-right:auto">Borrar</button>
+              <button class="btn sec" data-act="modalCerrar">Cerrar</button>
               <button class="btn" data-act="editarGuardar">Guardar</button>`
       };
     }
@@ -444,7 +445,7 @@ export function ventana() {
       const mover = S.elegirModo === 'mover';
       const producto = o.tipo === 'producto';
       const elegidos = S.elegirLugares;
-      const primero = elegidos.length ? d.porId(elegidos[0]) : null;
+      const ultimo = elegidos.length ? d.porId(elegidos[elegidos.length - 1]) : null;
       const padre = S.elegirNodo ? d.porId(S.elegirNodo) : null;
       const hijos = d.hijos(S.elegirNodo || null);
       const conSalida = mover && !S.elegirNodo;   // SALIDA se ofrece en el nivel de edificios
@@ -454,7 +455,7 @@ export function ventana() {
         const hoja = d.esHoja(l);
         const est = estadoDe(l);
         const marcado = elegidos.includes(l.id);
-        const lejos = !mover && hoja && primero && !marcado && !sonAledanos(primero, l);
+        const lejos = !mover && hoja && ultimo && !marcado && !sonAledanos(ultimo, l);
         const accion = !hoja ? 'Entrar →' : mover ? 'Mover aquí' : marcado ? 'Quitar' : 'Elegir aquí';
         return `<button class="bloque ${est.cls}${marcado ? ' elegido' : ''}${lejos ? ' lejos' : ''}" style="left:${p.x}px;top:${p.y}px"
             data-act="${hoja ? 'elegir' : 'elegirIr'}" data-id="${l.id}" ${hoja && !mover ? `aria-pressed="${marcado}"` : ''} aria-label="${esc(accion)} ${esc(d.dir(l))}">

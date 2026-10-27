@@ -39,19 +39,19 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   const d = ctx.dep;
   const st = estadoDe(l), nv = d.nivelDe(l);
   const objs = d.objetosDe(l.id).length;
-  const hijos = d.hijos(l.id).length;
+  const entrar = d.hijos(l.id).length || d.nivelParaHijo(l.id).def;
+  // Con objetos, el chip es el botón para verlos; así el bloque queda chico.
+  const chip = objs
+    ? `<button class="chip-btn" data-act="verObjetos" data-id="${l.id}" aria-label="Ver los objetos de ${esc(d.dir(l))}">${objs === 1 ? '1 objeto' : `${objs} objetos`}</button>`
+    : `<span class="chip ${st.cls}">${esc(st.chip)}</span>`;
   return `<div class="bloque ${st.cls}" ${atributos} style="${estilo}">
     <span class="nivel">${esc(nv.nombre)}</span>
     <span class="codigo">${esc(l.codigo)}</span>
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
-    <div class="pie">
-      <span class="chip ${st.cls}">${esc(st.chip)}</span>
-      ${objs ? `<button class="btn sm sec" data-act="verObjetos" data-id="${l.id}">Objetos (${objs})</button>` : ''}
-    </div>
+    <div class="pie">${chip}</div>
     <div class="acciones-fila">
-      ${(hijos || d.nivelParaHijo(l.id).def) ? `<button class="btn sm sec" data-act="planoIr" data-id="${l.id}">Entrar</button>` : ''}
+      ${entrar ? `<button class="btn sm sec" data-act="planoIr" data-id="${l.id}">Entrar</button>` : ''}
       <button class="btn sm txt" data-act="editarAbrir" data-id="${l.id}">Editar</button>
-      <button class="btn sm peligro" data-act="borrarLugar" data-id="${l.id}">Borrar</button>
     </div>
   </div>`;
 }

@@ -85,7 +85,9 @@ export const ACCIONES = {
     const dentro = d().descendientes(l).length;
     const pregunta = `¿Borrar "${d().dir(l)}"?` + (dentro ? ` Se borran también ${dentro} lugares que tiene adentro.` : '');
     if (!window.confirm(pregunta)) return;
-    aviso('borrar', d().borrarLugar(el.id), 'Borrado.');
+    const err = d().borrarLugar(el.id);
+    if (!err) limpiarModal();
+    aviso('borrar', err, 'Borrado.');
   },
   toggleNiveles: () => { S.editarNiveles = !S.editarNiveles; S.msg = {}; },
   nivelesTipicos: () => aviso('niveles', d().ponerNivelesTipicos(S.nodo), 'Niveles definidos.'),
@@ -164,8 +166,8 @@ export const ACCIONES = {
     }
     const elegidos = S.elegirLugares;
     if (elegidos.includes(l.id)) { S.elegirLugares = elegidos.filter(x => x !== l.id); aviso('elegir', null); return; }
-    if (elegidos.length && !sonAledanos(d().porId(elegidos[0]), l)) {
-      return aviso('elegir', 'Ese lugar no está cerca del primero. Los lugares tienen que estar en el mismo plano y uno al lado del otro.');
+    if (elegidos.length && !sonAledanos(d().porId(elegidos[elegidos.length - 1]), l)) {
+      return aviso('elegir', 'Ese lugar no está al lado del anterior. Cada lugar tiene que estar pegado al que elegiste antes, en el mismo plano.');
     }
     S.elegirLugares = [...elegidos, l.id];
     aviso('elegir', null);
