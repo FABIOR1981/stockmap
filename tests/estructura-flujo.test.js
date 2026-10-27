@@ -7,6 +7,8 @@ import { crearAlmacenMemoria } from '../js/almacen/memoria.js';
 import { aFilasDb, aEstadoModelo, calcularOperaciones, nuevoEstadoSincronizacion } from '../js/almacen/nube.js';
 
 const ADMIN = '33333333-3333-4333-8333-333333333333';
+import { aplicarOpsSimuladas } from './simulador.js';
+
 const ENV = { SUPABASE_URL: 'https://p.supabase.co', SUPABASE_SERVICE_KEY: 'clave', SESSION_SECRET: 'x'.repeat(32) };
 let tablas;
 const reset = () => { tablas = { perfiles: [{ id: ADMIN, nombre: 'Fabio', es_admin: true }], establecimientos: [], membresias: [], lugares: [],
@@ -23,6 +25,7 @@ function filtrar(filas, params) {
 async function fetchSimulado(url, opts = {}) {
   const u = new URL(url); const m = (opts.method || 'GET').toUpperCase();
   if (u.pathname.startsWith('/auth/v1/')) return u.pathname.endsWith('/token') ? json({ user: { id: ADMIN } }) : json({});
+  if (u.pathname === '/rest/v1/rpc/aplicar_cambios') return json(aplicarOpsSimuladas(tablas, JSON.parse(opts.body).ops));
   const tabla = u.pathname.replace('/rest/v1/', ''); const filas = tablas[tabla];
   if (!filas) throw new Error('tabla inexistente ' + tabla);
   if (m === 'GET') return json(filtrar(filas, u.searchParams));

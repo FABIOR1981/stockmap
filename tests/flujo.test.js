@@ -20,6 +20,8 @@ const reset = () => {
 
 const json = (datos, status = 200) => new Response(JSON.stringify(datos), { status, headers: { 'Content-Type': 'application/json' } });
 
+import { aplicarOpsSimuladas } from './simulador.js';
+
 // Filtros estilo PostgREST: col=eq.valor y col=in.(a,b). Lo demás (select, order, limit) se ignora.
 function filtrar(filas, params) {
   return filas.filter(r => [...params].every(([k, v]) => {
@@ -39,6 +41,7 @@ async function fetchSimulado(url, opts = {}) {
     const id = email === 'ana@x.com' ? LECTOR : ADMIN;
     return u.pathname.endsWith('/token') ? json({ user: { id } }) : json({});
   }
+  if (u.pathname === '/rest/v1/rpc/aplicar_cambios') return json(aplicarOpsSimuladas(tablas, JSON.parse(opts.body).ops));
   const tabla = u.pathname.replace('/rest/v1/', '');
   const filas = tablas[tabla];
   if (!filas) throw new Error(`Tabla inexistente en la simulación: ${tabla}`);

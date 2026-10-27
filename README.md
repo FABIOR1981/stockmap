@@ -27,6 +27,7 @@ functions/api/[[ruta]].js  API (Cloudflare Pages Function): única que habla con
 tests/reglas.test.js  Pruebas de reglas del modelo
 tests/nube.test.js    Pruebas de traducción y cálculo de cambios
 supabase/esquema.sql  Esquema de base de datos, tablas, triggers y RLS
+supabase/funciones.sql  Función aplicar_cambios: guarda cada sincronización en una sola llamada y transacción
 docs/modelo_datos.md  Modelo de datos y reglas de negocio
 ```
 
@@ -72,7 +73,7 @@ Variables en Cloudflare Pages (Settings > Environment variables):
 - `SUPABASE_SERVICE_KEY` (secreto, clave service_role)
 - `SESSION_SECRET` (secreto, texto aleatorio de 32 caracteres o más)
 
-Puesta en marcha de la base: ver `supabase/esquema.sql` (al final del archivo).
+Puesta en marcha de la base: ejecutar en el SQL Editor de Supabase, en este orden, `supabase/esquema.sql` (al final del archivo tiene los pasos de administrador) y después `supabase/funciones.sql`.
 
 ## Pendiente
 

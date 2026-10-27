@@ -128,41 +128,69 @@ async function requerirSesion(env, request) {
   return s;
 }
 
-async function rolEn(env, sesion, eid) {
-  if (sesion.es_admin) return 'admin';
-  const [m] = await db(env, `membresias?usuario_id=eq.${sesion.uid}&establecimiento_id=eq.${validarUUID(eid)}&select=rol`);
-  return m ? m.rol : null;
+// Datos que necesita un envío, traídos con pocas llamadas (Cloudflare limita las llamadas por petición).
+// Un envío grande no puede hacer una llamada por registro.
+async function precargar(env, ops, sesion) {
+  const todas = new Set();
+  for (const op of ops) {
+    const f = op?.op === 'upsert' ? op.fila : op?.clave;
+    if (f && typeof f === 'object') for (const v of Object.values(f)) if (typeof v === 'string' && UUID.test(v)) todas.add(v);
+  }
+  const lista = [...todas];
+  const traer = async (tabla, campos) => {
+    const mapa = new Map();
+    for (let i = 0; i < lista.length; i += 150) {
+      const filas = await db(env, `${tabla}?id=${enLista(lista.slice(i, i + 150))}&select=${campos}`);
+      for (const f of filas) mapa.set(f.id, f);
+    }
+    return mapa;
+  };
+  const [lugares, objetos, existencias, movimientos] = lista.length
+    ? await Promise.all([traer('lugares', 'id,establecimiento_id'), traer('objetos', 'id,establecimiento_id'),
+        traer('existencias', 'id,lugar_id'), traer('movimientos', 'id,establecimiento_id')])
+    : [new Map(), new Map(), new Map(), new Map()];
+  const roles = new Map();
+  if (!sesion.es_admin) {
+    const ms = await db(env, `membresias?usuario_id=eq.${sesion.uid}&select=establecimiento_id,rol`);
+    for (const m of ms) roles.set(m.establecimiento_id, m.rol);
+  }
+  return { lugares, objetos, existencias, movimientos, roles };
 }
 
-// Primero la base; si no está todavía, lo que llega en el mismo envío (se guarda después de autorizar todo).
-async function eidDeLugar(env, id, pend) {
-  const [l] = await db(env, `lugares?id=eq.${validarUUID(id)}&select=establecimiento_id`);
+// Rol del usuario en un cliente (admin general = admin en todos).
+function rolEn(c, sesion, eid) {
+  if (sesion.es_admin) return 'admin';
+  return c.roles.get(eid) ?? null;
+}
+
+// Cliente al que pertenece un lugar: primero lo que ya está en la base; si no, lo que llega en este envío.
+function eidDeLugar(c, id, pend) {
+  const l = c.lugares.get(id);
   if (l) return l.establecimiento_id;
-  return pend?.lugares.get(id) ?? null;
+  return pend.lugares.get(id) ?? null;
 }
-async function eidDeObjeto(env, id, pend) {
-  const [o] = await db(env, `objetos?id=eq.${validarUUID(id)}&select=establecimiento_id`);
+function eidDeObjeto(c, id, pend) {
+  const o = c.objetos.get(id);
   if (o) return o.establecimiento_id;
-  return pend?.objetos.get(id) ?? null;
+  return pend.objetos.get(id) ?? null;
 }
-// Cliente al que pertenece una fila que ya existe en la base (null si no existe).
-async function eidExistente(env, tabla, id) {
+
+// Cliente de una fila que ya existe en la base (null si no existe).
+function eidExistente(c, tabla, id) {
   validarUUID(id);
-  if (tabla === 'lugares') return eidDeLugar(env, id);
-  if (tabla === 'objetos' || tabla === 'movimientos') {
-    const [f] = await db(env, `${tabla}?id=eq.${id}&select=establecimiento_id`);
-    return f ? f.establecimiento_id : null;
-  }
+  if (tabla === 'lugares') return c.lugares.get(id)?.establecimiento_id ?? null;
+  if (tabla === 'objetos') return c.objetos.get(id)?.establecimiento_id ?? null;
+  if (tabla === 'movimientos') return c.movimientos.get(id)?.establecimiento_id ?? null;
   if (tabla === 'existencias') {
-    const [f] = await db(env, `existencias?id=eq.${id}&select=lugar_id`);
-    return f ? eidDeLugar(env, f.lugar_id) : null;
+    const e = c.existencias.get(id);
+    return e ? (c.lugares.get(e.lugar_id)?.establecimiento_id ?? null) : null;
   }
   return null;
 }
 
 // ---------- Validación de cada operación ----------
 // Devuelve el cliente de la operación, o null si no hay nada que hacer (borrar algo que no existe).
-async function autorizar(env, sesion, op, pend) {
+function autorizar(c, sesion, op, pend) {
   if (op.op !== 'upsert' && op.op !== 'delete') throw new ErrorApi('Operación inválida.');
   const info = TABLAS[op.tabla];
   if (!info) throw new ErrorApi(`Tabla no permitida: ${op.tabla}.`, 403);
@@ -180,26 +208,26 @@ async function autorizar(env, sesion, op, pend) {
     case 'membresias':
       validarUUID(datos.usuario_id);
       eid = validarUUID(datos.establecimiento_id);
-      if (!sesion.es_admin && (await rolEn(env, sesion, eid)) !== 'admin')
+      if (!sesion.es_admin && rolEn(c, sesion, eid) !== 'admin')
         throw new ErrorApi('Solo un admin del cliente puede gestionar accesos.', 403);
       return eid;
 
     case 'niveles_edificio': {
       const edificio = validarUUID(datos.edificio_id);
-      eid = await eidDeLugar(env, edificio, pend);
+      eid = eidDeLugar(c, edificio, pend);
       if (!eid) throw new ErrorApi('El edificio no existe.', 400);
       break;
     }
 
     case 'existencias': {
       if (op.op === 'upsert') {
-        const eLugar = await eidDeLugar(env, validarUUID(datos.lugar_id), pend);
-        const eObj = await eidDeObjeto(env, validarUUID(datos.objeto_id), pend);
+        const eLugar = eidDeLugar(c, validarUUID(datos.lugar_id), pend);
+        const eObj = eidDeObjeto(c, validarUUID(datos.objeto_id), pend);
         if (!eLugar || eLugar !== eObj) throw new ErrorApi('El objeto y el lugar no son del mismo cliente.', 403);
         eid = eLugar;
         validarUUID(datos.id);
       } else {
-        eid = await eidExistente(env, 'existencias', validarUUID(datos.id));
+        eid = eidExistente(c, 'existencias', validarUUID(datos.id));
         if (!eid) return null;
       }
       break;
@@ -209,14 +237,12 @@ async function autorizar(env, sesion, op, pend) {
       if (op.op === 'upsert') {
         eid = validarUUID(datos.establecimiento_id);
         if (datos.usuario_id !== sesion.uid) throw new ErrorApi('El movimiento tiene que quedar a nombre de quien lo registra.', 403);
-        const refs = [];
-        if (datos.objeto_id) refs.push(eidDeObjeto(env, datos.objeto_id, pend));
-        if (datos.desde_lugar_id) refs.push(eidDeLugar(env, datos.desde_lugar_id, pend));
-        if (datos.hasta_lugar_id) refs.push(eidDeLugar(env, datos.hasta_lugar_id, pend));
-        for (const r of await Promise.all(refs)) if (r !== eid) throw new ErrorApi('Un dato del movimiento es de otro cliente.', 403);
+        if (datos.objeto_id && eidDeObjeto(c, datos.objeto_id, pend) !== eid) throw new ErrorApi('Un dato del movimiento es de otro cliente.', 403);
+        if (datos.desde_lugar_id && eidDeLugar(c, datos.desde_lugar_id, pend) !== eid) throw new ErrorApi('Un dato del movimiento es de otro cliente.', 403);
+        if (datos.hasta_lugar_id && eidDeLugar(c, datos.hasta_lugar_id, pend) !== eid) throw new ErrorApi('Un dato del movimiento es de otro cliente.', 403);
         validarUUID(datos.id);
       } else {
-        eid = await eidExistente(env, 'movimientos', validarUUID(datos.id));
+        eid = eidExistente(c, 'movimientos', validarUUID(datos.id));
         if (!eid) return null;
       }
       break;
@@ -227,19 +253,19 @@ async function autorizar(env, sesion, op, pend) {
         eid = validarUUID(datos.establecimiento_id);
         validarUUID(datos.id);
       } else {
-        eid = await eidExistente(env, op.tabla, validarUUID(datos.id));
+        eid = eidExistente(c, op.tabla, validarUUID(datos.id));
         if (!eid) return null;
       }
   }
 
   // Si la fila ya existe, tiene que ser del mismo cliente (no se puede pisar la de otro).
   if (op.op === 'upsert' && info.clave.length === 1 && op.tabla !== 'membresias') {
-    const actual = await eidExistente(env, op.tabla, datos.id);
+    const actual = eidExistente(c, op.tabla, datos.id);
     if (actual && actual !== eid) throw new ErrorApi('Ese registro es de otro cliente.', 403);
   }
 
   if (!sesion.es_admin) {
-    const rol = await rolEn(env, sesion, eid);
+    const rol = rolEn(c, sesion, eid);
     if (!rol) throw new ErrorApi('No tenés acceso a este cliente.', 403);
     if (!PUEDEN_ESCRIBIR.includes(rol)) throw new ErrorApi('Tu rol es de solo lectura en este cliente.', 403);
   }
@@ -249,35 +275,33 @@ async function autorizar(env, sesion, op, pend) {
 // Solo las columnas permitidas, con tipos verificados.
 function filaLimpia(tabla, fila) {
   const salida = {};
-  for (const c of TABLAS[tabla].columnas) {
-    if (!(c in fila)) continue;
-    const v = fila[c];
-    if (v === null) { salida[c] = null; continue; }
-    if (c === 'id' || c.endsWith('_id')) salida[c] = validarUUID(v);
-    else if (c === 'orden' || c === 'cantidad' || c === 'minimo') salida[c] = validarEntero(v);
-    else if (c === 'nombre_opcional') salida[c] = v === true || v === 'true';
-    else if (c === 'rol') {
+  for (const col of TABLAS[tabla].columnas) {
+    if (!(col in fila)) continue;
+    const v = fila[col];
+    if (v === null) { salida[col] = null; continue; }
+    if (col === 'id' || col.endsWith('_id')) salida[col] = validarUUID(v);
+    else if (col === 'orden' || col === 'cantidad' || col === 'minimo') salida[col] = validarEntero(v);
+    else if (col === 'nombre_opcional') salida[col] = v === true || v === 'true';
+    else if (col === 'rol') {
       if (!ROLES.includes(v)) throw new ErrorApi('Rol inválido.');
-      salida[c] = v;
+      salida[col] = v;
     }
-    else salida[c] = String(v);
+    else salida[col] = String(v);
   }
   return salida;
 }
 
-async function aplicar(env, op) {
-  const info = TABLAS[op.tabla];
-  if (op.op === 'upsert') {
-    const fila = filaLimpia(op.tabla, op.fila);
-    await db(env, `${op.tabla}?on_conflict=${info.clave.join(',')}`, {
-      metodo: 'POST',
-      cuerpo: [fila],
-      cabeceras: { Prefer: 'resolution=merge-duplicates,return=minimal' }
-    });
-  } else {
-    const filtros = info.clave.map(c => `${c}=eq.${c.endsWith('_id') || c === 'id' ? validarUUID(op.clave[c]) : validarEntero(op.clave[c])}`).join('&');
-    await db(env, `${op.tabla}?${filtros}`, { metodo: 'DELETE' });
+// Una operación de sincronización con solo las columnas permitidas y tipos verificados.
+// Las claves de borrado se validan igual que las filas.
+function operacionLimpia(op) {
+  if (op.op === 'delete') {
+    const clave = {};
+    for (const c of TABLAS[op.tabla].clave) {
+      clave[c] = c.endsWith('_id') || c === 'id' ? validarUUID(op.clave?.[c]) : validarEntero(op.clave?.[c]);
+    }
+    return { op: 'delete', tabla: op.tabla, clave };
   }
+  return { op: 'upsert', tabla: op.tabla, fila: filaLimpia(op.tabla, op.fila || {}) };
 }
 
 // ---------- Rutas ----------
@@ -359,22 +383,22 @@ async function sincronizar(env, request) {
   if (!Array.isArray(ops) || ops.length > MAX_OPS) throw new ErrorApi('Demasiados cambios de una vez.');
 
   // Primero se valida todo; si algo no está permitido, no se escribe nada.
-  const verificadas = [];
-  // Lo que se crea en este mismo envío (lugares y objetos nuevos) cuenta como existente para lo que lo usa.
-  const pend = { lugares: new Map(), objetos: new Map() };
+  const c = await precargar(env, ops, s);
+  const pend = { lugares: new Map(), objetos: new Map() };   // lo que se crea en este mismo envío
   for (const op of ops) {
     if (op?.op === 'upsert' && (op.tabla === 'lugares' || op.tabla === 'objetos') && op.fila?.id && op.fila?.establecimiento_id)
       pend[op.tabla].set(op.fila.id, op.fila.establecimiento_id);
   }
-  for (const op of ops) verificadas.push({ op, valida: await autorizar(env, s, op, pend) });
+  const validas = [];
+  for (const op of ops) if (autorizar(c, s, op, pend) !== null) validas.push(op);
 
-  let aplicadas = 0;
-  for (const { op, valida } of verificadas) {
-    if (valida === null) continue;   // borrar algo que ya no existe
-    await aplicar(env, op);
-    aplicadas++;
-  }
-  return json({ ok: true, aplicadas });
+  // Todo el envío va en una sola llamada a la función de la base (supabase/funciones.sql).
+  // Corre en una transacción: si una operación falla, no queda nada a medias.
+  const aplicadas = await db(env, 'rpc/aplicar_cambios', {
+    metodo: 'POST',
+    cuerpo: { ops: validas.map(operacionLimpia) }
+  });
+  return json({ ok: true, aplicadas: Number(aplicadas) || 0 });
 }
 
 export async function onRequest({ request, env, params }) {
