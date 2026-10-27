@@ -69,7 +69,7 @@ function contenidoObjetos(l) {
   const cand = [l, ...d.descendientes(l)].filter(sirve);
   const sinLugar = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
   const sueltos = sinLugar.length
-    ? `<h3 class="sub-titulo">Sin lugar asignado (${sinLugar.length})</h3>
+    ? `<h3 class="sub-titulo">Pendientes de asignar (${sinLugar.length})</h3>
        ${cand.length
          ? `<div class="dlg-lista">${sinLugar.map(o => `<div class="r">
               <span>${etiqueta(o)}${detalle(o)}</span>
@@ -79,18 +79,10 @@ function contenidoObjetos(l) {
          : `<p class="dim" style="font-size:13px;margin:8px 0 0">Ningún lugar de acá puede recibirlo ahora. Sacá los objetos de adentro o de arriba para liberarlo.</p>`}`
     : '';
 
-  // Agregar uno de los que están en otro lugar, directo en este (solo si este sirve).
-  const fuera = d.objetos.filter(o => !propios.some(x => x.id === o.id));
-  const agregar = sirve(l) && fuera.length
-    ? `<div class="form" style="margin-top:16px">
-        ${campo('Agregar un objeto', `<select data-f="objAqui" aria-label="Objeto a agregar"><option value="">Elegir…</option>${fuera.map(o => `<option value="${o.id}">${esc(o.codigo_interno)}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}</option>`).join('')}</select>`)}
-        <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}">Agregar</button>
-      </div>`
-    : '';
   const motivo = !sirve(l) ? `<p class="dim" style="font-size:13px;margin:16px 0 0">${esc(d.lugarDestino(l.id))}</p>` : '';
-  const vacio = !propios.length && !adentro.length && !sinLugar.length && !fuera.length
+  const vacio = !propios.length && !adentro.length && !sinLugar.length
     ? `<p class="vacio" style="border:0;padding:12px">No hay objetos.</p>` : '';
-  return `${filas}${adentroHTML}${sueltos}${agregar}${motivo}${vacio}${msgHTML('objetos')}`;
+  return `${filas}${adentroHTML}${sueltos}${motivo}${vacio}${msgHTML('objetos')}`;
 }
 
 function editorNiveles(ed) {
