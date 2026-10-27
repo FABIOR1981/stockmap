@@ -84,8 +84,7 @@ export function accionPrincipal() {
 
 export function leyenda() {
   return `<div class="leyenda">
-    <span class="chip libre">Libre</span>
-    <span class="chip obj">Con objetos</span>
-    <span class="chip sub">Con subdivisiones</span>
+    <span class="muestra libre">Libre</span>
+    <span class="muestra obj">Con objetos</span>
   </div>`;
 }

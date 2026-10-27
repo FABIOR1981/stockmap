@@ -154,6 +154,9 @@ button.bloque:hover { border-color: var(--acc); }
 .bloque .codigo { font-size: 26px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
 .bloque .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
 .bloque .pie { margin-top: auto; display:flex; flex-wrap:wrap; gap: 2px; }
+.muestra { display:inline-flex; align-items:center; padding: 4px 10px; border: 1px solid; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--ink); }
+.muestra.libre { background: var(--ok-f); border-color: var(--ok-l); }
+.muestra.obj { background: var(--obj-f); border-color: var(--obj-l); }
 .leyenda { display:flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 14px; color: var(--mut); font-size: 13px; }
 
 /* ---------- Ventanas ---------- */
