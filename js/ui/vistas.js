@@ -319,7 +319,7 @@ function bloqueEstructura(padre, def) {
   if (!bajo.length) return '';
   const fila = (nivel, i) => {
     const de = i === 0 ? def.nombre : bajo[i - 1].nombre;
-    return `<div class="form" style="margin-top:8px">${campo(`Cuántos ${esc(plural(nivel.nombre.toLowerCase()))} por ${esc(de.toLowerCase())}`,
+    return `<div class="form" style="margin-top:8px">${campo(`${/[aó]n?$|ión$/i.test(nivel.nombre) || /a$/i.test(nivel.nombre) || /ión$/i.test(nivel.nombre) ? 'Cuántas' : 'Cuántos'} ${esc(plural(nivel.nombre.toLowerCase()))} por ${esc(de.toLowerCase())}`,
       `<input data-f="cuenta${i}" type="number" min="1" value="${esc(S.f['cuenta' + i])}" style="width:110px;min-width:0">`)}</div>`;
   };
   return `<div class="panel" style="margin-top:12px">
