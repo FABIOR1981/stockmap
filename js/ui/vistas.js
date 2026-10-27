@@ -50,6 +50,14 @@ function editorNiveles(ed) {
       ${msgHTML('niveles')}
     </section>`;
   }
+  // Ya armado, el edificio casi no cambia: se muestra un resumen y el editor se abre a pedido.
+  if (!S.editarNiveles) {
+    return `<section class="panel niveles-resumen">
+      <div class="cab-niveles"><div><h2>Niveles del edificio</h2>
+        <p class="ayuda">${esc(ed.niveles.map(n => n.nombre).join(' › '))}</p></div>
+        <button class="btn sm sec" data-act="toggleNiveles">Cambiar niveles</button></div>
+    </section>`;
+  }
   const filas = ed.niveles.map((n, i) => `
     <div class="nivel-fila">
       <span class="nivel-num">${i + 1}</span>
@@ -64,7 +72,8 @@ function editorNiveles(ed) {
     <h2>Niveles del edificio</h2>
     <p class="ayuda">Se editan acá. Un cambio de nombre se aplica de inmediato.</p>
     <div class="lista-niveles">${filas}</div>
-    <div class="acciones-fila"><button class="btn sm sec" data-act="agregarNivel">+ Agregar nivel</button></div>
+    <div class="acciones-fila"><button class="btn sm sec" data-act="agregarNivel">+ Agregar nivel</button>
+      <button class="btn sm" data-act="toggleNiveles">Listo</button></div>
     ${msgHTML('niveles')}
   </section>`;
 }

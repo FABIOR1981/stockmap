@@ -169,3 +169,5 @@ dialog#modal::backdrop { background: rgba(28,35,48,.35); backdrop-filter: blur(4
 /* Sin permiso de gestionar accesos: se ocultan los controles de roles. */
 .sin-gestion [data-act="darAcceso"], .sin-gestion [data-act="cambiarRol"], .sin-gestion [data-act="quitarAcceso"],
 .sin-gestion [data-f="accUid"], .sin-gestion [data-f="accRol"] { display: none !important; }
+
+.cab-niveles { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }

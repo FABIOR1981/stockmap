@@ -85,6 +85,7 @@ export const ACCIONES = {
     if (!window.confirm(pregunta)) return;
     aviso('borrar', d().borrarLugar(el.id), 'Borrado.');
   },
+  toggleNiveles: () => { S.editarNiveles = !S.editarNiveles; S.msg = {}; },
   nivelesTipicos: () => aviso('niveles', d().ponerNivelesTipicos(S.nodo), 'Niveles definidos.'),
   agregarNivel:   () => aviso('niveles', d().agregarNivel(S.nodo)),
   quitarNivel:    () => aviso('niveles', d().quitarNivel(S.nodo)),

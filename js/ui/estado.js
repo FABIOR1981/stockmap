@@ -21,6 +21,7 @@ export const S = {
     accUid: '', accRol: 'editor'
   },
   pruebas: null,           // resultado de la última corrida de pruebas
+  editarNiveles: false,    // true = se ve el editor de niveles del edificio (si no, solo el resumen)
   posiciones: {}           // posición en pantalla de cada edificio en el plano (solo UI)
 };
 
