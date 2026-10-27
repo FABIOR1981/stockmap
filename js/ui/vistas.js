@@ -84,8 +84,12 @@ export function vistaEstructura() {
       : `Niveles del edificio ${esc(ed.codigo)}: ${esc(ed.niveles.map(n => n.nombre).join(' › ') || '—')}.`}</p>`;
 
   const niveles = esEdificio ? editorNiveles(nodo) : '';
+  const objs = d.objetosDe(nodo.id).length;
   const contenido = !def
-    ? `<div class="aviso">Este es el último nivel del edificio: no tiene lugares adentro. Acá se guardan los objetos.</div>`
+    ? `<div class="aviso">Este es el último nivel del edificio: no tiene lugares adentro.</div>
+      <section class="panel"><h2>Objetos</h2>
+        <p class="ayuda">${objs ? `${objs} ${objs === 1 ? 'objeto' : 'objetos'} en este lugar.` : 'Todavía no hay objetos en este lugar.'}</p>
+        <button class="btn sec" data-act="verObjetos" data-id="${nodo.id}">Ver objetos</button></section>`
     : kids.length
       ? `<section class="panel"><h2>Contenido</h2><p class="ayuda">${kids.length} ${kids.length === 1 ? 'elemento' : 'elementos'}. Tocá Abrir para entrar.</p><div class="grid">${kids.map(tarjetaLugar).join('')}</div></section>`
       : `<div class="vacio"><span class="ilu">${ilustracion()}</span><p>Todavía no hay ${esc(plural(def.nombre.toLowerCase()))} aquí</p>
