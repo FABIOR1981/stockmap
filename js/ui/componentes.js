@@ -54,9 +54,9 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   const objs = d.objetosDe(l.id).length;
   const hijos = d.hijos(l.id).length;
   const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
-  const entrar = hijos || d.nivelParaHijo(l.id).def;
-  // Clic en el bloque entra al lugar (el arrastre no entra: lo filtra plano.js).
-  const clic = entrar ? `data-act="planoIr" data-id="${l.id}" role="button" tabindex="0"` : '';
+  // Clic en el bloque entra al lugar, también en el último nivel (ahí se ven y asignan los objetos).
+  // El arrastre no entra: lo filtra plano.js.
+  const clic = `data-act="planoIr" data-id="${l.id}" role="button" tabindex="0"`;
   return `<div class="bloque ${st.cls}" ${atributos} ${clic} style="${estilo}">
     <span class="nivel">${esc(nv.nombre)}</span>
     <div class="cab">
@@ -95,12 +95,15 @@ export function accionPrincipal() {
   if (!ctx.dep.eid) return '';
   if (S.vista === 'stock') return `<button class="btn" data-act="abrirNuevoObjeto">${ic('mas', 14)} Nuevo objeto</button>`;
   if (!['estructura', 'plano'].includes(S.vista)) return '';
+  const nodo = S.nodo ? ctx.dep.porId(S.nodo) : null;
+  // Los niveles de un edificio se editan en una ventana.
+  const niveles = nodo && ctx.dep.prof(nodo) === 0 ? `<button class="btn sec" data-act="abrirNiveles">Niveles</button>` : '';
   const { def } = ctx.dep.nivelParaHijo(S.nodo);
-  if (!def) return '';
+  if (!def) return niveles;
   const texto = S.nodo ? `Agregar ${def.nombre.toLowerCase()}` : 'Agregar edificio';
   const hijos = ctx.dep.hijos(S.nodo || null).length;
   const clonar = hijos ? `<button class="btn sec" data-act="clonarNivelAbrir">Clonar existente</button>` : '';
-  return `<button class="btn" data-act="abrirCrear">${ic('mas', 14)} ${texto}</button>${clonar}`;
+  return `${niveles}<button class="btn" data-act="abrirCrear">${ic('mas', 14)} ${texto}</button>${clonar}`;
 }
 
 export function leyenda() {

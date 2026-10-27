@@ -38,6 +38,28 @@ export function vistaEdificios() {
 }
 
 // ---------- Niveles de un edificio ----------
+// Objetos de un lugar: lista para sacar y selector para agregar. Lo usan la ventana de objetos y el plano.
+function contenidoObjetos(l) {
+  const d = ctx.dep;
+  const objs = d.objetosDe(l.id);
+      const fuera = d.objetos.filter(o => !objs.some(x => x.id === o.id));
+      const filas = objs.length
+        ? `<div class="dlg-lista">${objs.map(o => `<div class="r">
+            <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
+            <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>
+            ${o.tipo === 'producto' ? `<input type="number" min="1" max="${d.cantidadEn(o.id, l.id)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad a sacar de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">` : ''}
+            <button class="btn sm sec" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${l.id}">Sacar</button></span>
+          </div>`).join('')}</div>`
+        : `<p class="vacio" style="border:0;padding:12px">Este lugar no tiene objetos.</p>`;
+      const agregar = fuera.length
+        ? `<div class="form" style="margin-top:16px">
+            ${campo('Agregar un objeto', `<select data-f="objAqui" aria-label="Objeto a agregar"><option value="">Elegir…</option>${fuera.map(o => `<option value="${o.id}">${esc(o.codigo_interno)}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}</option>`).join('')}</select>`)}
+            <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}">Agregar</button>
+          </div>`
+        : `<p class="dim" style="font-size:13px;margin:16px 0 0">Todos los objetos ya están en este lugar.</p>`;
+  return `${filas}${agregar}${msgHTML('objetos')}`;
+}
+
 function editorNiveles(ed) {
   if (!ed.niveles.length) {
     return `<section class="panel">
@@ -136,13 +158,11 @@ export function vistaPlano() {
       ${leyenda()}${msgHTML('borrar')}`;
   }
   const kids = d.hijos(foco.id);
-  // Un edificio define sus niveles desde su propio plano.
-  const niveles = d.prof(foco) === 0 ? editorNiveles(foco) : '';
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
-    <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : 'No tiene niveles para contener lugares.'}</p>
-    ${niveles}
+    <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
     ${kids.length ? `<div class="plano">${lienzo(kids)}</div>` : '<p class="vacio" style="border:0">Este lugar está vacío.</p>'}
+    ${d.prof(foco) > 0 ? `<section class="panel"><h2>Objetos en este lugar</h2>${contenidoObjetos(foco)}</section>` : ''}
     ${leyenda()}${msgHTML('borrar')}`;
 }
 
@@ -423,25 +443,18 @@ export function ventana() {
     case 'objetos': {
       const l = S.verObj ? d.porId(S.verObj) : null;
       if (!l) return null;
-      const objs = d.objetosDe(l.id);
-      const fuera = d.objetos.filter(o => !objs.some(x => x.id === o.id));
-      const filas = objs.length
-        ? `<div class="dlg-lista">${objs.map(o => `<div class="r">
-            <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
-            <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>
-            ${o.tipo === 'producto' ? `<input type="number" min="1" max="${d.cantidadEn(o.id, l.id)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad a sacar de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">` : ''}
-            <button class="btn sm sec" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${l.id}">Sacar</button></span>
-          </div>`).join('')}</div>`
-        : `<p class="vacio" style="border:0;padding:12px">Este lugar no tiene objetos.</p>`;
-      const agregar = fuera.length
-        ? `<div class="form" style="margin-top:16px">
-            ${campo('Agregar un objeto', `<select data-f="objAqui" aria-label="Objeto a agregar"><option value="">Elegir…</option>${fuera.map(o => `<option value="${o.id}">${esc(o.codigo_interno)}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}</option>`).join('')}</select>`)}
-            <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}">Agregar</button>
-          </div>`
-        : `<p class="dim" style="font-size:13px;margin:16px 0 0">Todos los objetos ya están en este lugar.</p>`;
       return {
-        titulo: `Objetos en ${d.dir(l)} (${objs.length})`,
-        cuerpo: `${filas}${agregar}${msgHTML('objetos')}`,
+        titulo: `Objetos en ${d.dir(l)} (${d.objetosDe(l.id).length})`,
+        cuerpo: contenidoObjetos(l),
+        pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>`
+      };
+    }
+    case 'niveles': {
+      const ed = S.nodo ? d.porId(S.nodo) : null;
+      if (!ed || d.prof(ed) !== 0) return null;
+      return {
+        titulo: `Niveles de ${d.dir(ed)}`,
+        cuerpo: editorNiveles(ed),
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>`
       };
     }
