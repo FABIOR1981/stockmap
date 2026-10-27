@@ -38,6 +38,12 @@ export function sonAledanos(a, b) {
 }
 
 let arrastre = null;
+// Después de arrastrar, el navegador dispara un clic al soltar: ese clic no debe entrar al lugar.
+let ignorarClic = false;
+document.addEventListener('click', e => {
+  if (!ignorarClic) return;
+  e.stopPropagation(); e.preventDefault();
+}, true);
 
 export function instalarArrastre() {
   document.addEventListener('pointerdown', e => {
@@ -64,6 +70,8 @@ export function instalarArrastre() {
     el.classList.remove('arrastrando');
     arrastre = null;
     if (!movido) return;
+    ignorarClic = true;
+    setTimeout(() => { ignorarClic = false; }, 150);
     const err = ctx.dep.posicionar(id, parseInt(el.style.left, 10), parseInt(el.style.top, 10));
     ctx.render();   // si falló, el bloque vuelve a su lugar guardado
     if (!err) ctx.sincronizar();

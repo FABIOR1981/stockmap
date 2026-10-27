@@ -41,7 +41,10 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   const objs = d.objetosDe(l.id).length;
   const hijos = d.hijos(l.id).length;
   const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
-  return `<div class="bloque ${st.cls}" ${atributos} style="${estilo}">
+  const entrar = hijos || d.nivelParaHijo(l.id).def;
+  // Clic en el bloque entra al lugar (el arrastre no entra: lo filtra plano.js).
+  const clic = entrar ? `data-act="planoIr" data-id="${l.id}" role="button" tabindex="0"` : '';
+  return `<div class="bloque ${st.cls}" ${atributos} ${clic} style="${estilo}">
     <span class="nivel">${esc(nv.nombre)}</span>
     <div class="cab">
       <span class="codigo">${esc(l.codigo)}</span>
@@ -56,7 +59,7 @@ export function bloquePlano(l, estilo = '', atributos = '') {
       ${objs ? `<button class="btn sm sec" data-act="verObjetos" data-id="${l.id}">Objetos (${objs})</button>` : ''}
     </div>
     <div class="acciones-fila">
-      ${(hijos || d.nivelParaHijo(l.id).def) ? `<button class="btn sm sec" data-act="planoIr" data-id="${l.id}">Entrar</button>` : ''}
+      ${entrar ? `<button class="btn sm sec" data-act="planoIr" data-id="${l.id}">Entrar</button>` : ''}
     </div>
   </div>`;
 }
