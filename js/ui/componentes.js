@@ -24,13 +24,13 @@ export function tarjetaLugar(l) {
     <span class="nivel">${esc(nv.nombre)}</span>
     <div class="cab">
       <span class="codigo">${esc(l.codigo)}</span>
-      <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
+      <span class="acc">
+        <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
+        ${vacioAdentro ? `<button class="btn sm txt papelera" data-act="borrarLugar" data-id="${l.id}" aria-label="Borrar ${esc(l.codigo)}" title="Borrar">${ic('papelera', 14)}</button>` : ''}
+      </span>
     </div>
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
     <span class="chip ${st.cls}">${esc(st.chip)}</span>
-    <div class="pie">
-      ${vacioAdentro ? `<button class="btn sm peligro" data-act="borrarLugar" data-id="${l.id}">Borrar</button>` : ''}
-    </div>
   </article>`;
 }
 

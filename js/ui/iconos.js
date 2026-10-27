@@ -7,7 +7,8 @@ const TRAZOS = {
   estante:  '<path d="M4 5h16M4 12h16M4 19h16M6 3v18M18 3v18"/>',
   mas:      '<path d="M12 5v14M5 12h14"/>',
   buscar:   '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
-  lapiz:    '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'
+  lapiz:    '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  papelera: '<path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5"/><path d="M10 11v5M14 11v5"/>'
 };
 
 export const ic = (nombre, tam = 16) =>
