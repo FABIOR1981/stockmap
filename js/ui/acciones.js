@@ -118,12 +118,6 @@ export const ACCIONES = {
   },
 
   // Stock desde la tabla
-  asignarObj: el => {
-    const lid = S.f.lugarPara[el.oid];
-    if (!lid) return aviso('obj', 'Elegí el lugar donde lo querés agregar.');
-    const cant = S.f.cantPara[el.oid] || '1';
-    aviso('obj', d().asignar(el.oid, lid, cant), 'Agregado.');
-  },
   moverAbrir: el => {
     S.mover = { oid: el.oid, lid: el.lid }; S.modal = 'mover'; S.msg = {};
     S.f.cantMov = '1'; S.f.mvHasta = '';
@@ -142,12 +136,15 @@ export const ACCIONES = {
   // Elegir el lugar de un objeto mirando el plano (solo se navega y se elige; Agregar confirma).
   elegirEnPlano: el => { S.elegirPara = el.oid; S.elegirNodo = null; S.modal = 'elegirLugar'; S.msg = {}; },
   elegirIr: el => { S.elegirNodo = el.id || null; S.msg = {}; },
+  // Elegir un lugar del plano asigna el objeto ahí de una vez.
   elegir: el => {
     const l = d().porId(el.id);
     if (!l || !S.elegirPara) return;
-    S.f.lugarPara[S.elegirPara] = l.id;
+    const o = d().objetoPorId(S.elegirPara);
+    const err = d().asignar(S.elegirPara, l.id, S.f.cantPara[S.elegirPara] || '1');
+    if (err) return aviso('elegir', err);
     S.modal = null; S.elegirPara = null; S.elegirNodo = null;
-    aviso('obj', null, `Lugar elegido: ${d().dir(l)}. Tocá Agregar para confirmar.`);
+    aviso('obj', null, `${o.codigo_interno} agregado en ${d().dir(l)}.`);
   },
 
   abrirNuevoObjeto: () => { S.modal = 'nuevoObjeto'; S.msg = {}; },

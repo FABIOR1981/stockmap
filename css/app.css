@@ -190,11 +190,11 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 /* Sin permiso de edición (rol lector): se ocultan los controles de cambio. */
 .solo-lectura [data-act="editarAbrir"], .solo-lectura [data-act="clonarAbrir"], .solo-lectura [data-act="borrarLugar"],
 .solo-lectura [data-act="borrarObjeto"], .solo-lectura [data-act="abrirCrear"], .solo-lectura [data-act="abrirNuevoObjeto"],
-.solo-lectura [data-act="moverAbrir"], .solo-lectura [data-act="asignarObj"], .solo-lectura [data-act="elegirEnPlano"], .solo-lectura [data-act="asignarAqui"],
+.solo-lectura [data-act="moverAbrir"], .solo-lectura [data-act="elegirEnPlano"], .solo-lectura [data-act="asignarAqui"],
 .solo-lectura [data-act="liberarPar"], .solo-lectura [data-act="agregarNivel"], .solo-lectura [data-act="quitarNivel"],
 .solo-lectura [data-act="nivelesTipicos"], .solo-lectura [data-act="lote"], .solo-lectura [data-act="crear"],
 .solo-lectura [data-act="clonarEjecutar"], .solo-lectura [data-act="editarGuardar"], .solo-lectura [data-act="moverEjecutar"],
-.solo-lectura [data-act="crearObjeto"], .solo-lectura select[data-f="lugarPara"], .solo-lectura [data-cantoid],
+.solo-lectura [data-act="crearObjeto"], .solo-lectura [data-cantoid],
 .solo-lectura [data-nivel], .solo-lectura [data-f="objAqui"], .solo-lectura [data-f="codigo"], .solo-lectura [data-f="nombre"],
 .solo-lectura [data-f="desde"], .solo-lectura [data-f="hasta"], .solo-lectura [data-f="mvHasta"],
 .solo-lectura [data-f="edCodigo"], .solo-lectura [data-f="edNombre"], .solo-lectura [data-f="cantClon"] { display: none !important; }

@@ -17,7 +17,7 @@ export const S = {
     codigo: '', nombre: '', desde: '', hasta: '', cantClon: '1',
     codigoP: '', desc: '', tipoNuevo: 'unidad', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
-    lugarPara: {}, cantPara: {},          // por objeto (fila de la tabla de stock)
+    cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
     cantMov: '1', mvHasta: '',            // ventana de mover
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,
     accUid: '', accRol: 'editor'

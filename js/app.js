@@ -26,7 +26,7 @@ const NAV = [
 
 // Acciones que no cambian datos: no disparan sincronización.
 const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
-  'elegirEnPlano', 'elegirIr', 'elegir']);
+  'elegirEnPlano', 'elegirIr']);
 
 function sesionHTML() {
   const d = ctx.dep;
@@ -180,8 +180,6 @@ document.addEventListener('change', e => {
       const valor = t.type === 'checkbox' ? t.checked : t.value;
       aviso('niveles', ctx.dep.editarNivel(S.nodo, +t.dataset.nivel, t.dataset.campo, valor));
     }
-  } else if (t.dataset.oid) {
-    S.f.lugarPara[t.dataset.oid] = t.value;
   } else if (t.dataset.f) {
     S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
     // Los campos de texto ya se guardaron al escribir. Redibujar acá reemplazaría el campo

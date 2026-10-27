@@ -141,8 +141,6 @@ export function vistaStock() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Stock</h1>${sinCliente()}`;
   const q = S.q.trim().toLowerCase();
-  const hojas = d.lugares.filter(l => d.esHoja(l));
-  const opciones = oid => hojas.map(l => `<option value="${l.id}" ${S.f.lugarPara[oid] === l.id ? 'selected' : ''}>${esc(d.dir(l))}</option>`).join('');
 
   const buscador = `<div class="panel">
     <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código, código propio o descripción" aria-label="Buscar objeto">
@@ -182,12 +180,8 @@ export function vistaStock() {
       <td>${existencias}</td>
       <td>${ubicaciones}</td>
       <td><div class="acciones-fila">
-        <select data-f="lugarPara" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}">
-          <option value="">Elegir lugar…</option>${opciones(o.id)}
-        </select>
-        <button class="btn sm sec" data-act="elegirEnPlano" data-oid="${o.id}">En el plano</button>
         ${cantidad}
-        <button class="btn sm sec" data-act="asignarObj" data-oid="${o.id}">Agregar</button>
+        <button class="btn sm sec" data-act="elegirEnPlano" data-oid="${o.id}">Asignar en el plano</button>
         <button class="btn sm peligro" data-act="borrarObjeto" data-oid="${o.id}">Borrar</button>
       </div></td>
     </tr>`;
