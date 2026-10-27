@@ -17,7 +17,6 @@ ctx.dep = new Deposito(almacen);
 let estadoSync = null;
 
 const NAV = [
-  ['estructura', 'Edificios', 'edificio'],
   ['plano', 'Plano', 'plano'],
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],

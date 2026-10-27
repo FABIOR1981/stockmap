@@ -4,7 +4,7 @@
 export const ctx = { dep: null, render: () => {} };
 
 export const S = {
-  vista: 'estructura',     // 'estructura' | 'plano' | 'stock' | 'movimientos' | 'accesos'
+  vista: 'plano',          // 'plano' | 'stock' | 'movimientos' | 'accesos' ('estructura' = vista de tarjetas, sin menú)
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
