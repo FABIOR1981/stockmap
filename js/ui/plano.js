@@ -3,7 +3,7 @@
 
 import { ctx } from './estado.js';
 
-export const ANCHO = 124, ALTO = 150, GAP = 16, MARGEN = 20, COLUMNAS = 4;
+export const ANCHO = 149, ALTO = 180, GAP = 19, MARGEN = 24, COLUMNAS = 4;
 const PASO = ANCHO + GAP;   // separación horizontal entre bloques
 const PASO_V = ALTO + GAP;  // separación vertical entre bloques
 

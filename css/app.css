@@ -103,11 +103,11 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .chip.lleno { background: color-mix(in srgb, var(--peligro) 12%, transparent); color: var(--peligro); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--peligro) 22%, transparent); }
 
 /* ---------- Tarjetas cuadradas (edificios y lugares) ---------- */
-.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
-.tarjeta { background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); box-shadow: var(--sombra); min-height: 150px; padding: 12px; display:flex; flex-direction:column; gap: 4px; min-width: 0; transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s ease, border-color .2s ease; }
+.grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(144px, 1fr)); gap: 14px; }
+.tarjeta { background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); box-shadow: var(--sombra); min-height: 180px; padding: 14px; display:flex; flex-direction:column; gap: 4px; min-width: 0; transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s ease, border-color .2s ease; }
 .tarjeta:hover { transform: translateY(-3px); box-shadow: var(--sombra-h); border-color: var(--lin-f); }
 .tarjeta .nivel { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); font-weight: 600; }
-.tarjeta .codigo { font-size: 26px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
+.tarjeta .codigo { font-size: 31px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
 .tarjeta .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tarjeta { cursor: pointer; }
 .tarjeta .cab { display:flex; align-items:center; justify-content:space-between; gap: 4px; }
@@ -160,7 +160,7 @@ button.bloque:hover { border-color: var(--acc); }
 .bloque.elegido { outline: 3px solid var(--acc); outline-offset: 2px; }
 .bloque.lejos { opacity: .45; }
 .bloque .accion { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--acc-tx); }
-.bloque { position: absolute; width: 124px; height: 150px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 10px 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
+.bloque { position: absolute; width: 149px; height: 180px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 12px 14px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
 .bloque[data-drag] { cursor: grab; user-select: none; touch-action: none; }
 .bloque.arrastrando { cursor: grabbing; box-shadow: var(--sombra-arr); }
 .bloque.libre { background: var(--ok-f); border-color: var(--ok-l); border-top-color: var(--ok); }
@@ -168,8 +168,8 @@ button.bloque:hover { border-color: var(--acc); }
 .bloque.sub   { background: var(--sub-f); border-color: var(--sub-l); border-top-color: var(--sub); }
 .bloque.lleno { background: color-mix(in srgb, var(--peligro) 9%, var(--sur)); border-color: color-mix(in srgb, var(--peligro) 35%, transparent); border-top-color: var(--peligro); }
 .bloque .nivel { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); font-weight: 600; }
-.bloque .codigo { font-size: 26px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
-.bloque .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+.bloque .codigo { font-size: 31px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
+.bloque .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
 .bloque .pie { margin-top: auto; display:flex; flex-wrap:wrap; gap: 2px; }
 .muestra { display:inline-flex; align-items:center; padding: 4px 10px; border: 1px solid; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--ink); }
 .muestra.libre { background: var(--ok-f); border-color: var(--ok-l); }
