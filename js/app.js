@@ -159,7 +159,13 @@ document.addEventListener('input', e => {
     return;
   }
   if (t.dataset.cantoid) { S.f.cantPara[t.dataset.cantoid] = t.value; return; }
-  if (t.tagName === 'INPUT' && t.dataset.f) S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
+  if (t.tagName === 'INPUT' && t.dataset.f) {
+    S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
+    // El aviso viejo se quita mientras se escribe (sin redibujar, para no perder el foco).
+    const g = S.msg.global;
+    S.msg = g ? { global: g } : {};
+    document.querySelectorAll('#modal .msg').forEach(el => el.remove());
+  }
 });
 
 document.addEventListener('change', e => {
