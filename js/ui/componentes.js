@@ -1,6 +1,6 @@
 // Piezas que se repiten: tarjetas, bloques del plano, migas y acción principal.
 
-import { ctx, S, esc } from './estado.js';
+import { ctx, S, esc, plural } from './estado.js';
 import { ic } from './iconos.js';
 
 // Estado visible de un lugar: edificio, subdividido, con objetos o libre.
@@ -8,7 +8,12 @@ export function estadoDe(l) {
   const d = ctx.dep;
   if (d.prof(l) === 0) return { cls: 'sub', chip: 'Edificio' };
   const hijos = d.hijos(l.id).length;
-  if (hijos) return { cls: 'sub', chip: `${hijos} dentro` };
+  if (hijos) {
+    // Cuenta con el nombre del nivel de adentro: "10 estanterías", "1 estante".
+    const def = d.nivelParaHijo(l.id).def;
+    const nombre = def ? def.nombre.toLowerCase() : 'dentro';
+    return { cls: 'sub', chip: def ? `${hijos} ${hijos === 1 ? nombre : plural(nombre)}` : `${hijos} dentro` };
+  }
   const n = d.objetosDe(l.id).length;
   if (n) return { cls: 'obj', chip: n === 1 ? '1 objeto' : `${n} objetos` };
   return { cls: 'libre', chip: 'Libre' };
