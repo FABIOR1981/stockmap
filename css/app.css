@@ -233,6 +233,17 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 
 .cab-niveles { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+/* ---------- Ingreso ---------- */
+/* El body es una fila: la pantalla de ingreso tiene que ocupar todo el ancho para centrar la tarjeta. */
+.ingreso { flex: 1; width: 100%; }
+.ingreso-caja { width: min(380px, 100%); background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); box-shadow: var(--sombra); padding: 32px 28px; display: flex; flex-direction: column; gap: 14px; }
+.ingreso-caja h1 { font-size: 26px; margin: 0; }
+.ingreso-caja .sub { margin: -8px 0 4px; }
+.ingreso-caja .campo { font-size: 13px; }
+.ingreso-caja .campo input { width: 100%; min-width: 0; padding: 10px 12px; font-size: 15px; }
+.ingreso-caja .btn { padding: 11px 14px; font-size: 15px; margin-top: 4px; }
+.ingreso-caja .msg { margin: 0; }
+
 /* Movimiento reducido: sin entradas animadas ni desplazamientos; los cambios de color y sombra se mantienen. */
 @media (prefers-reduced-motion: reduce) {
   .contenido, dialog#modal { animation: none; }
