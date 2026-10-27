@@ -17,14 +17,15 @@ ctx.dep = new Deposito(almacen);
 let estadoSync = null;
 
 const NAV = [
-  ['plano', 'Plano', 'plano'],
+  ['plano', 'Asignación', 'plano'],
+  ['mover', 'Mover', 'mover'],
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
   ['accesos', 'Accesos', 'mas']
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'subirNivel', 'ponerEn', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
 
 function sesionHTML() {
@@ -46,7 +47,7 @@ function render() {
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
+  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
   const cuerpo = (vistas[S.vista] || vistaEstructura)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
 

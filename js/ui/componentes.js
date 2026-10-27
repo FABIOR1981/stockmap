@@ -75,15 +75,15 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   </div>`;
 }
 
-const NOMBRES_VISTA = { estructura: 'Edificios', plano: 'Plano', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
+const NOMBRES_VISTA = { estructura: 'Edificios', plano: 'Asignación', mover: 'Mover', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
 
 export function migasHTML() {
   const d = ctx.dep;
-  if (!['estructura', 'plano'].includes(S.vista)) return `<b>${NOMBRES_VISTA[S.vista] || ''}</b>`;
+  if (!['estructura', 'plano', 'mover'].includes(S.vista)) return `<b>${NOMBRES_VISTA[S.vista] || ''}</b>`;
   const raiz = NOMBRES_VISTA[S.vista];
   const nodo = S.nodo ? d.porId(S.nodo) : null;
   const ruta = nodo ? d.ruta(nodo) : [];
-  const accion = S.vista === 'plano' ? 'planoIr' : 'nodo';
+  const accion = ['plano', 'mover'].includes(S.vista) ? 'planoIr' : 'nodo';
   const partes = [`<a data-act="${accion}" data-id="">${raiz}</a>`,
     ...ruta.map((l, i) => i === ruta.length - 1
       ? `<b>${esc(l.codigo)}</b>`
@@ -94,7 +94,7 @@ export function migasHTML() {
 export function accionPrincipal() {
   if (!ctx.dep.eid) return '';
   if (S.vista === 'stock') return `<button class="btn" data-act="abrirNuevoObjeto">${ic('mas', 14)} Nuevo objeto</button>`;
-  if (!['estructura', 'plano'].includes(S.vista)) return '';
+  if (!['estructura', 'plano', 'mover'].includes(S.vista)) return '';
   const nodo = S.nodo ? ctx.dep.porId(S.nodo) : null;
   // Los niveles de un edificio se editan en una ventana.
   const niveles = nodo && ctx.dep.prof(nodo) === 0 ? `<button class="btn sec" data-act="abrirNiveles">Niveles</button>` : '';

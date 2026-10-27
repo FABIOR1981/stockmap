@@ -19,9 +19,14 @@ const cerrarElegir = mensaje => { limpiarModal(); aviso('obj', null, mensaje); }
 
 export const ACCIONES = {
   // Navegación
-  vista:   el => { S.vista = el.v; S.nodo = null; S.msg = {}; },
+  // Entre Asignación y Mover se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
+  vista:   el => {
+    const enPlano = v => v === 'plano' || v === 'mover';
+    if (!(enPlano(S.vista) && enPlano(el.v))) S.nodo = null;
+    S.vista = el.v; S.msg = {};
+  },
   nodo:    el => { S.vista = 'estructura'; S.nodo = el.id || null; S.msg = {}; },
-  planoIr: el => { S.vista = 'plano'; S.nodo = el.id || null; S.msg = {}; },
+  planoIr: el => { S.vista = S.vista === 'mover' ? 'mover' : 'plano'; S.nodo = el.id || null; S.msg = {}; },
   // Vuelve un nivel arriba en el plano (al padre; si era de primer nivel, a la raíz).
   subirNivel: () => { const l = d().porId(S.nodo); S.nodo = l?.padre_id || null; S.msg = {}; },
 
@@ -126,18 +131,23 @@ export const ACCIONES = {
     aviso('objetos', err, 'Puesto en el lugar.');
     if (!err) S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: null };
   },
-  // Pone un objeto en el lugar: el de la fila (data-oid) o el elegido en el selector.
-  asignarAqui: el => {
-    const oid = el.oid || S.f.objAqui;
-    const err = d().asignar(oid, el.lid);
-    aviso('objetos', err, 'Agregado.');
-    if (!err && !el.oid) S.f.objAqui = '';
+  // Mover: lugar elegido para un objeto que está en un lugar (fila de la vista Mover).
+  moverEn: el => { S.f.moverA = { ...S.f.moverA, [`${el.oid}|${el.lid}`]: el.value || null }; },
+  moverObjeto: el => {
+    const key = `${el.oid}|${el.lid}`;
+    const hasta = S.f.moverA?.[key];
+    if (!hasta) return aviso('objetos', 'Elegí a dónde moverlo.');
+    const o = d().objetoPorId(el.oid);
+    const cant = o?.tipo === 'producto' ? (S.f.cantPara[el.oid] || '1') : '1';
+    const err = d().transferir(el.oid, el.lid, hasta, cant);
+    aviso('objetos', err, 'Movido.');
+    if (!err) S.f.moverA = { ...S.f.moverA, [key]: null };
   },
   // Saca de un lugar la cantidad elegida (una unidad, o la cantidad escrita para productos).
   sacarDeLugar: el => {
     const o = d().objetoPorId(el.oid);
     const cant = o?.tipo === 'producto' ? (S.f.cantPara[el.oid] || '1') : '1';
-    aviso(S.modal === 'objetos' || S.vista === 'plano' ? 'objetos' : 'obj', d().retirar(el.oid, el.lid, cant), 'Sacado de ese lugar.');
+    aviso(S.modal === 'objetos' || ['plano', 'mover'].includes(S.vista) ? 'objetos' : 'obj', d().retirar(el.oid, el.lid, cant), 'Sacado del depósito.');
   },
 
   // Stock desde la tabla

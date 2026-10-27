@@ -4,7 +4,7 @@
 export const ctx = { dep: null, render: () => {} };
 
 export const S = {
-  vista: 'plano',          // 'plano' | 'stock' | 'movimientos' | 'accesos' ('estructura' = vista de tarjetas, sin menú)
+  vista: 'plano',          // 'plano' (Asignación) | 'mover' | 'stock' | 'movimientos' | 'accesos' ('estructura' = vista de tarjetas, sin menú)
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
@@ -21,6 +21,7 @@ export const S = {
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
     ponerEn: {},                          // por objeto sin lugar: lugar elegido para ponerlo (desde un estante)
+    moverA: {},                           // por 'objeto|lugar': lugar al que se mueve ese objeto desde ese lugar
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,
     accUid: '', accRol: 'editor'
   },

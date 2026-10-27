@@ -437,11 +437,14 @@ export class Deposito {
   // - ningún lugar de adentro tiene objetos (si no, se quedaría un objeto adentro de algo ocupado);
   // - ningún lugar de arriba tiene objetos (si no, se pondría adentro de algo ocupado).
   // Varios objetos pueden ir en el mismo lugar. Devuelve el lugar, o el motivo (texto).
-  lugarDestino(lid) {
+  // `ignorar` ({oid, origen}): el objeto que se mueve desde ese origen no cuenta como ocupación.
+  lugarDestino(lid, ignorar = null) {
     const l = this.porId(lid);
     if (!l) return 'Lugar inexistente.';
-    if (this.descendientes(l).some(x => this.objetosDe(x.id).length)) return 'Hay objetos en lugares de adentro. Sacalos antes de poner algo acá.';
-    if (this.ancestros(l).some(a => this.objetosDe(a.id).length)) return 'Un lugar de arriba tiene un objeto puesto. Sacalo antes para usar este lugar.';
+    const ocupado = p => this.asignaciones.some(a => a.lid === p.id && a.cantidad > 0 &&
+      !(ignorar && a.oid === ignorar.oid && a.lid === ignorar.origen));
+    if (this.descendientes(l).some(ocupado)) return 'Hay objetos en lugares de adentro. Sacalos antes de poner algo acá.';
+    if (this.ancestros(l).some(ocupado)) return 'Un lugar de arriba tiene un objeto puesto. Sacalo antes para usar este lugar.';
     return l;
   }
 
@@ -510,13 +513,14 @@ export class Deposito {
     const o = this.objetoPorId(oid);
     if (!o) return 'Objeto inexistente.';
     if (desde === hasta) return 'El origen y el destino son el mismo lugar.';
-    const destino = this.lugarDestino(hasta);
-    if (typeof destino === 'string') return destino;
     const n = o.tipo === 'unidad' ? 1 : enteroPositivo(cantidad);
     if (!n) return 'La cantidad tiene que ser un número entero mayor que 0.';
     const disp = this.cantidadEn(oid, desde);
     if (!disp) return 'Ese objeto no está en el lugar de origen.';
     if (n > disp) return `Solo hay ${disp} en el origen.`;
+    // Si se mueve todo lo que hay en el origen, ese lugar deja de estar ocupado por este objeto.
+    const destino = this.lugarDestino(hasta, n === disp ? { oid, origen: desde } : null);
+    if (typeof destino === 'string') return destino;
     if (o.tipo === 'unidad' && this.cantidadEn(oid, hasta) > 0) return 'Ese objeto ya está en el destino.';
     this._restar(oid, desde, n);
     this._sumar(oid, hasta, n);

@@ -38,51 +38,56 @@ export function vistaEdificios() {
 }
 
 // ---------- Niveles de un edificio ----------
-// Objetos de un lugar, desde su página: los que tiene, los que hay adentro, y los que todavía no tienen lugar
-// (se ponen en este lugar o en uno de adentro, según la regla de destino del modelo).
-function contenidoObjetos(l) {
+const etiquetaObj = o => `<strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}`;
+const detalleObj = o => o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : '';
+// Cantidad para productos (una unidad se mueve o saca de a una).
+const cantidadProducto = (o, lid) => o.tipo === 'producto'
+  ? `<input type="number" min="1" max="${ctx.dep.cantidadEn(o.id, lid)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">`
+  : '';
+
+// Asignación: solo los objetos que todavía no tienen lugar, para ponerlos en este lugar o uno de adentro.
+function contenidoAsignacion(l) {
   const d = ctx.dep;
-  const etiqueta = o => `<strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}`;
-  const detalle = o => o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : '';
-  const sacar = (o, lid) => `${o.tipo === 'producto' ? `<input type="number" min="1" max="${d.cantidadEn(o.id, lid)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad a sacar de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">` : ''}
-    <button class="btn sm sec" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${lid}">Sacar</button>`;
-  // Un lugar sirve como destino si d.lugarDestino no devuelve un motivo (texto).
   const sirve = x => typeof d.lugarDestino(x.id) !== 'string';
-
-  const propios = d.objetosDe(l.id);
-  const filas = propios.length
-    ? `<div class="dlg-lista">${propios.map(o => `<div class="r">
-        <span>${etiqueta(o)}${detalle(o)}</span>
-        <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>${sacar(o, l.id)}</span>
-      </div>`).join('')}</div>`
-    : '';
-
-  const adentro = d.descendientes(l).flatMap(h => d.objetosDe(h.id).map(o => ({ o, h })));
-  const adentroHTML = adentro.length
-    ? `<h3 class="sub-titulo">Adentro (${adentro.length})</h3><div class="dlg-lista">${adentro.map(({ o, h }) => `<div class="r">
-        <span>${etiqueta(o)}<br><span class="dim" style="font-size:13px">en ${esc(d.dir(h))}</span></span>
-        <span class="acciones-fila">${sacar(o, h.id)}</span>
-      </div>`).join('')}</div>`
-    : '';
-
-  // Lugares donde se puede poner un objeto desde acá: este mismo (si sirve) y los de adentro que sirvan.
   const cand = [l, ...d.descendientes(l)].filter(sirve);
-  const sinLugar = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
-  const sueltos = sinLugar.length
-    ? `<h3 class="sub-titulo">Pendientes de asignar (${sinLugar.length})</h3>
-       ${cand.length
-         ? `<div class="dlg-lista">${sinLugar.map(o => `<div class="r">
-              <span>${etiqueta(o)}${detalle(o)}</span>
-              <span class="acciones-fila"><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${cand.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}${h.id === l.id ? ' (este)' : ''}</option>`).join('')}</select>
-                <button class="btn sm" data-act="ponerObjeto" data-oid="${o.id}">Poner</button></span>
-            </div>`).join('')}</div>`
-         : `<p class="dim" style="font-size:13px;margin:8px 0 0">Ningún lugar de acá puede recibirlo ahora. Sacá los objetos de adentro o de arriba para liberarlo.</p>`}`
-    : '';
+  const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
+  if (!pendientes.length) return `<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
+  if (!cand.length) return `<p class="dim" style="font-size:13px;margin:0">Ningún lugar de acá puede recibir objetos ahora: ${esc(d.lugarDestino(l.id))}</p>${msgHTML('objetos')}`;
+  return `<p class="ayuda" style="margin:0 0 8px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
+    <div class="dlg-lista">${pendientes.map(o => `<div class="r">
+      <span>${etiquetaObj(o)}${detalleObj(o)}</span>
+      <span class="acciones-fila"><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${cand.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}${h.id === l.id ? ' (este)' : ''}</option>`).join('')}</select>
+        <button class="btn sm" data-act="ponerObjeto" data-oid="${o.id}">Poner</button></span>
+    </div>`).join('')}</div>${msgHTML('objetos')}`;
+}
 
-  const motivo = !sirve(l) ? `<p class="dim" style="font-size:13px;margin:16px 0 0">${esc(d.lugarDestino(l.id))}</p>` : '';
-  const vacio = !propios.length && !adentro.length && !sinLugar.length
-    ? `<p class="vacio" style="border:0;padding:12px">No hay objetos.</p>` : '';
-  return `${filas}${adentroHTML}${sueltos}${motivo}${vacio}${msgHTML('objetos')}`;
+// Lugares a los que puede moverse un objeto que está en `origen` (los que sirven, sin contar su propio lugar).
+function destinosDe(o, origen) {
+  const d = ctx.dep;
+  const ed = d.edificioDe(origen);
+  return [ed, ...d.descendientes(ed)].filter(x => x.id !== origen.id &&
+    typeof d.lugarDestino(x.id, { oid: o.id, origen: origen.id }) !== 'string');
+}
+
+// Mover: lo que hay en este lugar y adentro, para moverlo a otro lugar o sacarlo del depósito.
+function contenidoMover(l) {
+  const d = ctx.dep;
+  const fila = (o, origen) => {
+    const key = `${o.id}|${origen.id}`;
+    const destinos = destinosDe(o, origen);
+    return `<div class="r">
+      <span>${etiquetaObj(o)}${detalleObj(o)}<br><span class="dim" style="font-size:13px">en ${esc(d.dir(origen))} · ${d.cantidadEn(o.id, origen.id)}</span></span>
+      <span class="acciones-fila">${cantidadProducto(o, origen.id)}
+        ${destinos.length ? `<select data-act="moverEn" data-oid="${o.id}" data-lid="${origen.id}" aria-label="Mover ${esc(o.codigo_interno)} a"><option value="">Mover a…</option>${destinos.map(h => `<option value="${h.id}" ${S.f.moverA[key] === h.id ? 'selected' : ''}>${esc(d.dir(h))}</option>`).join('')}</select>
+          <button class="btn sm" data-act="moverObjeto" data-oid="${o.id}" data-lid="${origen.id}">Mover</button>` : ''}
+        <button class="btn sm peligro" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${origen.id}">Sacar del depósito</button>
+      </span></div>`;
+  };
+  const filas = [
+    ...d.objetosDe(l.id).map(o => fila(o, l)),
+    ...d.descendientes(l).flatMap(h => d.objetosDe(h.id).map(o => fila(o, h))),
+  ];
+  return `${filas.length ? `<div class="dlg-lista">${filas.join('')}</div>` : '<p class="vacio" style="border:0;padding:12px">No hay objetos en este lugar ni adentro.</p>'}${msgHTML('objetos')}`;
 }
 
 function editorNiveles(ed) {
@@ -158,7 +163,8 @@ export function vistaEstructura() {
 // ---------- Plano ----------
 export function vistaPlano() {
   const d = ctx.dep;
-  if (!d.eid) return `<h1>Plano</h1>${sinCliente()}`;
+  const mover = S.vista === 'mover';
+  if (!d.eid) return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>${sinCliente()}`;
   const foco = S.nodo ? d.porId(S.nodo) : null;
   const { def } = d.nivelParaHijo(S.nodo);
   // Un lienzo con posición libre para cada bloque (edificios, o lo que hay dentro de un lugar).
@@ -176,7 +182,7 @@ export function vistaPlano() {
       const p = posDe(e, i);
       return bloquePlano(e, `left:${p.x}px;top:${p.y}px;`, `data-drag="${e.id}"`);
     }).join('');
-    return `<h1>Plano</h1>
+    return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
       ${eds.length ? '' : '<p class="vacio" style="margin:0 0 16px;border:0">Todavía no hay edificios.</p>'}
       <div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>
@@ -187,7 +193,7 @@ export function vistaPlano() {
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
-    <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>Objetos de este lugar</h2>${contenidoObjetos(foco)}</section></div>
+    <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>${mover ? contenidoMover(foco) : contenidoAsignacion(foco)}</section></div>
     ${leyenda()}${msgHTML('borrar')}`;
 }
 
@@ -470,7 +476,7 @@ export function ventana() {
       if (!l) return null;
       return {
         titulo: `Objetos en ${d.dir(l)} (${d.objetosDe(l.id).length})`,
-        cuerpo: contenidoObjetos(l),
+        cuerpo: contenidoMover(l),
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>`
       };
     }
