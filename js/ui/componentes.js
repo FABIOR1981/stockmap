@@ -40,9 +40,16 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   const st = estadoDe(l), nv = d.nivelDe(l);
   const objs = d.objetosDe(l.id).length;
   const hijos = d.hijos(l.id).length;
+  const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
   return `<div class="bloque ${st.cls}" ${atributos} style="${estilo}">
     <span class="nivel">${esc(nv.nombre)}</span>
-    <span class="codigo">${esc(l.codigo)}</span>
+    <div class="cab">
+      <span class="codigo">${esc(l.codigo)}</span>
+      <span class="acc">
+        <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
+        ${vacioAdentro ? `<button class="btn sm txt papelera" data-act="borrarLugar" data-id="${l.id}" aria-label="Borrar ${esc(l.codigo)}" title="Borrar">${ic('papelera', 14)}</button>` : ''}
+      </span>
+    </div>
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
     <div class="pie">
       <span class="chip ${st.cls}">${esc(st.chip)}</span>
@@ -50,8 +57,6 @@ export function bloquePlano(l, estilo = '', atributos = '') {
     </div>
     <div class="acciones-fila">
       ${(hijos || d.nivelParaHijo(l.id).def) ? `<button class="btn sm sec" data-act="planoIr" data-id="${l.id}">Entrar</button>` : ''}
-      <button class="btn sm txt" data-act="editarAbrir" data-id="${l.id}">Editar</button>
-      <button class="btn sm peligro" data-act="borrarLugar" data-id="${l.id}">Borrar</button>
     </div>
   </div>`;
 }

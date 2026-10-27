@@ -110,10 +110,11 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .tarjeta .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tarjeta { cursor: pointer; }
 .tarjeta .cab { display:flex; align-items:center; justify-content:space-between; gap: 4px; }
-.tarjeta .acc { display:flex; align-items:center; gap: 2px; flex-shrink: 0; }
-.tarjeta .acc .btn { padding: 4px; line-height: 0; color: var(--mut); }
-.tarjeta .acc .btn:hover { color: var(--acc-tx); }
-.tarjeta .acc .papelera:hover { color: var(--peligro); }
+.tarjeta .cab, .bloque .cab { display:flex; align-items:center; justify-content:space-between; gap: 4px; }
+.tarjeta .acc, .bloque .acc { display:flex; align-items:center; gap: 2px; flex-shrink: 0; }
+.tarjeta .acc .btn, .bloque .acc .btn { padding: 4px; line-height: 0; color: var(--mut); }
+.tarjeta .acc .btn:hover, .bloque .acc .btn:hover { color: var(--acc-tx); }
+.tarjeta .acc .papelera:hover, .bloque .acc .papelera:hover { color: var(--peligro); }
 .tarjeta .chip { margin-top: auto; align-self: flex-start; }
 .tarjeta:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
 .tarjeta.libre { background: var(--ok-f); border-color: var(--ok-l); }
