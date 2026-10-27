@@ -28,7 +28,7 @@ export function vistaEdificios() {
       <div class="vacio"><span class="ilu">${ilustracion()}</span>
         <p>Todavía no hay edificios</p>
         <small>Creá el primero para empezar a definir sus niveles y su contenido.</small>
-        <button class="btn" data-act="abrirCrear">+ Nuevo edificio</button></div>
+        <button class="btn" data-act="abrirCrear">+ Agregar edificio</button></div>
       ${msgHTML('borrar')}`;
   }
   return `<h1>Edificios</h1>
@@ -361,7 +361,7 @@ export function ventana() {
     case 'crear': {
       const { def } = d.nivelParaHijo(S.nodo);
       if (!def) return { titulo: 'Crear lugar', cuerpo: `<p class="aviso">Este edificio no tiene niveles. Definilos primero.</p>`, pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>` };
-      const titulo = nodo ? `Nuevo ${def.nombre.toLowerCase()} en ${d.dir(nodo)}` : 'Nuevo edificio';
+      const titulo = nodo ? `Agregar ${def.nombre.toLowerCase()} en ${d.dir(nodo)}` : 'Agregar edificio';
       return {
         titulo,
         cuerpo: `<div class="form">
@@ -401,13 +401,16 @@ export function ventana() {
               <button class="btn" data-act="editarGuardar">Guardar</button>`
       };
     }
-    case 'clonar': {
-      const src = S.clon ? d.porId(S.clon) : null;
-      if (!src) return null;
+    case 'clonarNivel': {
+      const hijos = d.hijos(S.nodo || null);
+      if (!hijos.length) return null;
+      const src = d.porId(S.clon) || hijos[0];
+      const opciones = hijos.map(h => `<option value="${h.id}" ${h.id === src.id ? 'selected' : ''}>${esc(d.nivelDe(h).nombre)} ${esc(h.codigo)}${h.nombre ? ' · ' + esc(h.nombre) : ''}</option>`).join('');
       return {
-        titulo: `Clonar ${d.dir(src)}`,
-        cuerpo: `<p class="dim" style="margin:0 0 14px">Se copian los niveles y los lugares de adentro. El stock no se copia. Los códigos nuevos se asignan solos.</p>
-          <div class="form">${campo('Cantidad de copias', `<input data-f="cantClon" value="${esc(S.f.cantClon)}" size="5">`)}</div>
+        titulo: `Clonar ${d.nivelDe(src).nombre.toLowerCase()} existente`,
+        cuerpo: `<p class="dim" style="margin:0 0 14px">Se copia el que elijas, con sus niveles y lugares de adentro. El stock no se copia. Los códigos nuevos se asignan solos.</p>
+          <div class="form">${campo('Cuál copiar', `<select data-act="clonarElegir" aria-label="Cuál copiar">${opciones}</select>`)}
+          ${campo('Cantidad de copias', `<input data-f="cantClon" value="${esc(S.f.cantClon)}" size="5">`)}</div>
           ${msgHTML('clon')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
               <button class="btn" data-act="clonarEjecutar">Clonar</button>`

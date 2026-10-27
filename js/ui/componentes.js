@@ -29,7 +29,6 @@ export function tarjetaLugar(l) {
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
     <span class="chip ${st.cls}">${esc(st.chip)}</span>
     <div class="pie">
-      <button class="btn sm txt" data-act="clonarAbrir" data-id="${l.id}">Clonar</button>
       ${vacioAdentro ? `<button class="btn sm peligro" data-act="borrarLugar" data-id="${l.id}">Borrar</button>` : ''}
     </div>
   </article>`;
@@ -79,8 +78,10 @@ export function accionPrincipal() {
   if (!['estructura', 'plano'].includes(S.vista)) return '';
   const { def } = ctx.dep.nivelParaHijo(S.nodo);
   if (!def) return '';
-  const texto = S.nodo ? `Agregar ${def.nombre.toLowerCase()}` : 'Nuevo edificio';
-  return `<button class="btn" data-act="abrirCrear">${ic('mas', 14)} ${texto}</button>`;
+  const texto = S.nodo ? `Agregar ${def.nombre.toLowerCase()}` : 'Agregar edificio';
+  const hijos = ctx.dep.hijos(S.nodo || null).length;
+  const clonar = hijos ? `<button class="btn sec" data-act="clonarNivelAbrir">Clonar existente</button>` : '';
+  return `<button class="btn" data-act="abrirCrear">${ic('mas', 14)} ${texto}</button>${clonar}`;
 }
 
 export function leyenda() {

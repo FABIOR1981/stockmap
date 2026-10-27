@@ -8,7 +8,7 @@ export const S = {
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
-  modal: null,             // 'crear' | 'editar' | 'clonar' | 'objetos' | 'nuevoObjeto' | 'elegirLugar' | null
+  modal: null,             // 'crear' | 'editar' | 'clonarNivel' | 'objetos' | 'nuevoObjeto' | 'elegirLugar' | null
   elegirPara: null,        // objeto al que se le elige lugar en el plano
   elegirModo: 'asignar',   // 'asignar' (lugar nuevo) | 'mover' (desde un lugar actual, o a SALIDA)
   elegirOrigen: null,      // en mover: lugar de donde sale el objeto

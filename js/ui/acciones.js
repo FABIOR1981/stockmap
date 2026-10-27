@@ -100,7 +100,12 @@ export const ACCIONES = {
   editarGuardar: () => aviso('editar',
     d().editarLugar(S.editar, { codigo: S.f.edCodigo, nombre: S.f.edNombre }), 'Cambios guardados.'),
 
-  clonarAbrir: el => { S.clon = el.id; S.modal = 'clonar'; S.msg = {}; },
+  // Clonar un hijo existente del nivel que se mira (la copia queda al mismo nivel).
+  clonarNivelAbrir: () => {
+    S.clon = d().hijos(S.nodo || null)[0]?.id || null;
+    S.modal = 'clonarNivel'; S.msg = {};
+  },
+  clonarElegir: el => { S.clon = el.value || null; S.msg = {}; },
   clonarEjecutar: () => {
     const r = d().clonar(S.clon, S.f.cantClon);
     if (r.error) return aviso('clon', r.error);

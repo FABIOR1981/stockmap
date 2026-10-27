@@ -108,7 +108,7 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .tarjeta .nivel { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); font-weight: 600; }
 .tarjeta .codigo { font-size: 26px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
 .tarjeta .nombre { color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tarjeta .pie { margin-top: auto; display:flex; justify-content: space-between; align-items: center; gap: 2px; }
+.tarjeta .pie { margin-top: auto; display:flex; justify-content: flex-end; align-items: center; gap: 2px; }
 .tarjeta { cursor: pointer; }
 .tarjeta .cab { display:flex; align-items:center; justify-content:space-between; gap: 4px; }
 .tarjeta .lapiz { padding: 4px; line-height: 0; flex-shrink: 0; color: var(--mut); }
