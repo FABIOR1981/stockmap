@@ -206,12 +206,18 @@ export function vistaCodigo() {
     <p class="sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
     <section class="panel" style="max-width:560px">
       <div class="form">
-        ${campo('Código del lugar', `<input data-f="codLugar" value="${esc(S.f.codLugar)}" placeholder="Ej.: 1 · A · 2" autocomplete="off">`)}
-        ${campo('Código del objeto', `<input data-f="codObjeto" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC" autocomplete="off">`)}
+        ${campo('Código del lugar', `<input data-f="codLugar" data-enter="enfocar" data-campo="codObjeto" value="${esc(S.f.codLugar)}" placeholder="Ej.: 1 · A · 2 (o escaneá)" autocomplete="off">`)}
+        ${campo('Código del objeto', `<input data-f="codObjeto" data-enter="asignarPorCodigo" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC (o escaneá)" autocomplete="off">`)}
         ${campo('Cantidad', `<input data-f="codCant" value="${esc(S.f.codCant)}" size="5" inputmode="numeric">`)}
       </div>
       <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button></div>
       ${msgHTML('codigo')}
+    </section>
+    <section class="panel" style="max-width:560px;margin-top:16px">
+      <h2>Etiquetas QR</h2>
+      <p class="ayuda">Se imprimen en una hoja nueva. Cada lugar y cada objeto lleva su código para escanear.</p>
+      <div class="acciones-fila"><button class="btn sec" data-act="imprimirEtiquetas" data-que="lugares">Imprimir lugares</button>
+        <button class="btn sec" data-act="imprimirEtiquetas" data-que="objetos">Imprimir objetos</button></div>
     </section>`;
 }
 

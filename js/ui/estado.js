@@ -27,6 +27,7 @@ export const S = {
     accUid: '', accRol: 'editor'
   },
   pruebas: null,           // resultado de la última corrida de pruebas
+  enfocar: null,           // data-f del campo que vuelve a tener el foco tras dibujar
   editarNiveles: false,    // true = se ve el editor de niveles del edificio (si no, solo el resumen)
 };
 

@@ -6,6 +6,7 @@ import { ctx, S, aviso } from './estado.js';
 import { correrPruebas } from '../core/pruebas.js';
 import { api } from '../almacen/nube.js';
 import { sonAledanos } from './plano.js';
+import { abrirEtiquetas } from './etiquetas.js';
 
 const d = () => ctx.dep;
 
@@ -131,13 +132,16 @@ export const ACCIONES = {
     aviso('objetos', err, 'Puesto en el lugar.');
     if (!err) S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: null };
   },
-  // Por código: busca el lugar y el objeto por su código (sin distinguir mayúsculas, espacios ni signos).
+  // Por código: el lugar se busca por su identificador (QR) o por su código visible, y el objeto por su código.
+  // Enter en el lugar pasa al objeto; Enter en el objeto asigna. El lugar queda elegido para seguir escaneando.
   asignarPorCodigo: () => {
     const dep = d();
     const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-    const lc = norm(S.f.codLugar);
-    const lugar = lc ? dep.lugares.find(l => norm(dep.dir(l)) === lc) : null;
-    if (!lugar) return aviso('codigo', `No encuentro un lugar con el código "${S.f.codLugar}".`);
+    const raw = String(S.f.codLugar || '').trim();
+    const lc = norm(raw);
+    const lugar = raw ? (dep.lugares.find(l => l.id === raw) || dep.lugares.find(l => lc && norm(dep.dir(l)) === lc)) : null;
+    S.enfocar = 'codObjeto';
+    if (!lugar) return aviso('codigo', `No encuentro un lugar con el código "${raw}".`);
     const oc = norm(S.f.codObjeto);
     const obj = oc ? dep.objetos.find(o => norm(o.codigo_interno) === oc || (o.codigo_propio && norm(o.codigo_propio) === oc)) : null;
     if (!obj) return aviso('codigo', `No encuentro un objeto con el código "${S.f.codObjeto}".`);
@@ -145,6 +149,15 @@ export const ACCIONES = {
     const err = dep.asignar(obj.id, lugar.id, cant);
     aviso('codigo', err, `${obj.codigo_interno} asignado en ${dep.dir(lugar)}.`);
     if (!err) S.f.codObjeto = '';
+  },
+  enfocar: el => { S.enfocar = el.campo || null; },
+  // Hoja de etiquetas QR de todos los lugares o de todos los objetos.
+  imprimirEtiquetas: el => {
+    const dep = d();
+    const items = el.que === 'objetos'
+      ? dep.objetos.map(o => ({ codigo: o.codigo_interno, titulo: o.codigo_interno, detalle: [o.codigo_propio, o.descripcion].filter(Boolean).join(' · ') }))
+      : dep.lugares.map(l => ({ codigo: l.id, titulo: dep.dir(l), detalle: l.nombre || '' }));
+    aviso('codigo', abrirEtiquetas(el.que === 'objetos' ? 'Etiquetas de objetos' : 'Etiquetas de lugares', items));
   },
   // Mover: lugar elegido para un objeto que está en un lugar (fila de la vista Mover).
   moverEn: el => { S.f.moverA = { ...S.f.moverA, [`${el.oid}|${el.lid}`]: el.value || null }; },

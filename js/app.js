@@ -26,7 +26,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
 
 function sesionHTML() {
@@ -52,6 +52,7 @@ function render() {
   const cuerpo = (vistas[S.vista] || vistaEstructura)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
 
+  if (S.enfocar) { document.querySelector(`[data-f="${S.enfocar}"]`)?.focus(); S.enfocar = null; }
   const dlg = $('#modal');
   const v = S.modal ? ventana() : null;
   if (v) {
@@ -148,6 +149,17 @@ document.addEventListener('click', async e => {
   if (fn) await fn(b.dataset);
   render();
   if (!SIN_SYNC.has(b.dataset.act) && ctx.sesion) sincronizarAhora();
+});
+
+// Campos con data-enter: Enter llama a su acción (por ejemplo, el lector de códigos USB manda Enter al final).
+document.addEventListener('keydown', async e => {
+  if (e.key !== 'Enter' || !e.target.dataset?.enter) return;
+  e.preventDefault();
+  const act = e.target.dataset.enter;
+  const fn = ACCIONES[act];
+  if (fn) await fn({ ...e.target.dataset });
+  render();
+  if (!SIN_SYNC.has(act) && ctx.sesion) sincronizarAhora();
 });
 
 // Tarjetas que actúan como botón (role="button"): Enter o Espacio sobre la tarjeta misma equivalen a un clic.
