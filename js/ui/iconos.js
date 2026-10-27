@@ -6,7 +6,8 @@ const TRAZOS = {
   caja:     '<path d="M3.5 7.5 12 3.5l8.5 4v9L12 20.5l-8.5-4z"/><path d="M3.5 7.5 12 11.5l8.5-4M12 11.5v9"/>',
   estante:  '<path d="M4 5h16M4 12h16M4 19h16M6 3v18M18 3v18"/>',
   mas:      '<path d="M12 5v14M5 12h14"/>',
-  buscar:   '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>'
+  buscar:   '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/>',
+  lapiz:    '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'
 };
 
 export const ic = (nombre, tam = 16) =>

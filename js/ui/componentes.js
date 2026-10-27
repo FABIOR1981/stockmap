@@ -15,21 +15,22 @@ export function estadoDe(l) {
 }
 
 // Tarjeta cuadrada: vista de configuración.
+// La tarjeta entera abre el lugar. Borrar solo aparece si el lugar y todo lo que tiene adentro están vacíos.
 export function tarjetaLugar(l) {
   const d = ctx.dep;
   const st = estadoDe(l), nv = d.nivelDe(l);
-  const n = d.hijos(l.id).length;
-  const objs = d.objetosDe(l.id).length;
-  return `<article class="tarjeta ${st.cls}">
+  const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
+  return `<article class="tarjeta ${st.cls}" data-act="nodo" data-id="${l.id}" role="button" tabindex="0">
     <span class="nivel">${esc(nv.nombre)}</span>
-    <span class="codigo">${esc(l.codigo)}</span>
+    <div class="cab">
+      <span class="codigo">${esc(l.codigo)}</span>
+      <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
+    </div>
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
     <span class="chip ${st.cls}">${esc(st.chip)}</span>
     <div class="pie">
-      <button class="btn sm sec" data-act="nodo" data-id="${l.id}">Abrir</button>
-      <button class="btn sm txt" data-act="editarAbrir" data-id="${l.id}">Editar</button>
       <button class="btn sm txt" data-act="clonarAbrir" data-id="${l.id}">Clonar</button>
-      <button class="btn sm peligro" data-act="borrarLugar" data-id="${l.id}">Borrar</button>
+      ${vacioAdentro ? `<button class="btn sm peligro" data-act="borrarLugar" data-id="${l.id}">Borrar</button>` : ''}
     </div>
   </article>`;
 }

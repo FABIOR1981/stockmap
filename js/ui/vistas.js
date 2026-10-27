@@ -100,7 +100,7 @@ export function vistaEstructura() {
         <p class="ayuda">${objs ? `${objs} ${objs === 1 ? 'objeto' : 'objetos'} en este lugar.` : 'Todavía no hay objetos en este lugar.'}</p>
         <button class="btn sec" data-act="verObjetos" data-id="${nodo.id}">Ver objetos</button></section>`
     : kids.length
-      ? `<section class="panel"><h2>Contenido</h2><p class="ayuda">${kids.length} ${kids.length === 1 ? 'elemento' : 'elementos'}. Tocá Abrir para entrar.</p><div class="grid">${kids.map(tarjetaLugar).join('')}</div></section>`
+      ? `<section class="panel"><h2>Contenido</h2><p class="ayuda">${kids.length} ${kids.length === 1 ? 'elemento' : 'elementos'}. Tocá una tarjeta para entrar.</p><div class="grid">${kids.map(tarjetaLugar).join('')}</div></section>`
       : `<div class="vacio"><span class="ilu">${ilustracion()}</span><p>Todavía no hay ${esc(plural(def.nombre.toLowerCase()))} aquí</p>
           <small>Agregá el primero y empezá a armar el contenido.</small>
           <button class="btn" data-act="abrirCrear">+ Agregar ${esc(def.nombre.toLowerCase())}</button></div>`;

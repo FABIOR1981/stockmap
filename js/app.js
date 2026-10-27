@@ -149,6 +149,14 @@ document.addEventListener('click', async e => {
   if (!SIN_SYNC.has(b.dataset.act) && ctx.sesion) sincronizarAhora();
 });
 
+// Tarjetas que actúan como botón (role="button"): Enter o Espacio sobre la tarjeta misma equivalen a un clic.
+document.addEventListener('keydown', e => {
+  if ((e.key !== 'Enter' && e.key !== ' ') || e.target.getAttribute?.('role') !== 'button') return;
+  if (e.target.tagName === 'BUTTON') return;
+  e.preventDefault();
+  e.target.click();
+});
+
 document.addEventListener('input', e => {
   const t = e.target;
   if (t.dataset.in === 'q') {
