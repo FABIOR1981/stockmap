@@ -14,10 +14,10 @@ export const ic = (nombre, tam = 16) =>
 
 // Ilustración de los estados vacíos: un estante con dos niveles.
 export const ilustracion = () => `<svg class="ilu" width="120" height="96" viewBox="0 0 120 96" fill="none" aria-hidden="true">
-  <rect x="14" y="10" width="92" height="76" rx="8" fill="#fff" stroke="currentColor" stroke-width="1.5"/>
+  <rect x="14" y="10" width="92" height="76" rx="8" style="fill:var(--sur)" stroke="currentColor" stroke-width="1.5"/>
   <path d="M14 42h92M14 70h92" stroke="currentColor" stroke-width="1.5"/>
-  <rect x="26" y="20" width="18" height="14" rx="3" fill="var(--acc-s, #eceefe)" stroke="var(--acc, #4f46e5)" stroke-width="1.2"/>
-  <rect x="50" y="20" width="24" height="14" rx="3" fill="#fff" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/>
-  <rect x="32" y="50" width="26" height="14" rx="3" fill="#fff" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/>
-  <rect x="66" y="50" width="22" height="14" rx="3" fill="var(--acc-s, #eceefe)" stroke="var(--acc, #4f46e5)" stroke-width="1.2"/>
+  <rect x="26" y="20" width="18" height="14" rx="3" style="fill:var(--acc-s);stroke:var(--acc)" stroke-width="1.2"/>
+  <rect x="50" y="20" width="24" height="14" rx="3" style="fill:var(--sur)" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/>
+  <rect x="32" y="50" width="26" height="14" rx="3" style="fill:var(--sur)" stroke="currentColor" stroke-width="1.2" stroke-dasharray="3 3"/>
+  <rect x="66" y="50" width="22" height="14" rx="3" style="fill:var(--acc-s);stroke:var(--acc)" stroke-width="1.2"/>
 </svg>`;
