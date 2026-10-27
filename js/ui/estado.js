@@ -17,7 +17,7 @@ export const S = {
   editar: null, clon: null, verObj: null,
   f: {
     codigo: '', nombre: '', desde: '', hasta: '', cantClon: '1',
-    codigoP: '', desc: '', tipoNuevo: 'unidad', minimoNuevo: '',
+    codigoP: '', desc: '', tipoNuevo: 'producto', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,
