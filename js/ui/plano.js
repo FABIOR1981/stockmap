@@ -3,13 +3,14 @@
 
 import { ctx } from './estado.js';
 
-export const ANCHO = 184, GAP = 16, MARGEN = 20, COLUMNAS = 4;
-const PASO = ANCHO + GAP;
+export const ANCHO = 184, ALTO = 232, GAP = 16, MARGEN = 20, COLUMNAS = 4;
+const PASO = ANCHO + GAP;   // separación horizontal entre bloques
+const PASO_V = ALTO + GAP;  // separación vertical entre bloques
 
 // Posición de un lugar: la guardada, o la de la cuadrícula por defecto según su orden entre hermanos.
 export function posDe(l, indice = 0) {
   if (l.pos_x != null && l.pos_y != null) return { x: l.pos_x, y: l.pos_y };
-  return { x: MARGEN + (indice % COLUMNAS) * PASO, y: MARGEN + Math.floor(indice / COLUMNAS) * PASO };
+  return { x: MARGEN + (indice % COLUMNAS) * PASO, y: MARGEN + Math.floor(indice / COLUMNAS) * PASO_V };
 }
 
 // Tamaño del lienzo que necesitan todos los bloques de un plano.
@@ -18,7 +19,7 @@ export function tamanoPlano(lugares) {
   lugares.forEach((l, i) => {
     const p = posDe(l, i);
     ancho = Math.max(ancho, p.x + ANCHO);
-    alto = Math.max(alto, p.y + ANCHO);
+    alto = Math.max(alto, p.y + ALTO);
   });
   return { ancho: ancho + MARGEN, alto: alto + MARGEN };
 }

@@ -143,7 +143,7 @@ button.bloque:hover { border-color: var(--acc); }
 .bloque.elegido { outline: 3px solid var(--acc); outline-offset: 2px; }
 .bloque.lejos { opacity: .45; }
 .bloque .accion { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--acc-tx); }
-.bloque { position: absolute; width: 184px; height: 184px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
+.bloque { position: absolute; width: 184px; height: 232px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
 .bloque[data-drag] { cursor: grab; user-select: none; touch-action: none; }
 .bloque.arrastrando { cursor: grabbing; box-shadow: var(--sombra-arr); }
 .bloque.libre { background: var(--ok-f); border-color: var(--ok-l); border-top-color: var(--ok); }
@@ -193,7 +193,7 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .solo-lectura [data-act="editarAbrir"], .solo-lectura [data-act="clonarAbrir"], .solo-lectura [data-act="borrarLugar"],
 .solo-lectura [data-act="borrarObjeto"], .solo-lectura [data-act="abrirCrear"], .solo-lectura [data-act="abrirNuevoObjeto"],
 .solo-lectura [data-act="moverAbrir"], .solo-lectura [data-act="elegirEnPlano"], .solo-lectura [data-act="asignarAqui"],
-.solo-lectura [data-act="liberarPar"], .solo-lectura [data-act="agregarNivel"], .solo-lectura [data-act="quitarNivel"],
+.solo-lectura [data-act="sacarDeLugar"], .solo-lectura [data-act="agregarNivel"], .solo-lectura [data-act="quitarNivel"],
 .solo-lectura [data-act="nivelesTipicos"], .solo-lectura [data-act="lote"], .solo-lectura [data-act="crear"],
 .solo-lectura [data-act="clonarEjecutar"], .solo-lectura [data-act="editarGuardar"], .solo-lectura [data-act="moverEjecutar"],
 .solo-lectura [data-act="crearObjeto"], .solo-lectura [data-cantoid],

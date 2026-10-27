@@ -405,7 +405,8 @@ export function ventana() {
         ? `<div class="dlg-lista">${objs.map(o => `<div class="r">
             <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
             <span class="acciones-fila"><span class="chip obj">${d.cantidadEn(o.id, l.id)} en este lugar</span>
-            <button class="btn sm sec" data-act="liberarPar" data-oid="${o.id}" data-lid="${l.id}">Sacar todo</button></span>
+            ${o.tipo === 'producto' ? `<input type="number" min="1" max="${d.cantidadEn(o.id, l.id)}" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad a sacar de ${esc(o.codigo_interno)}" style="width:72px;min-width:0">` : ''}
+            <button class="btn sm sec" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${l.id}">Sacar</button></span>
           </div>`).join('')}</div>`
         : `<p class="vacio" style="border:0;padding:12px">Este lugar no tiene objetos.</p>`;
       const agregar = fuera.length

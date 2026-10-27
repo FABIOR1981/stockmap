@@ -114,9 +114,11 @@ export const ACCIONES = {
     aviso('objetos', err, 'Agregado.');
     if (!err) S.f.objAqui = '';
   },
-  liberarPar: el => {
-    const err = d().liberar(el.oid, el.lid);
-    aviso(S.modal === 'objetos' ? 'objetos' : 'obj', err, 'Sacado de ese lugar.');
+  // Saca de un lugar la cantidad elegida (una unidad, o la cantidad escrita para productos).
+  sacarDeLugar: el => {
+    const o = d().objetoPorId(el.oid);
+    const cant = o?.tipo === 'producto' ? (S.f.cantPara[el.oid] || '1') : '1';
+    aviso(S.modal === 'objetos' ? 'objetos' : 'obj', d().retirar(el.oid, el.lid, cant), 'Sacado de ese lugar.');
   },
 
   // Stock desde la tabla
