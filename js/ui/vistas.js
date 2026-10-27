@@ -324,7 +324,7 @@ export function ventana() {
       return {
         titulo,
         cuerpo: `<div class="form">
-            ${campo('Código', `<input data-f="codigo" value="${esc(S.f.codigo)}" placeholder="${FORMATOS[def.formato].ej}">`)}
+            ${campo('Código', `<input data-f="codigo" value="${esc(S.f.codigo)}" placeholder="Ej.: ${FORMATOS[def.formato].ej}">`)}
             ${def.nombreOpcional ? campo('Nombre (opcional)', `<input data-f="nombre" value="${esc(S.f.nombre)}">`) : ''}
           </div>
           <p class="dim" style="font-size:13px;margin:8px 0 0">Formato: ${FORMATOS[def.formato].txt}.</p>
@@ -332,8 +332,8 @@ export function ventana() {
           <button class="btn sec sm" data-act="verVarios" style="margin-top:14px">${S.f.verVarios ? 'Ocultar varios' : 'Crear varios de una vez'}</button>
           ${S.f.verVarios ? `<div class="panel" style="margin-top:12px">
             <div class="form">
-              ${campo('Desde', `<input data-f="desde" value="${esc(S.f.desde)}" placeholder="${FORMATOS[def.formato].ej}">`)}
-              ${campo('Hasta', `<input data-f="hasta" value="${esc(S.f.hasta)}" placeholder="${FORMATOS[def.formato].ej}">`)}
+              ${campo('Desde', `<input data-f="desde" value="${esc(S.f.desde)}" placeholder="Ej.: ${FORMATOS[def.formato].ej}">`)}
+              ${campo('Hasta', `<input data-f="hasta" value="${esc(S.f.hasta)}" placeholder="Ej.: ${FORMATOS[def.formato].ej}">`)}
             </div>
             <p class="dim" style="font-size:13px;margin:8px 0 0">Crea solo los códigos del rango, sin nombre. El nombre se pone después editando cada uno.</p>
             ${msgHTML('lote')}
