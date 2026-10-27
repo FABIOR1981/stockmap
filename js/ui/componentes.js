@@ -63,9 +63,6 @@ export function bloquePlano(l, estilo = '', atributos = '') {
       <span class="chip ${st.cls}">${esc(st.chip)}</span>
       ${objs ? `<button class="btn sm sec" data-act="verObjetos" data-id="${l.id}">Objetos (${objs})</button>` : ''}
     </div>
-    <div class="acciones-fila">
-      ${entrar ? `<button class="btn sm sec" data-act="planoIr" data-id="${l.id}">Entrar</button>` : ''}
-    </div>
   </div>`;
 }
 

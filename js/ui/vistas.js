@@ -136,7 +136,8 @@ export function vistaPlano() {
       ${leyenda()}${msgHTML('borrar')}`;
   }
   const kids = d.hijos(foco.id);
-  return `<h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
+  return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
+    <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : 'No tiene niveles para contener lugares.'}</p>
     ${kids.length ? `<div class="plano">${lienzo(kids)}</div>` : '<p class="vacio" style="border:0">Este lugar está vacío.</p>'}
     ${leyenda()}${msgHTML('borrar')}`;

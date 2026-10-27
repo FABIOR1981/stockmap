@@ -22,6 +22,8 @@ export const ACCIONES = {
   vista:   el => { S.vista = el.v; S.nodo = null; S.msg = {}; },
   nodo:    el => { S.vista = 'estructura'; S.nodo = el.id || null; S.msg = {}; },
   planoIr: el => { S.vista = 'plano'; S.nodo = el.id || null; S.msg = {}; },
+  // Vuelve un nivel arriba en el plano (al padre; si era de primer nivel, a la raíz).
+  subirNivel: () => { const l = d().porId(S.nodo); S.nodo = l?.padre_id || null; S.msg = {}; },
 
   // Sesión: usuario y cliente
   usuario: el => {
