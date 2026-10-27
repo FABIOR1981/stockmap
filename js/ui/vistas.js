@@ -53,8 +53,8 @@ function contenidoAsignacion(l) {
   const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
   if (!pendientes.length) return `<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
   if (!cand.length) return `<p class="dim" style="font-size:13px;margin:0">Ningún lugar de acá puede recibir objetos ahora: ${esc(d.lugarDestino(l.id))}</p>${msgHTML('objetos')}`;
-  return `<p class="ayuda" style="margin:0 0 8px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
-    <div class="dlg-lista">${pendientes.map(o => `<div class="r">
+  return `<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
+    <div class="dlg-lista compacta">${pendientes.map(o => `<div class="r">
       <span>${etiquetaObj(o)}${detalleObj(o)}</span>
       <span class="acciones-fila"><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${cand.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}${h.id === l.id ? ' (este)' : ''}</option>`).join('')}</select>
         <button class="btn sm" data-act="ponerObjeto" data-oid="${o.id}">Poner</button></span>

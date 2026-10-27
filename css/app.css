@@ -186,6 +186,10 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .dlg-pie { display:flex; justify-content:flex-end; gap: 8px; padding: 14px 20px; border-top: 1px solid var(--lin); background: var(--sur-2); border-radius: 0 0 14px 14px; }
 .dlg-lista .r { display:flex; justify-content: space-between; align-items:center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--lin); }
 .dlg-lista .r:last-child { border-bottom: 0; }
+.dlg-lista.compacta .r { padding: 5px 0; gap: 8px; }
+.dlg-lista.compacta .r > span:first-child { font-size: 13px; line-height: 1.3; min-width: 0; }
+.dlg-lista.compacta .r select { font-size: 13px; padding: 4px 6px; max-width: 150px; }
+.dlg-lista.compacta .r .btn.sm { padding: 4px 9px; }
 
 /* ---------- Pruebas ---------- */
 .pruebas { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 24px; }
