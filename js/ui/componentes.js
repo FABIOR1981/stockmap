@@ -39,6 +39,7 @@ export function tarjetaLugar(l) {
       <span class="codigo">${esc(l.codigo)}</span>
       <span class="acc">
         <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
+        <button class="btn sm txt" data-act="etiquetaLugar" data-id="${l.id}" aria-label="Imprimir etiqueta de ${esc(l.codigo)}" title="Imprimir etiqueta">${ic('qr', 14)}</button>
         ${vacioAdentro ? `<button class="btn sm txt papelera" data-act="borrarLugar" data-id="${l.id}" aria-label="Borrar ${esc(l.codigo)}" title="Borrar">${ic('papelera', 14)}</button>` : ''}
       </span>
     </div>
@@ -63,6 +64,7 @@ export function bloquePlano(l, estilo = '', atributos = '') {
       <span class="codigo">${esc(l.codigo)}</span>
       <span class="acc">
         <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
+        <button class="btn sm txt" data-act="etiquetaLugar" data-id="${l.id}" aria-label="Imprimir etiqueta de ${esc(l.codigo)}" title="Imprimir etiqueta">${ic('qr', 14)}</button>
         ${vacioAdentro ? `<button class="btn sm txt papelera" data-act="borrarLugar" data-id="${l.id}" aria-label="Borrar ${esc(l.codigo)}" title="Borrar">${ic('papelera', 14)}</button>` : ''}
       </span>
     </div>

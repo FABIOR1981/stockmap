@@ -151,6 +151,19 @@ export const ACCIONES = {
     if (!err) S.f.codObjeto = '';
   },
   enfocar: el => { S.enfocar = el.campo || null; },
+  // Etiqueta de un solo lugar (QR = su identificador) o de un solo objeto (QR = su código interno).
+  etiquetaLugar: el => {
+    const dep = d();
+    const l = dep.porId(el.id);
+    if (!l) return;
+    aviso('codigo', abrirEtiquetas('Etiqueta de lugar', [{ codigo: l.id, titulo: dep.dir(l), detalle: l.nombre || '' }]));
+  },
+  etiquetaObjeto: el => {
+    const dep = d();
+    const o = dep.objetoPorId(el.oid);
+    if (!o) return;
+    aviso('codigo', abrirEtiquetas('Etiqueta de objeto', [{ codigo: o.codigo_interno, titulo: o.codigo_interno, detalle: [o.codigo_propio, o.descripcion].filter(Boolean).join(' · ') }]));
+  },
   // Hoja de etiquetas QR de todos los lugares o de todos los objetos.
   imprimirEtiquetas: el => {
     const dep = d();

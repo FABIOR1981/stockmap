@@ -2,7 +2,7 @@
 
 import { ctx, S, esc, campo, msgHTML, plural } from './estado.js';
 import { FORMATOS } from '../core/formatos.js';
-import { ilustracion } from './iconos.js';
+import { ic, ilustracion } from './iconos.js';
 import { tarjetaLugar, bloquePlano, leyenda, estadoDe } from './componentes.js';
 import { posDe, tamanoPlano, sonAledanos } from './plano.js';
 
@@ -56,7 +56,7 @@ function contenidoAsignacion(l) {
   return `<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
     <div class="dlg-lista compacta">${pendientes.map(o => `<div class="r">
       <span>${etiquetaObj(o)}${detalleObj(o)}</span>
-      <span class="acciones-fila"><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${cand.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}${h.id === l.id ? ' (este)' : ''}</option>`).join('')}</select>
+      <span class="acciones-fila"><button class="btn sm txt" data-act="etiquetaObjeto" data-oid="${o.id}" aria-label="Imprimir etiqueta de ${esc(o.codigo_interno)}" title="Imprimir etiqueta">${ic('qr', 14)}</button><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${cand.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}${h.id === l.id ? ' (este)' : ''}</option>`).join('')}</select>
         <button class="btn sm" data-act="ponerObjeto" data-oid="${o.id}">Poner</button></span>
     </div>`).join('')}</div>${msgHTML('objetos')}`;
 }
@@ -77,7 +77,7 @@ function contenidoMover(l) {
     const destinos = destinosDe(o, origen);
     return `<div class="r">
       <span>${etiquetaObj(o)}${detalleObj(o)}<br><span class="dim" style="font-size:13px">en ${esc(d.dir(origen))} · ${d.cantidadEn(o.id, origen.id)}</span></span>
-      <span class="acciones-fila">${cantidadProducto(o, origen.id)}
+      <span class="acciones-fila">${cantidadProducto(o, origen.id)}<button class="btn sm txt" data-act="etiquetaObjeto" data-oid="${o.id}" aria-label="Imprimir etiqueta de ${esc(o.codigo_interno)}" title="Imprimir etiqueta">${ic('qr', 14)}</button>
         ${destinos.length ? `<select data-act="moverEn" data-oid="${o.id}" data-lid="${origen.id}" aria-label="Mover ${esc(o.codigo_interno)} a"><option value="">Mover a…</option>${destinos.map(h => `<option value="${h.id}" ${S.f.moverA[key] === h.id ? 'selected' : ''}>${esc(d.dir(h))}</option>`).join('')}</select>
           <button class="btn sm" data-act="moverObjeto" data-oid="${o.id}" data-lid="${origen.id}">Mover</button>` : ''}
         <button class="btn sm peligro" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${origen.id}">Sacar del depósito</button>
