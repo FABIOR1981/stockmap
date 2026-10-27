@@ -103,7 +103,7 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 
 /* ---------- Tarjetas cuadradas (edificios y lugares) ---------- */
 .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
-.tarjeta { background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); box-shadow: var(--sombra); min-height: 96px; padding: 12px; display:flex; flex-direction:column; gap: 4px; min-width: 0; transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s ease, border-color .2s ease; }
+.tarjeta { background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); box-shadow: var(--sombra); min-height: 150px; padding: 12px; display:flex; flex-direction:column; gap: 4px; min-width: 0; transition: transform .2s cubic-bezier(.2,.7,.3,1), box-shadow .2s ease, border-color .2s ease; }
 .tarjeta:hover { transform: translateY(-3px); box-shadow: var(--sombra-h); border-color: var(--lin-f); }
 .tarjeta .nivel { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); font-weight: 600; }
 .tarjeta .codigo { font-size: 26px; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; }
@@ -154,7 +154,7 @@ button.bloque:hover { border-color: var(--acc); }
 .bloque.elegido { outline: 3px solid var(--acc); outline-offset: 2px; }
 .bloque.lejos { opacity: .45; }
 .bloque .accion { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--acc-tx); }
-.bloque { position: absolute; width: 124px; height: 124px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 10px 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
+.bloque { position: absolute; width: 124px; height: 150px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 10px 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
 .bloque[data-drag] { cursor: grab; user-select: none; touch-action: none; }
 .bloque.arrastrando { cursor: grabbing; box-shadow: var(--sombra-arr); }
 .bloque.libre { background: var(--ok-f); border-color: var(--ok-l); border-top-color: var(--ok); }
