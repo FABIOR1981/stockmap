@@ -26,7 +26,7 @@ const NAV = [
 
 // Acciones que no cambian datos: no disparan sincronización.
 const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
-  'elegirEnPlano', 'elegirIr']);
+  'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
 
 function sesionHTML() {
   const d = ctx.dep;
@@ -194,7 +194,7 @@ document.addEventListener('change', e => {
 
 // Esc o la X cierran la ventana.
 $('#modal').addEventListener('close', () => {
-  if (S.modal) { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; render(); }
+  if (S.modal) { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.elegirOrigen = null; render(); }
 });
 
 instalarArrastre();

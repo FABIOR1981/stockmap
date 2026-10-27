@@ -140,6 +140,7 @@ tbody tr:hover { background: var(--hov-2); }
 .plano-lienzo { position: relative; min-width: 100%; }
 button.bloque { font: inherit; text-align: left; cursor: pointer; color: var(--ink); }
 button.bloque:hover { border-color: var(--acc); }
+.bloque.salida { border-style: dashed; background: var(--sur-2); border-top-color: var(--mut-2); }
 .bloque.elegido { outline: 3px solid var(--acc); outline-offset: 2px; }
 .bloque.lejos { opacity: .45; }
 .bloque .accion { margin-top: 4px; font-size: 12px; font-weight: 600; color: var(--acc-tx); }
@@ -192,13 +193,13 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 /* Sin permiso de edición (rol lector): se ocultan los controles de cambio. */
 .solo-lectura [data-act="editarAbrir"], .solo-lectura [data-act="clonarAbrir"], .solo-lectura [data-act="borrarLugar"],
 .solo-lectura [data-act="borrarObjeto"], .solo-lectura [data-act="abrirCrear"], .solo-lectura [data-act="abrirNuevoObjeto"],
-.solo-lectura [data-act="moverAbrir"], .solo-lectura [data-act="elegirEnPlano"], .solo-lectura [data-act="asignarAqui"],
+.solo-lectura [data-act="moverEnPlano"], .solo-lectura [data-act="elegirEnPlano"], .solo-lectura [data-act="asignarAqui"],
 .solo-lectura [data-act="sacarDeLugar"], .solo-lectura [data-act="agregarNivel"], .solo-lectura [data-act="quitarNivel"],
 .solo-lectura [data-act="nivelesTipicos"], .solo-lectura [data-act="lote"], .solo-lectura [data-act="crear"],
-.solo-lectura [data-act="clonarEjecutar"], .solo-lectura [data-act="editarGuardar"], .solo-lectura [data-act="moverEjecutar"],
+.solo-lectura [data-act="clonarEjecutar"], .solo-lectura [data-act="editarGuardar"], 
 .solo-lectura [data-act="crearObjeto"], .solo-lectura [data-cantoid],
 .solo-lectura [data-nivel], .solo-lectura [data-f="objAqui"], .solo-lectura [data-f="codigo"], .solo-lectura [data-f="nombre"],
-.solo-lectura [data-f="desde"], .solo-lectura [data-f="hasta"], .solo-lectura [data-f="mvHasta"],
+.solo-lectura [data-f="desde"], .solo-lectura [data-f="hasta"], 
 .solo-lectura [data-f="edCodigo"], .solo-lectura [data-f="edNombre"], .solo-lectura [data-f="cantClon"] { display: none !important; }
 
 /* Sin permiso de gestionar accesos: se ocultan los controles de roles. */

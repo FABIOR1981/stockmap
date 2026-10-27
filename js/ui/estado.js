@@ -8,18 +8,18 @@ export const S = {
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
-  modal: null,             // 'crear' | 'editar' | 'clonar' | 'objetos' | 'mover' | 'nuevoObjeto' | 'elegirLugar' | null
+  modal: null,             // 'crear' | 'editar' | 'clonar' | 'objetos' | 'nuevoObjeto' | 'elegirLugar' | null
   elegirPara: null,        // objeto al que se le elige lugar en el plano
+  elegirModo: 'asignar',   // 'asignar' (lugar nuevo) | 'mover' (desde un lugar actual, o a SALIDA)
+  elegirOrigen: null,      // en mover: lugar de donde sale el objeto
   elegirNodo: null,        // lugar que se muestra dentro de esa ventana (null = edificios)
   elegirLugares: [],       // lugares elegidos para el objeto (productos pueden tener varios, aledaños)
   editar: null, clon: null, verObj: null,
-  mover: null,             // { oid, lid } del objeto que se mueve
   f: {
     codigo: '', nombre: '', desde: '', hasta: '', cantClon: '1',
     codigoP: '', desc: '', tipoNuevo: 'unidad', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
-    cantMov: '1', mvHasta: '',            // ventana de mover
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,
     accUid: '', accRol: 'editor'
   },

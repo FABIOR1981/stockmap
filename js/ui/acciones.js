@@ -14,7 +14,7 @@ const cuentasDelFormulario = () => S.f.usarEstructura
   ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))
   : [];
 
-const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.mover = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.msg = {}; };
+const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.elegirOrigen = null; S.msg = {}; };
 const cerrarElegir = mensaje => { limpiarModal(); aviso('obj', null, mensaje); };
 
 export const ACCIONES = {
@@ -122,30 +122,41 @@ export const ACCIONES = {
   },
 
   // Stock desde la tabla
-  moverAbrir: el => {
-    S.mover = { oid: el.oid, lid: el.lid }; S.modal = 'mover'; S.msg = {};
-    S.f.cantMov = '1'; S.f.mvHasta = '';
-  },
-  moverEjecutar: () => {
-    const { oid, lid } = S.mover || {};
-    if (!oid) return;
-    const err = S.f.mvHasta
-      ? d().transferir(oid, lid, S.f.mvHasta, S.f.cantMov)
-      : d().retirar(oid, lid, S.f.cantMov);
-    if (err) return aviso('mover', err);
-    S.modal = null; S.mover = null;
-    aviso('obj', null, S.f.mvHasta ? 'Movido.' : 'Retirado del depósito.');
-  },
 
   // Elegir el lugar de un objeto mirando el plano (solo se navega y se elige; Agregar confirma).
-  elegirEnPlano: el => { S.elegirPara = el.oid; S.elegirNodo = null; S.elegirLugares = []; S.modal = 'elegirLugar'; S.msg = {}; },
+  elegirEnPlano: el => { S.elegirPara = el.oid; S.elegirModo = 'asignar'; S.elegirOrigen = null; S.elegirNodo = null; S.elegirLugares = []; S.modal = 'elegirLugar'; S.msg = {}; },
+  // Mover: si el objeto está en un solo lugar, sale de ahí; si está en varios, se elige de cuál.
+  moverEnPlano: el => {
+    const ub = d().ubicacionesDe(el.oid);
+    S.elegirPara = el.oid; S.elegirModo = 'mover'; S.elegirOrigen = ub.length === 1 ? ub[0].id : null;
+    S.elegirNodo = null; S.elegirLugares = []; S.modal = 'elegirLugar'; S.msg = {};
+  },
+  elegirOrigen: el => { S.elegirOrigen = el.id || null; S.msg = {}; },
   elegirIr: el => { S.elegirNodo = el.id || null; S.msg = {}; },
   // Una unidad va en un solo lugar: se asigna de una vez. Un producto puede ir en varios lugares
   // aledaños: el primero que se toca manda, y los siguientes tienen que estar cerca de él.
   elegir: el => {
-    const l = d().porId(el.id);
-    if (!l || !S.elegirPara) return;
+    if (!S.elegirPara) return;
     const o = d().objetoPorId(S.elegirPara);
+    if (!o) return;
+    // Mover: sale de S.elegirOrigen y va a un lugar, o a SALIDA (sale del sistema).
+    if (S.elegirModo === 'mover') {
+      if (!S.elegirOrigen) return aviso('elegir', 'Primero elegí de qué lugar sale.');
+      const cant = o.tipo === 'producto' ? (S.f.cantPara[o.id] || '1') : '1';
+      if (el.id === 'SALIDA') {
+        const err = d().retirar(o.id, S.elegirOrigen, cant);
+        if (err) return aviso('elegir', err);
+        return cerrarElegir(`${o.codigo_interno} salió del sistema.`);
+      }
+      const destino = d().porId(el.id);
+      if (!destino) return;
+      const err = d().transferir(o.id, S.elegirOrigen, destino.id, cant);
+      if (err) return aviso('elegir', err);
+      return cerrarElegir(`${o.codigo_interno} movido a ${d().dir(destino)}.`);
+    }
+    const l = d().porId(el.id);
+    if (!l) return;
+    // Asignar: una unidad va en un solo lugar; un producto puede ir en varios aledaños.
     if (o.tipo === 'unidad') {
       const err = d().asignar(o.id, l.id, '1');
       if (err) return aviso('elegir', err);

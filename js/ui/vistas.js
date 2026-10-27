@@ -124,9 +124,15 @@ export function vistaPlano() {
   };
   if (!foco) {
     const eds = d.hijos(null);
+    const { ancho, alto } = tamanoPlano([...eds, {}]);
+    const bloques = eds.map((e, i) => {
+      const p = posDe(e, i);
+      return bloquePlano(e, `left:${p.x}px;top:${p.y}px;`, `data-drag="${e.id}"`);
+    }).join('');
     return `<h1>Plano</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
-      ${eds.length ? `<div class="plano" data-raiz>${lienzo(eds)}</div>` : '<p class="vacio" style="margin:20px;border:0">Todavía no hay edificios.</p>'}
+      ${eds.length ? '' : '<p class="vacio" style="margin:0 0 16px;border:0">Todavía no hay edificios.</p>'}
+      <div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>
       ${leyenda()}${msgHTML('borrar')}`;
   }
   const kids = d.hijos(foco.id);
@@ -166,7 +172,7 @@ export function vistaStock() {
       ? ub.map(l => {
           const c = d.cantidadEn(o.id, l.id);
           return `<span class="ubic">${esc(d.dir(l))}${o.tipo === 'producto' ? ` · <strong>${c}</strong>` : ''}
-            <button class="btn sm txt" data-act="moverAbrir" data-oid="${o.id}" data-lid="${l.id}">Mover</button></span>`;
+            </span>`;
         }).join('')
       : `<span class="dim">Sin ubicación</span>`;
     const cantidad = o.tipo === 'producto'
@@ -181,7 +187,9 @@ export function vistaStock() {
       <td>${ubicaciones}</td>
       <td><div class="acciones-fila">
         ${cantidad}
-        <button class="btn sm sec" data-act="elegirEnPlano" data-oid="${o.id}">Asignar en el plano</button>
+        ${ub.length
+          ? `<button class="btn sm sec" data-act="moverEnPlano" data-oid="${o.id}">Mover</button>`
+          : `<button class="btn sm sec" data-act="elegirEnPlano" data-oid="${o.id}">Asignar en el plano</button>`}
         <button class="btn sm peligro" data-act="borrarObjeto" data-oid="${o.id}">Borrar</button>
       </div></td>
     </tr>`;
@@ -337,6 +345,15 @@ function bloqueEstructura(padre, def) {
 }
 
 // ---------- Ventanas (modales) ----------
+// SALIDA: lugar fijo para los objetos que salen del sistema. No se guarda en la base.
+const bloqueSalida = (pos, interactivo) => {
+  const cuerpo = '<span class="nivel">Salida</span><span class="codigo">SALIDA</span><span class="nombre">Los objetos que salen del sistema</span>';
+  const estilo = `left:${pos.x}px;top:${pos.y}px`;
+  return interactivo
+    ? `<button class="bloque salida" style="${estilo}" data-act="elegir" data-id="SALIDA" aria-label="Sacar del sistema (salida)">${cuerpo}</button>`
+    : `<div class="bloque salida" style="${estilo}" aria-label="Salida del sistema">${cuerpo}</div>`;
+};
+
 export function ventana() {
   const d = ctx.dep;
   const nodo = S.nodo ? d.porId(S.nodo) : null;
@@ -424,64 +441,55 @@ export function ventana() {
     case 'elegirLugar': {
       const o = S.elegirPara ? d.objetoPorId(S.elegirPara) : null;
       if (!o) return null;
+      const mover = S.elegirModo === 'mover';
       const producto = o.tipo === 'producto';
       const elegidos = S.elegirLugares;
       const primero = elegidos.length ? d.porId(elegidos[0]) : null;
       const padre = S.elegirNodo ? d.porId(S.elegirNodo) : null;
       const hijos = d.hijos(S.elegirNodo || null);
-      const { ancho, alto } = tamanoPlano(hijos);
+      const conSalida = mover && !S.elegirNodo;   // SALIDA se ofrece en el nivel de edificios
+      const { ancho, alto } = tamanoPlano(conSalida ? [...hijos, {}] : hijos);
       const bloques = hijos.map((l, i) => {
         const p = posDe(l, i);
         const hoja = d.esHoja(l);
         const est = estadoDe(l);
         const marcado = elegidos.includes(l.id);
-        const lejos = hoja && primero && !marcado && !sonAledanos(primero, l);
-        const accion = !hoja ? 'Entrar →' : marcado ? 'Quitar' : 'Elegir aquí';
-        const nombre = `${accion} ${d.dir(l)}`;
+        const lejos = !mover && hoja && primero && !marcado && !sonAledanos(primero, l);
+        const accion = !hoja ? 'Entrar →' : mover ? 'Mover aquí' : marcado ? 'Quitar' : 'Elegir aquí';
         return `<button class="bloque ${est.cls}${marcado ? ' elegido' : ''}${lejos ? ' lejos' : ''}" style="left:${p.x}px;top:${p.y}px"
-            data-act="${hoja ? 'elegir' : 'elegirIr'}" data-id="${l.id}" ${hoja ? `aria-pressed="${marcado}"` : ''} aria-label="${esc(nombre)}">
+            data-act="${hoja ? 'elegir' : 'elegirIr'}" data-id="${l.id}" ${hoja && !mover ? `aria-pressed="${marcado}"` : ''} aria-label="${esc(accion)} ${esc(d.dir(l))}">
           <span class="nivel">${esc(d.nivelDe(l).nombre)}</span>
           <span class="codigo">${esc(l.codigo)}</span>
           <span class="pie"><span class="chip ${est.cls}">${esc(est.chip)}</span></span>
           <span class="accion">${accion}</span>
         </button>`;
-      }).join('');
+      }).join('') + (conSalida ? bloqueSalida(posDe({}, hijos.length), true) : '');
+      const ubic = mover ? d.ubicacionesDe(o.id) : [];
+      const origenes = ubic.length > 1
+        ? `<div class="acciones-fila" style="margin-bottom:12px"><span class="dim">Sale de:</span>${ubic.map(l =>
+            `<button class="btn sm ${S.elegirOrigen === l.id ? '' : 'sec'}" data-act="elegirOrigen" data-id="${l.id}">${esc(d.dir(l))}</button>`).join('')}</div>`
+        : '';
+      const ayuda = mover
+        ? (ubic.length > 1 && !S.elegirOrigen ? 'Primero elegí de qué lugar sale. ' : '') +
+          'Tocá el lugar donde va. Para sacarlo del sistema, tocá SALIDA.'
+        : producto
+          ? 'Podés elegir varios lugares. El primero que toques manda: los siguientes tienen que estar al lado, en el mismo plano. Tocá de nuevo para quitar uno.'
+          : 'Elegí el lugar donde va. Los que tienen algo adentro se abren con "Entrar".';
       const n = elegidos.length;
-      const ayuda = producto
-        ? 'Podés elegir varios lugares. El primero que toques manda: los siguientes tienen que estar al lado, en el mismo plano. Tocá de nuevo para quitar uno.'
-        : 'Elegí el lugar donde va. Los que tienen algo adentro se abren con "Entrar".';
       return {
-        titulo: `Elegir lugar para ${o.codigo_interno}`,
+        titulo: mover ? `Mover ${o.codigo_interno}` : `Elegir lugar para ${o.codigo_interno}`,
         cuerpo: `<div class="acciones-fila" style="margin-bottom:12px">
             ${padre ? `<button class="btn sm sec" data-act="elegirIr" data-id="${esc(padre.padre_id || '')}">← Volver</button>` : ''}
             <span class="dim">${padre ? esc(d.dir(padre)) : 'Edificios del cliente'}</span></div>
+          ${origenes}
           <p class="ayuda" style="margin:0 0 12px">${ayuda}</p>
-          ${hijos.length
+          ${hijos.length || conSalida
             ? `<div class="plano" style="height:min(50vh,420px)"><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}</div></div>`
             : '<p class="vacio" style="border:0">No hay lugares aquí.</p>'}
           ${msgHTML('elegir')}`,
-        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>${producto
+        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>${!mover && producto
           ? `<button class="btn" data-act="elegirConfirmar" ${n ? '' : 'disabled'}>${n ? `Asignar a ${n} ${n > 1 ? 'lugares' : 'lugar'}` : 'Asignar'}</button>`
           : ''}`
-      };
-    }
-    case 'mover': {
-      const o = S.mover ? d.objetoPorId(S.mover.oid) : null;
-      const origen = S.mover ? d.porId(S.mover.lid) : null;
-      if (!o || !origen) return null;
-      const disp = d.cantidadEn(o.id, origen.id);
-      const destinos = d.lugares.filter(l => l.id !== origen.id && d.esHoja(l));
-      const unidad = o.tipo === 'unidad';
-      return {
-        titulo: `Mover ${o.codigo_interno}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}`,
-        cuerpo: `<p class="dim" style="margin:0 0 14px">Desde <strong>${esc(d.dir(origen))}</strong>. Hay ${disp} ${unidad ? '' : 'unidades'} aquí.</p>
-          <div class="form">
-            ${unidad ? '' : campo('Cantidad', `<input type="number" min="1" max="${disp}" data-f="cantMov" value="${esc(S.f.cantMov)}" style="width:110px;min-width:0">`)}
-            ${campo('Destino', `<select data-f="mvHasta"><option value="">Sacar del depósito (sin destino)</option>${destinos.map(l => `<option value="${l.id}" ${S.f.mvHasta === l.id ? 'selected' : ''}>${esc(d.dir(l))}</option>`).join('')}</select>`)}
-          </div>
-          ${msgHTML('mover')}`,
-        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>
-              <button class="btn" data-act="moverEjecutar">Confirmar</button>`
       };
     }
     case 'nuevoObjeto':
