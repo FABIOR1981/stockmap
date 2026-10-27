@@ -43,7 +43,7 @@ function render() {
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
   $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
-    `<button data-act="vista" data-v="${v}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span>${txt}</span></button>`
+    `<button data-act="vista" data-v="${v}" title="${txt}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span>${txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();

@@ -250,3 +250,37 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .btn, .tarjeta { transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease; }
   .btn:active, .tarjeta:hover { transform: none; }
 }
+
+/* ---------- Vista de elementos (rama desarrollo) ----------
+   Escritorio: barra lateral de íconos, el plano ocupa la pantalla y las acciones aparecen al pasar el cursor.
+   Celular: sin cambios (la barra y el plano siguen como en main). */
+.cuenta { display: contents; }
+.rail-mas { display: none; }
+
+@media (min-width: 861px) {
+  .side { width: 76px; padding: 16px 0; align-items: center; background: var(--sur); border-right: 1px solid var(--lin); z-index: 3; overflow: visible; }
+  .marca { width: 44px; height: 44px; border-radius: 14px; background: var(--acc); color: #fff; display: grid; place-items: center; font-size: 0; padding: 0; margin-bottom: 14px; }
+  .marca::before { content: "D"; font-size: 19px; font-weight: 700; }
+  .nav { align-items: center; gap: 6px; }
+  .nav button { width: 48px; height: 48px; justify-content: center; padding: 0; border-radius: 14px; }
+  .nav button span { display: none; }
+  .nav button[aria-current="page"] { box-shadow: inset 0 0 0 1.5px var(--acc); }
+
+  .rail-mas { display: grid; place-items: center; margin-top: auto; width: 48px; height: 48px; border: 0; border-radius: 14px; background: none; color: var(--mut); cursor: pointer; }
+  .rail-mas:hover, .rail-mas:focus { background: var(--hov); color: var(--ink); }
+  .cuenta { display: none; position: absolute; left: 84px; bottom: 16px; width: 252px; background: var(--sur); border: 1px solid var(--lin); border-radius: 16px; box-shadow: var(--sombra-h); padding: 16px; flex-direction: column; gap: 16px; z-index: 5; }
+  .rail-mas:focus + .cuenta, .cuenta:focus-within { display: flex; }
+
+  .top { background: transparent; border-bottom: 0; padding: 18px 28px 0; min-height: 0; }
+  .crumbs { background: var(--sur); border: 1px solid var(--lin); border-radius: 999px; padding: 7px 16px; box-shadow: var(--sombra); }
+  .contenido { padding: 14px 28px 40px; }
+  .plano { max-height: none; height: calc(100vh - 230px); min-height: 460px; border-radius: 24px; background-size: 22px 22px; }
+  .bloque, .tarjeta { border-radius: 18px; box-shadow: var(--sombra-h); }
+  .bloque .codigo, .tarjeta .codigo { letter-spacing: -.03em; }
+}
+
+/* Las acciones de cada elemento se ven al pasar el cursor (en pantallas táctiles siempre están). */
+@media (min-width: 861px) and (hover: hover) {
+  .bloque .acc, .tarjeta .acc { opacity: 0; transition: opacity .15s ease; }
+  .bloque:hover .acc, .bloque:focus-within .acc, .tarjeta:hover .acc, .tarjeta:focus-within .acc { opacity: 1; }
+}
