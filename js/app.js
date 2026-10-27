@@ -56,7 +56,7 @@ function render() {
   if (v) {
     dlg.innerHTML = `<div class="dlg-cab"><h2>${esc(v.titulo)}</h2>
         <button class="btn x" data-act="modalCerrar" aria-label="Cerrar">×</button></div>
-      <div class="dlg-cuerpo">${v.cuerpo}</div>
+      <div class="dlg-cuerpo">${msgHTML('global')}${v.cuerpo}</div>
       <div class="dlg-pie">${v.pie}</div>`;
     if (!dlg.open) dlg.showModal();
   } else if (dlg.open) {
