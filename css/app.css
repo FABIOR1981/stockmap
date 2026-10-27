@@ -137,9 +137,8 @@ tbody tr:hover { background: var(--hov-2); }
 
 /* ---------- Plano ---------- */
 .plano { position: relative; background-color: var(--sur-2); background-image: radial-gradient(var(--punto) 1px, transparent 1px); background-size: 18px 18px; border: 1px solid var(--lin); border-radius: var(--r); height: min(66vh, 620px); overflow: auto; }
-.plano-flow { display:grid; grid-template-columns: repeat(auto-fill, 184px); gap: 16px; justify-content: center; padding: 20px; }
+.plano-lienzo { position: relative; min-width: 100%; }
 .bloque { position: absolute; width: 184px; height: 184px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); border-top-width: 4px; padding: 12px; display:flex; flex-direction:column; gap: 4px; box-shadow: var(--sombra-b); overflow: hidden; }
-.plano-flow .bloque { position: static; }
 .bloque[data-drag] { cursor: grab; user-select: none; touch-action: none; }
 .bloque.arrastrando { cursor: grabbing; box-shadow: var(--sombra-arr); }
 .bloque.libre { background: var(--ok-f); border-color: var(--ok-l); border-top-color: var(--ok); }
@@ -175,7 +174,7 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .contenido { padding: 20px 16px 40px; }
   .bloque[data-drag] { position: static !important; width: 100% !important; height: auto !important; min-height: 140px; }
   .plano { height: auto; background: transparent; border: 0; }
-  .plano-flow { grid-template-columns: 1fr; }
+  .plano-lienzo { width: auto !important; height: auto !important; display: flex; flex-direction: column; gap: 16px; }
   .pruebas { columns: 1; }
 }
 

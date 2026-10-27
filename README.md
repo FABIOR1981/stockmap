@@ -27,6 +27,7 @@ functions/api/[[ruta]].js  API (Cloudflare Pages Function): única que habla con
 tests/reglas.test.js  Pruebas de reglas del modelo
 tests/nube.test.js    Pruebas de traducción y cálculo de cambios
 supabase/esquema.sql  Esquema de base de datos, tablas, triggers y RLS
+supabase/migracion_posiciones.sql  Migración: posiciones libres de los lugares en el plano (bases ya creadas)
 supabase/funciones.sql  Función aplicar_cambios: guarda cada sincronización en una sola llamada y transacción
 docs/modelo_datos.md  Modelo de datos y reglas de negocio
 ```

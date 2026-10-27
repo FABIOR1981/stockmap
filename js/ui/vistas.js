@@ -4,7 +4,7 @@ import { ctx, S, esc, campo, msgHTML, plural } from './estado.js';
 import { FORMATOS } from '../core/formatos.js';
 import { ilustracion } from './iconos.js';
 import { tarjetaLugar, bloquePlano, leyenda } from './componentes.js';
-import { posDe } from './plano.js';
+import { posDe, tamanoPlano } from './plano.js';
 
 const ROLES = { admin: 'Admin', editor: 'Editor', lector: 'Lector' };
 const TIPOS = { unidad: 'Unidad', producto: 'Producto' };
@@ -114,25 +114,25 @@ export function vistaPlano() {
   if (!d.eid) return `<h1>Plano</h1>${sinCliente()}`;
   const foco = S.nodo ? d.porId(S.nodo) : null;
   const { def } = d.nivelParaHijo(S.nodo);
+  // Un lienzo con posición libre para cada bloque (edificios, o lo que hay dentro de un lugar).
+  const lienzo = lugares => {
+    const { ancho, alto } = tamanoPlano(lugares);
+    return `<div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${lugares.map((l, i) => {
+      const p = posDe(l, i);
+      return bloquePlano(l, `left:${p.x}px;top:${p.y}px;`, `data-drag="${l.id}"`);
+    }).join('')}</div>`;
+  };
   if (!foco) {
     const eds = d.hijos(null);
-    const bloques = eds.map(e => {
-      const p = posDe(e);
-      return bloquePlano(e, `left:${p.x}px;top:${p.y}px;`, `data-drag="${e.id}"`);
-    }).join('');
     return `<h1>Plano</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
-      <div class="plano" data-raiz>${eds.length ? bloques : '<p class="vacio" style="margin:20px;border:0">Todavía no hay edificios.</p>'}</div>
+      ${eds.length ? `<div class="plano" data-raiz>${lienzo(eds)}</div>` : '<p class="vacio" style="margin:20px;border:0">Todavía no hay edificios.</p>'}
       ${leyenda()}${msgHTML('borrar')}`;
   }
   const kids = d.hijos(foco.id);
   return `<h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
-    <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}.` : 'No tiene niveles para contener lugares.'}</p>
-    <div class="plano">
-      <div class="plano-flow">${kids.length
-        ? kids.map(l => bloquePlano(l)).join('')
-        : '<p class="vacio" style="grid-column:1/-1;border:0">Este lugar está vacío.</p>'}</div>
-    </div>
+    <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : 'No tiene niveles para contener lugares.'}</p>
+    ${kids.length ? `<div class="plano">${lienzo(kids)}</div>` : '<p class="vacio" style="border:0">Este lugar está vacío.</p>'}
     ${leyenda()}${msgHTML('borrar')}`;
 }
 

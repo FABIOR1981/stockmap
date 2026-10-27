@@ -62,6 +62,8 @@ create table if not exists lugares (
   padre_id            uuid references lugares(id) on delete restrict,   -- null = edificio
   codigo              text not null,
   nombre              text not null default '',
+  pos_x               integer,   -- posición libre en el plano (null = sin mover)
+  pos_y               integer,
   creado_en           timestamptz not null default now()
 );
 

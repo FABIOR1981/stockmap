@@ -291,6 +291,15 @@ export class Deposito {
     return null;
   }
 
+  // Posición libre de un lugar dentro del plano de su padre. Se guarda con el resto de los cambios.
+  posicionar(id, x, y) {
+    const err = this._exigir('editar'); if (err) return err;
+    if (!this.porId(id)) return 'Lugar inexistente.';
+    if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0) return 'Posición inválida.';
+    this.almacen.actualizar('lugares', id, { pos_x: x, pos_y: y });
+    return null;
+  }
+
   siguienteCodigo(padreId, formato) {
     const hermanos = this.hijos(padreId || null);
     if (formato === 'numero') {

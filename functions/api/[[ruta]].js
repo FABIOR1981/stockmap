@@ -17,7 +17,7 @@
 const TABLAS = {
   establecimientos: { columnas: ['id', 'nombre'], clave: ['id'] },
   membresias:       { columnas: ['usuario_id', 'establecimiento_id', 'rol'], clave: ['usuario_id', 'establecimiento_id'] },
-  lugares:          { columnas: ['id', 'establecimiento_id', 'padre_id', 'codigo', 'nombre'], clave: ['id'] },
+  lugares:          { columnas: ['id', 'establecimiento_id', 'padre_id', 'codigo', 'nombre', 'pos_x', 'pos_y'], clave: ['id'] },
   niveles_edificio: { columnas: ['edificio_id', 'orden', 'nombre', 'formato', 'nombre_opcional'], clave: ['edificio_id', 'orden'] },
   objetos:          { columnas: ['id', 'establecimiento_id', 'codigo_interno', 'codigo_propio', 'descripcion', 'tipo', 'minimo'], clave: ['id'] },
   existencias:      { columnas: ['id', 'objeto_id', 'lugar_id', 'cantidad'], clave: ['id'] },

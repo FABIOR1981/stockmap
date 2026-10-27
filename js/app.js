@@ -8,7 +8,7 @@ import { ctx, S, $, esc, aviso, msgHTML } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
 import { vistaStock, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
-import { centrarPlano, instalarArrastre } from './ui/plano.js';
+import { instalarArrastre } from './ui/plano.js';
 import { ACCIONES } from './ui/acciones.js';
 
 // El almacén en memoria es la copia de trabajo; la verdad está en el servidor.
@@ -49,7 +49,6 @@ function render() {
   const vistas = { stock: vistaStock, plano: vistaPlano, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
   const cuerpo = (vistas[S.vista] || vistaEstructura)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
-  if (S.vista === 'plano' && !S.nodo) centrarPlano();
 
   const dlg = $('#modal');
   const v = S.modal ? ventana() : null;
@@ -91,6 +90,7 @@ async function recargar() {
   render();
 }
 ctx.recargar = recargar;
+ctx.sincronizar = () => sincronizarAhora();
 
 // ---------- Ingreso ----------
 const pantallaIngreso = $('#ingreso');

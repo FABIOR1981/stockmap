@@ -21,7 +21,8 @@ export function aFilasDb(almacen) {
   d.establecimientos.forEach(e => poner('establecimientos', { id: e.id, nombre: e.nombre }));
   d.membresias.forEach(m => poner('membresias', { usuario_id: m.uid, establecimiento_id: m.eid, rol: m.rol }));
   d.lugares.forEach(l => {
-    poner('lugares', { id: l.id, establecimiento_id: l.eid, padre_id: l.padre_id ?? null, codigo: l.codigo, nombre: l.nombre ?? '' });
+    poner('lugares', { id: l.id, establecimiento_id: l.eid, padre_id: l.padre_id ?? null, codigo: l.codigo, nombre: l.nombre ?? '',
+      pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null });
     if (!l.padre_id) {
       (l.niveles || []).forEach((n, i) => poner('niveles_edificio', {
         edificio_id: l.id, orden: i + 1, nombre: n.nombre, formato: n.formato, nombre_opcional: !!n.nombreOpcional
@@ -56,6 +57,7 @@ export function aEstadoModelo(datos) {
       membresias: (datos.membresias || []).map(m => ({ id: `${m.usuario_id}|${m.establecimiento_id}`, uid: m.usuario_id, eid: m.establecimiento_id, rol: m.rol })),
       lugares: (datos.lugares || []).map(l => ({
         id: l.id, eid: l.establecimiento_id, padre_id: l.padre_id, codigo: l.codigo, nombre: l.nombre ?? '',
+        pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null,
         niveles: l.padre_id ? [] : (niveles[l.id] || []).map(({ nombre, formato, nombreOpcional }) => ({ nombre, formato, nombreOpcional }))
       })),
       objetos: (datos.objetos || []).map(o => ({
