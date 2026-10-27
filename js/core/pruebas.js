@@ -82,9 +82,19 @@ export function correrPruebas(dep) {
     return x.every(o => dep.asignar(o.id, B1().id) === null) && dep.objetosDe(B1().id).length >= 3;
   })());
   ej();
-  t('Un edificio no admite objetos', (dep.asignar(obj().id, bld('0').id) || '').includes('edificios'));
+  t('Un edificio admite objetos si adentro está libre', (() => {
+    const q = dep.crearLugar(null, '9'); if (q.error) return false;
+    return dep.asignar(obj().id, q.id) === null;
+  })());
   ej();
-  t('Un lugar con subdivisiones no admite objetos', (dep.asignar(obj().id, kid(bld('0'), 'A').id) || '').includes('subdivisiones'));
+  t('Un estante con divisiones vacías admite objetos, y su división no mientras él tiene uno', (() => {
+    const z = dep.crearLugar(bld('0').id, 'Z');
+    if (z.error) return false;
+    if (dep.crearLugar(z.id, '1').error) return false;
+    if (dep.asignar(obj().id, z.id) !== null) return false;
+    const div = dep.hijos(z.id)[0];
+    return (dep.asignar(obj().id, div.id) || '').includes('arriba');
+  })());
   ej();
   t('No se subdivide un lugar que tiene objetos', (() => {
     dep.asignar(obj().id, B1().id);

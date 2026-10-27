@@ -432,11 +432,16 @@ export class Deposito {
   movimientosRecientes(limite = 100) { return [...this.movimientos].reverse().slice(0, limite); }
 
   // Lugar donde se puede guardar stock: hoja que no es edificio. Devuelve el lugar o un texto de error.
-  _lugarHoja(lid) {
+  // Dónde puede ir un objeto (en cualquier nivel: edificio, estantería, estante o división).
+  // Un lugar sirve si ni él ni sus lugares de adentro (en cualquier nivel) tienen un camino ocupado:
+  // - ningún lugar de adentro tiene objetos (si no, se quedaría un objeto adentro de algo ocupado);
+  // - ningún lugar de arriba tiene objetos (si no, se pondría adentro de algo ocupado).
+  // Varios objetos pueden ir en el mismo lugar. Devuelve el lugar, o el motivo (texto).
+  lugarDestino(lid) {
     const l = this.porId(lid);
     if (!l) return 'Lugar inexistente.';
-    if (this.prof(l) === 0) return 'Los edificios no tienen objetos directos. Elegí un lugar dentro.';
-    if (this.hijos(l.id).length) return 'Este lugar tiene subdivisiones. Los objetos van dentro de ellas.';
+    if (this.descendientes(l).some(x => this.objetosDe(x.id).length)) return 'Hay objetos en lugares de adentro. Sacalos antes de poner algo acá.';
+    if (this.ancestros(l).some(a => this.objetosDe(a.id).length)) return 'Un lugar de arriba tiene un objeto puesto. Sacalo antes para usar este lugar.';
     return l;
   }
 
@@ -467,7 +472,7 @@ export class Deposito {
     const err = this._exigir('editar'); if (err) return err;
     const o = this.objetoPorId(oid);
     if (!o) return 'Objeto inexistente.';
-    const l = this._lugarHoja(lid);
+    const l = this.lugarDestino(lid);
     if (typeof l === 'string') return l;
     const n = o.tipo === 'unidad' ? 1 : enteroPositivo(cantidad);
     if (!n) return 'La cantidad tiene que ser un número entero mayor que 0.';
@@ -505,7 +510,7 @@ export class Deposito {
     const o = this.objetoPorId(oid);
     if (!o) return 'Objeto inexistente.';
     if (desde === hasta) return 'El origen y el destino son el mismo lugar.';
-    const destino = this._lugarHoja(hasta);
+    const destino = this.lugarDestino(hasta);
     if (typeof destino === 'string') return destino;
     const n = o.tipo === 'unidad' ? 1 : enteroPositivo(cantidad);
     if (!n) return 'La cantidad tiene que ser un número entero mayor que 0.';
