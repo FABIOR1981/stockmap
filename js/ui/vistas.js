@@ -57,7 +57,19 @@ function contenidoObjetos(l) {
             <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}">Agregar</button>
           </div>`
         : `<p class="dim" style="font-size:13px;margin:16px 0 0">Todos los objetos ya están en este lugar.</p>`;
-  return `${filas}${agregar}${msgHTML('objetos')}`;
+  // Objetos que todavía no tienen ningún lugar: se ven para poder ponerlos acá.
+  // Los objetos van solo en lugares del último nivel: en otros lugares se avisa en vez de ofrecer agregar.
+  const hoja = d.esHoja(l);
+  const sinLugar = hoja ? d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0) : [];
+  const sueltos = sinLugar.length
+    ? `<h3 class="sub-titulo">Sin lugar asignado (${sinLugar.length})</h3>
+       <div class="dlg-lista">${sinLugar.map(o => `<div class="r">
+          <span><strong>${esc(o.codigo_interno)}</strong>${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}${o.descripcion ? '<br><span class="dim" style="font-size:13px">' + esc(o.descripcion) + '</span>' : ''}</span>
+          <button class="btn sm" data-act="asignarAqui" data-lid="${l.id}" data-oid="${o.id}">Poner aquí</button>
+        </div>`).join('')}</div>`
+    : '';
+  const aviso2 = hoja ? '' : `<p class="dim" style="font-size:13px;margin:16px 0 0">Los objetos van en los lugares del último nivel. Entrá a uno para ponerlos.</p>`;
+  return `${filas}${hoja ? sueltos : ''}${hoja ? agregar : aviso2}${msgHTML('objetos')}`;
 }
 
 function editorNiveles(ed) {
@@ -158,11 +170,11 @@ export function vistaPlano() {
       ${leyenda()}${msgHTML('borrar')}`;
   }
   const kids = d.hijos(foco.id);
+  const plano = kids.length ? `<div class="plano">${lienzo(kids)}</div>` : '<p class="vacio" style="border:0">Este lugar está vacío.</p>';
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
-    ${kids.length ? `<div class="plano">${lienzo(kids)}</div>` : '<p class="vacio" style="border:0">Este lugar está vacío.</p>'}
-    ${d.prof(foco) > 0 ? `<section class="panel"><h2>Objetos en este lugar</h2>${contenidoObjetos(foco)}</section>` : ''}
+    ${d.prof(foco) > 0 ? `<div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>Objetos de este lugar</h2>${contenidoObjetos(foco)}</section></div>` : plano}
     ${leyenda()}${msgHTML('borrar')}`;
 }
 

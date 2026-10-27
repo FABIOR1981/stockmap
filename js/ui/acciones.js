@@ -117,10 +117,12 @@ export const ACCIONES = {
 
   // Objetos dentro de un lugar (ventana)
   verObjetos: el => { S.verObj = el.id; S.modal = 'objetos'; S.msg = {}; },
+  // Pone un objeto en el lugar: el de la fila (data-oid) o el elegido en el selector.
   asignarAqui: el => {
-    const err = d().asignar(S.f.objAqui, el.lid);
+    const oid = el.oid || S.f.objAqui;
+    const err = d().asignar(oid, el.lid);
     aviso('objetos', err, 'Agregado.');
-    if (!err) S.f.objAqui = '';
+    if (!err && !el.oid) S.f.objAqui = '';
   },
   // Saca de un lugar la cantidad elegida (una unidad, o la cantidad escrita para productos).
   sacarDeLugar: el => {
