@@ -183,7 +183,9 @@ document.addEventListener('change', e => {
     S.f.lugarPara[t.dataset.oid] = t.value;
   } else if (t.dataset.f) {
     S.f[t.dataset.f] = t.type === 'checkbox' ? t.checked : t.value;
-    // Al cambiar un dato del formulario, el aviso anterior ya no vale: se borra (se conserva el global).
+    // Los campos de texto ya se guardaron al escribir. Redibujar acá reemplazaría el campo
+    // que el usuario acaba de tocar y se perdería lo que escribe en el siguiente.
+    if (t.tagName === 'INPUT') return;
     const g = S.msg.global;
     S.msg = g ? { global: g } : {};
   }
