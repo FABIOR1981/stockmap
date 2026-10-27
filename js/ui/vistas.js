@@ -85,7 +85,7 @@ export function vistaEstructura() {
 
   const niveles = esEdificio ? editorNiveles(nodo) : '';
   const contenido = !def
-    ? `<div class="aviso">Primero definí los niveles de este edificio, más arriba.</div>`
+    ? `<div class="aviso">Este es el último nivel del edificio: no tiene lugares adentro. Acá se guardan los objetos.</div>`
     : kids.length
       ? `<section class="panel"><h2>Contenido</h2><p class="ayuda">${kids.length} ${kids.length === 1 ? 'elemento' : 'elementos'}. Tocá Abrir para entrar.</p><div class="grid">${kids.map(tarjetaLugar).join('')}</div></section>`
       : `<div class="vacio"><span class="ilu">${ilustracion()}</span><p>Todavía no hay ${esc(plural(def.nombre.toLowerCase()))} aquí</p>
