@@ -131,6 +131,21 @@ export const ACCIONES = {
     aviso('objetos', err, 'Puesto en el lugar.');
     if (!err) S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: null };
   },
+  // Por código: busca el lugar y el objeto por su código (sin distinguir mayúsculas, espacios ni signos).
+  asignarPorCodigo: () => {
+    const dep = d();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const lc = norm(S.f.codLugar);
+    const lugar = lc ? dep.lugares.find(l => norm(dep.dir(l)) === lc) : null;
+    if (!lugar) return aviso('codigo', `No encuentro un lugar con el código "${S.f.codLugar}".`);
+    const oc = norm(S.f.codObjeto);
+    const obj = oc ? dep.objetos.find(o => norm(o.codigo_interno) === oc || (o.codigo_propio && norm(o.codigo_propio) === oc)) : null;
+    if (!obj) return aviso('codigo', `No encuentro un objeto con el código "${S.f.codObjeto}".`);
+    const cant = obj.tipo === 'producto' ? (S.f.codCant || '1') : '1';
+    const err = dep.asignar(obj.id, lugar.id, cant);
+    aviso('codigo', err, `${obj.codigo_interno} asignado en ${dep.dir(lugar)}.`);
+    if (!err) S.f.codObjeto = '';
+  },
   // Mover: lugar elegido para un objeto que está en un lugar (fila de la vista Mover).
   moverEn: el => { S.f.moverA = { ...S.f.moverA, [`${el.oid}|${el.lid}`]: el.value || null }; },
   moverObjeto: el => {

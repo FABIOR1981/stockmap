@@ -198,6 +198,23 @@ export function vistaPlano() {
 }
 
 // ---------- Stock (unidades y productos) ----------
+// Por código: se escribe el código de un lugar y el de un objeto, y se asigna.
+export function vistaCodigo() {
+  const d = ctx.dep;
+  if (!d.eid) return `<h1>Por código</h1>${sinCliente()}`;
+  return `<h1>Asignar por código</h1>
+    <p class="sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
+    <section class="panel" style="max-width:560px">
+      <div class="form">
+        ${campo('Código del lugar', `<input data-f="codLugar" value="${esc(S.f.codLugar)}" placeholder="Ej.: 1 · A · 2" autocomplete="off">`)}
+        ${campo('Código del objeto', `<input data-f="codObjeto" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC" autocomplete="off">`)}
+        ${campo('Cantidad', `<input data-f="codCant" value="${esc(S.f.codCant)}" size="5" inputmode="numeric">`)}
+      </div>
+      <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button></div>
+      ${msgHTML('codigo')}
+    </section>`;
+}
+
 export function vistaStock() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Stock</h1>${sinCliente()}`;

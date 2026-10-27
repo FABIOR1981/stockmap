@@ -75,7 +75,7 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   </div>`;
 }
 
-const NOMBRES_VISTA = { estructura: 'Edificios', plano: 'Asignación', mover: 'Mover', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
+const NOMBRES_VISTA = { estructura: 'Edificios', plano: 'Asignación', codigo: 'Por código', mover: 'Mover', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
 
 export function migasHTML() {
   const d = ctx.dep;

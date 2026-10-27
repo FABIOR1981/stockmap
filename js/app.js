@@ -7,7 +7,7 @@ import { api, cargarDesdeServidor, sincronizar, nuevoEstadoSincronizacion } from
 import { ctx, S, $, esc, aviso, msgHTML } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
-import { vistaStock, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
+import { vistaStock, vistaCodigo, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
 import { ACCIONES } from './ui/acciones.js';
 
@@ -18,6 +18,7 @@ let estadoSync = null;
 
 const NAV = [
   ['plano', 'Asignación', 'plano'],
+  ['codigo', 'Por código', 'buscar'],
   ['mover', 'Mover', 'mover'],
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
@@ -47,7 +48,7 @@ function render() {
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
+  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
   const cuerpo = (vistas[S.vista] || vistaEstructura)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
 
