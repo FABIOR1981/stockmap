@@ -95,7 +95,9 @@ async function db(env, ruta, { metodo = 'GET', cuerpo, cabeceras = {} } = {}) {
     try { mensaje = JSON.parse(texto).message || texto; } catch { /* texto plano */ }
     throw new ErrorApi(mensaje, 400);
   }
-  return res.status === 204 ? null : res.json();
+  // Las escrituras con return=minimal responden sin cuerpo: no se puede leer como JSON.
+  const texto = await res.text();
+  return texto ? JSON.parse(texto) : null;
 }
 
 async function auth(env, ruta, cuerpo) {
@@ -166,7 +168,8 @@ async function autorizar(env, sesion, op) {
 
   if (op.tabla === 'establecimientos') {
     if (!sesion.es_admin) throw new ErrorApi('Solo el administrador general puede crear clientes.', 403);
-    return null;
+    // Devuelve el id (no null): null significa "no hay nada que hacer" y salteaba el guardado.
+    return validarUUID(datos.id);
   }
 
   let eid;
