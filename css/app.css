@@ -199,7 +199,8 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 @media (max-width: 860px) {
   body { flex-direction: column; }
   .side { width: auto; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--lin); flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 12px; }
-  .nav { flex-direction: row; }
+  .nav { flex-direction: row; flex-wrap: wrap; }
+  .nav button { width: auto; }
   .side h4 { display:none; }
   .top { position: static; flex-wrap: wrap; padding: 14px 16px; }
   .contenido { padding: 20px 16px 40px; }
