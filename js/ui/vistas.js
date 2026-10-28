@@ -37,7 +37,9 @@ function contenidoAsignacion(l, destino) {
   if (typeof error === 'string') {
     // Se nombra qué lugares de adentro tienen objetos, para saber cuál sacar.
     const adentro = d.descendientes(destino).filter(x => d.objetosDe(x.id).length > 0).map(x => d.dir(x));
-    const detalle = adentro.length ? ` Tiene objetos en: ${adentro.join(', ')}.` : '';
+    const arriba = d.ancestros(destino).filter(x => d.objetosDe(x.id).length > 0).map(x => d.dir(x));
+    const detalle = (adentro.length ? ` Tiene objetos en: ${adentro.join(', ')}.` : '')
+      + (arriba.length ? ` Tiene objetos puestos más arriba: ${arriba.join(', ')}.` : '');
     return `${cabecera}<p class="dim" style="font-size:13px;margin:0">No puede recibir objetos. ${esc(error)}${esc(detalle)} Elegí otro lugar en el plano.</p>${msgHTML('objetos')}`;
   }
   return `${cabecera}<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
