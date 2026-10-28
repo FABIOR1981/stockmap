@@ -130,6 +130,23 @@ function editorNiveles(ed) {
   </section>`;
 }
 
+// Primera tarjeta dentro de un lugar: lo que hay puesto en ese mismo lugar (no sus divisiones).
+// Tocarla selecciona el lugar como destino de 'Por asignar'.
+function bloqueContenido(l, estilo) {
+  const d = ctx.dep;
+  const objs = d.objetosDe(l.id);
+  const n = objs.length;
+  const cls = n ? 'obj' : 'libre';
+  const seleccion = S.elegido === l.id ? ' elegido' : '';
+  const resumen = n ? objs.slice(0, 2).map(o => esc(o.codigo_interno)).join(', ') + (n > 2 ? ` y ${n - 2} más` : '') : '';
+  return `<div class="bloque ${cls}${seleccion}" data-act="planoSeleccionar" data-id="${l.id}" role="button" tabindex="0" style="${estilo}">
+    <span class="nivel">Contenido</span>
+    <div class="cab"><span class="codigo">${n}</span></div>
+    ${resumen ? `<span class="nombre">${resumen}</span>` : ''}
+    <div class="pie"><span class="chip ${cls}">${n === 1 ? '1 objeto' : n ? `${n} objetos` : 'Libre'}</span></div>
+  </div>`;
+}
+
 // ---------- Plano ----------
 export function vistaPlano() {
   const d = ctx.dep;
@@ -140,10 +157,12 @@ export function vistaPlano() {
   // Botón para entrar al lugar seleccionado (en celular no hay doble clic).
   const botonEntrar = x => x ? `<button class="btn sec sm" data-act="planoIr" data-id="${x.id}" style="margin:0 0 12px">Entrar a ${esc(d.dir(x))}</button>` : '';
   // Un lienzo con posición libre para cada bloque (edificios, o lo que hay dentro de un lugar).
+  // Dentro de un lugar, la primera tarjeta es su propio contenido; después van los lugares de adentro.
   const lienzo = lugares => {
-    const { ancho, alto } = tamanoPlano(lugares);
-    return `<div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${lugares.map((l, i) => {
-      const p = posDe(l, i);
+    const { ancho, alto } = tamanoPlano([{}, ...lugares]);
+    const p0 = posDe({}, 0);
+    return `<div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloqueContenido(foco, `left:${p0.x}px;top:${p0.y}px;`)}${lugares.map((l, i) => {
+      const p = posDe(l, i + 1);
       return bloquePlano(l, `left:${p.x}px;top:${p.y}px;`, `data-drag="${l.id}"`);
     }).join('')}</div>`;
   };
@@ -165,7 +184,7 @@ export function vistaPlano() {
   const elegido = S.elegido ? d.porId(S.elegido) : null;
   const destino = elegido && d.descendientes(foco).some(x => x.id === elegido.id) ? elegido : foco;
   const kids = d.hijos(foco.id);
-  const plano = kids.length ? `<div class="plano-marco"><div class="plano">${lienzo(kids)}</div>${leyenda()}</div>` : `<p class="vacio" style="border:0">Este lugar está vacío.</p>${leyenda()}`;
+  const plano = `<div class="plano-marco"><div class="plano">${lienzo(kids)}</div>${leyenda()}</div>`;
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
