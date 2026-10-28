@@ -7,6 +7,7 @@ import { correrPruebas } from '../core/pruebas.js';
 import { api } from '../almacen/nube.js';
 import { sonAledanos } from './plano.js';
 import { abrirEtiquetas } from './etiquetas.js';
+import { escanearCamara } from './escaner.js';
 
 const d = () => ctx.dep;
 
@@ -151,6 +152,25 @@ export const ACCIONES = {
     if (!err) S.f.codObjeto = '';
   },
   enfocar: el => { S.enfocar = el.campo || null; },
+  // Lee con la cámara el QR del lugar (campo codLugar) o del objeto (campo codObjeto).
+  // Al leer el objeto, si ya hay un lugar cargado, asigna sin tener que tocar nada más.
+  escanear: el => {
+    const campo = el.campo;
+    const error = escanearCamara({
+      alDetectar: texto => {
+        S.f[campo] = texto;
+        if (campo === 'codLugar') {
+          S.enfocar = 'codObjeto';
+        } else if (S.f.codLugar) {
+          ACCIONES.asignarPorCodigo();
+        }
+        ctx.render();
+        if (ctx.sesion) ctx.sincronizar();
+      },
+      alError: msg => { aviso('codigo', msg); ctx.render(); },
+    });
+    if (error) aviso('codigo', error);
+  },
   // Etiqueta de un solo lugar (QR = su identificador) o de un solo objeto (QR = su código interno).
   etiquetaLugar: el => {
     const dep = d();

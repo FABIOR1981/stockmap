@@ -234,6 +234,14 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 
 .cab-niveles { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+/* ---------- Lector de QR con cámara ---------- */
+.solo-lectura [data-act="escanear"] { display: none !important; }
+.escaner { position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.escaner-caja { width: min(440px, 100%); display: flex; flex-direction: column; gap: 14px; align-items: center; color: #fff; }
+.escaner video { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 18px; background: #000; }
+.escaner p { margin: 0; font-size: 15px; }
+.escaner .btn { min-width: 160px; }
+
 /* ---------- Ingreso ---------- */
 /* El body es una fila: la pantalla de ingreso tiene que ocupar todo el ancho para centrar la tarjeta. */
 .ingreso { flex: 1; width: 100%; }

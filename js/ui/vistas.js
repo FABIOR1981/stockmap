@@ -210,7 +210,9 @@ export function vistaCodigo() {
         ${campo('Código del objeto', `<input data-f="codObjeto" data-enter="asignarPorCodigo" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC (o escaneá)" autocomplete="off">`)}
         ${campo('Cantidad', `<input data-f="codCant" value="${esc(S.f.codCant)}" size="5" inputmode="numeric">`)}
       </div>
-      <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button></div>
+      <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button>
+        <button class="btn sec" data-act="escanear" data-campo="codLugar">${ic('qr', 14)} Escanear lugar</button>
+        <button class="btn sec" data-act="escanear" data-campo="codObjeto">${ic('qr', 14)} Escanear objeto</button></div>
       ${msgHTML('codigo')}
     </section>
     <section class="panel" style="max-width:560px;margin-top:16px">
