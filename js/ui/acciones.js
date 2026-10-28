@@ -28,6 +28,11 @@ export const ACCIONES = {
     S.vista = el.v; S.msg = {};
   },
   planoIr: el => { S.vista = S.vista === 'mover' ? 'mover' : 'plano'; S.nodo = el.id || null; S.elegido = null; S.msg = {}; },
+  // Entrar con doble clic (o doble toque): si el lugar tiene objetos puestos, muestra su lista en un modal.
+  planoEntrar: el => {
+    ACCIONES.planoIr(el);
+    if (d().objetosDe(el.id).length) { S.verObj = el.id; S.modal = 'contenido'; }
+  },
   // Un clic en un lugar lo selecciona: es el destino de 'Por asignar'.
   planoSeleccionar: el => { S.elegido = el.id || null; S.msg = {}; },
   // Vuelve un nivel arriba en el plano (al padre; si era de primer nivel, a la raíz).

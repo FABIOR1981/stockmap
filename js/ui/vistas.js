@@ -138,11 +138,9 @@ function bloqueContenido(l, estilo) {
   const n = objs.length;
   const cls = n ? 'obj' : 'libre';
   const seleccion = S.elegido === l.id ? ' elegido' : '';
-  const resumen = n ? objs.slice(0, 2).map(o => esc(o.codigo_interno)).join(', ') + (n > 2 ? ` y ${n - 2} más` : '') : '';
   return `<div class="bloque ${cls}${seleccion}" data-act="planoSeleccionar" data-id="${l.id}" role="button" tabindex="0" style="${estilo}">
     <span class="nivel">Contenido</span>
     <div class="cab"><span class="codigo">${n}</span></div>
-    ${resumen ? `<span class="nombre">${resumen}</span>` : ''}
     <div class="pie"><span class="chip ${cls}">${n === 1 ? '1 objeto' : n ? `${n} objetos` : 'Libre'}</span></div>
   </div>`;
 }
@@ -154,8 +152,6 @@ export function vistaPlano() {
   if (!d.eid) return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>${sinCliente()}`;
   const foco = S.nodo ? d.porId(S.nodo) : null;
   const { def } = d.nivelParaHijo(S.nodo);
-  // Botón para entrar al lugar seleccionado (en celular no hay doble clic).
-  const botonEntrar = x => x ? `<button class="btn sec sm" data-act="planoIr" data-id="${x.id}" style="margin:0 0 12px">Entrar a ${esc(d.dir(x))}</button>` : '';
   // Un lienzo con posición libre para cada bloque (edificios, o lo que hay dentro de un lugar).
   // Dentro de un lugar, la primera tarjeta es su propio contenido; después van los lugares de adentro.
   const lienzo = lugares => {
@@ -175,7 +171,6 @@ export function vistaPlano() {
     }).join('');
     return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
-      ${botonEntrar(S.elegido ? d.porId(S.elegido) : null)}
       ${eds.length ? '' : '<p class="vacio" style="margin:0 0 16px;border:0">Todavía no hay edificios.</p>'}
       <div class="plano-marco"><div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>${leyenda()}</div>
       ${msgHTML('borrar')}`;
@@ -188,7 +183,6 @@ export function vistaPlano() {
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
-    ${botonEntrar(destino !== foco ? destino : null)}
     <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>${mover ? contenidoMover(foco) : contenidoAsignacion(foco, destino)}</section></div>
     ${msgHTML('borrar')}`;
 }
@@ -492,6 +486,16 @@ export function ventana() {
           ${msgHTML('clon')}`,
         pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>
               <button class="btn" data-act="clonarEjecutar">Clonar</button>`
+      };
+    }
+    case 'contenido': {
+      const l = S.verObj ? d.porId(S.verObj) : null;
+      if (!l) return null;
+      const objs = d.objetosDe(l.id);
+      return {
+        titulo: `Contenido de ${d.dir(l)}`,
+        cuerpo: `<div class="dlg-lista">${objs.map(o => `<div class="r"><span>${etiquetaObj(o)}${detalleObj(o)}</span><span class="dim">${d.cantidadEn(o.id, l.id)} acá</span></div>`).join('')}</div>`,
+        pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>`
       };
     }
     case 'objetos': {
