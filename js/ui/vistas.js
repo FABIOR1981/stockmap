@@ -27,18 +27,18 @@ const cantidadProducto = (o, lid) => o.tipo === 'producto'
   : '';
 
 // Asignación: solo los objetos que todavía no tienen lugar, para ponerlos en este lugar o uno de adentro.
-function contenidoAsignacion(l) {
+// 'Por asignar': el destino es el lugar seleccionado (o el lugar en el que estás). Tocar un objeto lo pone ahí.
+function contenidoAsignacion(l, destino) {
   const d = ctx.dep;
-  const sirve = x => typeof d.lugarDestino(x.id) !== 'string';
-  const cand = [l, ...d.descendientes(l)].filter(sirve);
   const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
   if (!pendientes.length) return `<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
-  if (!cand.length) return `<p class="dim" style="font-size:13px;margin:0">Ningún lugar de acá puede recibir objetos ahora: ${esc(d.lugarDestino(l.id))}</p>${msgHTML('objetos')}`;
-  return `<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
-    <div class="dlg-lista compacta">${pendientes.map(o => `<div class="r">
+  const error = d.lugarDestino(destino.id);
+  const cabecera = `<p class="ayuda" style="margin:0 0 6px">Asignar a <strong>${esc(d.dir(destino))}</strong>${destino.id === l.id ? '' : ' (seleccionado)'}. Tocá un objeto para ponerlo ahí.</p>`;
+  if (typeof error === 'string') return `${cabecera}<p class="dim" style="font-size:13px;margin:0">No puede recibir objetos: ${esc(error)} Elegí otro lugar en el plano.</p>${msgHTML('objetos')}`;
+  return `${cabecera}<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
+    <div class="dlg-lista compacta">${pendientes.map(o => `<div class="r obj-asignable" role="button" tabindex="0" data-act="ponerObjeto" data-oid="${o.id}" data-lugar="${destino.id}">
       <span>${etiquetaObj(o)}${detalleObj(o)}</span>
-      <span class="acciones-fila"><button class="btn sm txt" data-act="etiquetaObjeto" data-oid="${o.id}" aria-label="Imprimir etiqueta de ${esc(o.codigo_interno)}" title="Imprimir etiqueta">${ic('qr', 14)}</button><select data-act="ponerEn" data-oid="${o.id}" aria-label="Lugar para ${esc(o.codigo_interno)}"><option value="">Elegir lugar…</option>${cand.map(h => `<option value="${h.id}" ${S.f.ponerEn[o.id] === h.id ? 'selected' : ''}>${esc(d.dir(h))}${h.id === l.id ? ' (este)' : ''}</option>`).join('')}</select>
-        <button class="btn sm" data-act="ponerObjeto" data-oid="${o.id}">Poner</button></span>
+      <span class="acciones-fila"><button class="btn sm txt" data-act="etiquetaObjeto" data-oid="${o.id}" aria-label="Imprimir etiqueta de ${esc(o.codigo_interno)}" title="Imprimir etiqueta">${ic('qr', 14)}</button></span>
     </div>`).join('')}</div>${msgHTML('objetos')}`;
 }
 
@@ -118,6 +118,8 @@ export function vistaPlano() {
   if (!d.eid) return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>${sinCliente()}`;
   const foco = S.nodo ? d.porId(S.nodo) : null;
   const { def } = d.nivelParaHijo(S.nodo);
+  // Botón para entrar al lugar seleccionado (en celular no hay doble clic).
+  const botonEntrar = x => x ? `<button class="btn sec sm" data-act="planoIr" data-id="${x.id}" style="margin:0 0 12px">Entrar a ${esc(d.dir(x))}</button>` : '';
   // Un lienzo con posición libre para cada bloque (edificios, o lo que hay dentro de un lugar).
   const lienzo = lugares => {
     const { ancho, alto } = tamanoPlano(lugares);
@@ -135,16 +137,21 @@ export function vistaPlano() {
     }).join('');
     return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
+      ${botonEntrar(S.elegido ? d.porId(S.elegido) : null)}
       ${eds.length ? '' : '<p class="vacio" style="margin:0 0 16px;border:0">Todavía no hay edificios.</p>'}
       <div class="plano-marco"><div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>${leyenda()}</div>
       ${msgHTML('borrar')}`;
   }
+  // Destino de 'Por asignar': el lugar seleccionado dentro de este, o este mismo.
+  const elegido = S.elegido ? d.porId(S.elegido) : null;
+  const destino = elegido && d.descendientes(foco).some(x => x.id === elegido.id) ? elegido : foco;
   const kids = d.hijos(foco.id);
   const plano = kids.length ? `<div class="plano-marco"><div class="plano">${lienzo(kids)}</div>${leyenda()}</div>` : `<p class="vacio" style="border:0">Este lugar está vacío.</p>${leyenda()}`;
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
-    <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>${mover ? contenidoMover(foco) : contenidoAsignacion(foco)}</section></div>
+    ${botonEntrar(destino !== foco ? destino : null)}
+    <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>${mover ? contenidoMover(foco) : contenidoAsignacion(foco, destino)}</section></div>
     ${msgHTML('borrar')}`;
 }
 

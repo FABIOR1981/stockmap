@@ -6,6 +6,7 @@ export const ctx = { dep: null, render: () => {} };
 export const S = {
   vista: 'plano',          // 'plano' (Asignación) | 'codigo' (Por código) | 'mover' | 'stock' | 'movimientos' | 'accesos'
   nodo: null,              // lugar que se mira (null = raíz de la vista)
+  elegido: null,           // lugar seleccionado con un clic (doble clic = entrar). Es el destino de 'Por asignar'.
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
   modal: null,             // 'crear' | 'editar' | 'clonarNivel' | 'niveles' | 'objetos' | 'nuevoObjeto' | 'elegirLugar' | null
@@ -20,7 +21,6 @@ export const S = {
     codigoP: '', desc: '', tipoNuevo: 'producto', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
-    ponerEn: {},                          // por objeto sin lugar: lugar elegido para ponerlo (desde un estante)
     codLugar: '', codObjeto: '', codCant: '1',   // asignación por código
     moverA: {},                           // por 'objeto|lugar': lugar al que se mueve ese objeto desde ese lugar
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,

@@ -24,12 +24,14 @@ export const ACCIONES = {
   // Entre Asignación y Mover se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
   vista:   el => {
     const enPlano = v => v === 'plano' || v === 'mover';
-    if (!(enPlano(S.vista) && enPlano(el.v))) S.nodo = null;
+    if (!(enPlano(S.vista) && enPlano(el.v))) { S.nodo = null; S.elegido = null; }
     S.vista = el.v; S.msg = {};
   },
-  planoIr: el => { S.vista = S.vista === 'mover' ? 'mover' : 'plano'; S.nodo = el.id || null; S.msg = {}; },
+  planoIr: el => { S.vista = S.vista === 'mover' ? 'mover' : 'plano'; S.nodo = el.id || null; S.elegido = null; S.msg = {}; },
+  // Un clic en un lugar lo selecciona: es el destino de 'Por asignar'.
+  planoSeleccionar: el => { S.elegido = el.id || null; S.msg = {}; },
   // Vuelve un nivel arriba en el plano (al padre; si era de primer nivel, a la raíz).
-  subirNivel: () => { const l = d().porId(S.nodo); S.nodo = l?.padre_id || null; S.msg = {}; },
+  subirNivel: () => { const l = d().porId(S.nodo); S.nodo = l?.padre_id || null; S.elegido = null; S.msg = {}; },
 
   // Sesión: usuario y cliente
   usuario: el => {
@@ -124,13 +126,10 @@ export const ACCIONES = {
   // Objetos dentro de un lugar (ventana)
   verObjetos: el => { S.verObj = el.id; S.modal = 'objetos'; S.msg = {}; },
   // Lugar elegido para un objeto sin lugar (selector de un estante o estantería).
-  ponerEn: el => { S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: el.value || null }; },
+  // Tocar un objeto de 'Por asignar' lo pone en el lugar destino (el seleccionado, o el lugar en el que estás).
   ponerObjeto: el => {
-    const lid = S.f.ponerEn?.[el.oid];
-    if (!lid) return aviso('objetos', 'Elegí el lugar donde va.');
-    const err = d().asignar(el.oid, lid);
+    const err = d().asignar(el.oid, el.lugar);
     aviso('objetos', err, 'Puesto en el lugar.');
-    if (!err) S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: null };
   },
   // Por código: el lugar se busca por su identificador (QR) o por su código visible, y el objeto por su código.
   // Enter en el lugar pasa al objeto; Enter en el objeto asigna. El lugar queda elegido para seguir escaneando.

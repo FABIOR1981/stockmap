@@ -36,10 +36,9 @@ export function bloquePlano(l, estilo = '', atributos = '') {
   const objs = d.objetosDe(l.id).length;
   const hijos = d.hijos(l.id).length;
   const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
-  // Clic en el bloque entra al lugar, también en el último nivel (ahí se ven y asignan los objetos).
-  // El arrastre no entra: lo filtra plano.js.
-  const clic = `data-act="planoIr" data-id="${l.id}" role="button" tabindex="0"`;
-  return `<div class="bloque ${st.cls}" ${atributos} ${clic} style="${estilo}">
+  // Un clic selecciona el lugar; dos clics seguidos lo abren (lo decide app.js). El arrastre no selecciona: lo filtra plano.js.
+  const clic = `data-act="planoSeleccionar" data-id="${l.id}" role="button" tabindex="0"`;
+  return `<div class="bloque ${st.cls}${S.elegido === l.id ? ' elegido' : ''}" ${atributos} ${clic} style="${estilo}">
     <span class="nivel">${esc(nv.nombre)}</span>
     <div class="cab">
       <span class="codigo">${esc(l.codigo)}</span>

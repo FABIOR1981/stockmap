@@ -29,7 +29,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'planoIr', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
 
 function sesionHTML() {
@@ -147,13 +147,23 @@ $('#formIngreso').addEventListener('submit', async e => {
 });
 
 // ---------- Eventos ----------
+// Un clic en un lugar lo selecciona. Dos clics seguidos sobre el mismo lugar (o un doble toque) lo abren.
+// Se detecta acá y no con el evento dblclick, porque el primer clic vuelve a dibujar la pantalla.
+let ultimoLugar = { id: null, t: 0 };
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]');
   if (!b || b.matches('select, input')) return;
-  const fn = ACCIONES[b.dataset.act];
+  let accion = b.dataset.act;
+  if (accion === 'planoSeleccionar') {
+    const ahora = Date.now();
+    const doble = ultimoLugar.id === b.dataset.id && ahora - ultimoLugar.t < 450;
+    ultimoLugar = doble ? { id: null, t: 0 } : { id: b.dataset.id, t: ahora };
+    if (doble) accion = 'planoIr';
+  }
+  const fn = ACCIONES[accion];
   if (fn) await fn(b.dataset);
   render();
-  if (!SIN_SYNC.has(b.dataset.act) && ctx.sesion) sincronizarAhora();
+  if (!SIN_SYNC.has(accion) && ctx.sesion) sincronizarAhora();
 });
 
 // Campos con data-enter: Enter llama a su acción (por ejemplo, el lector de códigos USB manda Enter al final).

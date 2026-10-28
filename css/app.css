@@ -327,3 +327,8 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .escaneo { grid-template-columns: 1fr; }
   .oc-celular { display: none; }
 }
+
+/* Selección en el plano y objetos que se asignan con un clic */
+.obj-asignable { cursor: pointer; }
+.obj-asignable:hover { background: var(--hov); }
+.obj-asignable:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
