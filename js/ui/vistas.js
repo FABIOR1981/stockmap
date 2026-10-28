@@ -28,7 +28,19 @@ const cantidadProducto = (o, lid) => o.tipo === 'producto'
 
 // Asignación: solo los objetos que todavía no tienen lugar, para ponerlos en este lugar o uno de adentro.
 // 'Por asignar': el destino es el lugar seleccionado (o el lugar en el que estás). Tocar un objeto lo pone ahí.
+// Arriba del panel: lo que ya está puesto en este lugar (un objeto puede estar en el estante y tener divisiones).
 function contenidoAsignacion(l, destino) {
+  const d = ctx.dep;
+  const dentro = d.objetosDe(l.id);
+  const enEste = dentro.length
+    ? `<p class="ayuda" style="margin:0 0 6px">En este lugar</p>
+       <div class="dlg-lista compacta" style="margin-bottom:14px">${dentro.map(o => `<div class="r">
+         <span>${etiquetaObj(o)}${detalleObj(o)}</span><span class="dim" style="font-size:13px">${d.cantidadEn(o.id, l.id)} acá</span></div>`).join('')}</div>`
+    : '';
+  return enEste + contenidoPendientes(l, destino);
+}
+
+function contenidoPendientes(l, destino) {
   const d = ctx.dep;
   const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
   if (!pendientes.length) return `<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
