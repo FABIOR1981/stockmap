@@ -7,7 +7,7 @@ import { api, cargarDesdeServidor, sincronizar, nuevoEstadoSincronizacion } from
 import { ctx, S, $, esc, aviso, msgHTML } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
-import { vistaStock, vistaCodigo, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
+import { vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
 import { ACCIONES } from './ui/acciones.js';
 
@@ -26,7 +26,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
 
 function sesionHTML() {
@@ -48,8 +48,8 @@ function render() {
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
-  const cuerpo = (vistas[S.vista] || vistaEstructura)();
+  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
+  const cuerpo = (vistas[S.vista] || vistaPlano)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
   // En las vistas de elementos, el título ya lo dice la ruta de arriba: se oculta en escritorio (ver css).
   $('#contenido').classList.toggle('elementos', ['plano', 'mover'].includes(S.vista));

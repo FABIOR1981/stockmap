@@ -3,7 +3,7 @@
 import { ctx, S, esc, campo, msgHTML, plural } from './estado.js';
 import { FORMATOS } from '../core/formatos.js';
 import { ic, ilustracion } from './iconos.js';
-import { tarjetaLugar, bloquePlano, leyenda, estadoDe } from './componentes.js';
+import { bloquePlano, leyenda, estadoDe } from './componentes.js';
 import { posDe, tamanoPlano, sonAledanos } from './plano.js';
 
 const ROLES = { admin: 'Admin', editor: 'Editor', lector: 'Lector' };
@@ -16,25 +16,6 @@ function sinCliente() {
     <p>Elegí un cliente para ver su depósito</p>
     <small>Si todavía no hay clientes, creá uno desde Accesos.</small>
     <button class="btn" data-act="vista" data-v="accesos">Ir a Accesos</button></div>`;
-}
-
-// ---------- Edificios ----------
-export function vistaEdificios() {
-  const edificios = ctx.dep.hijos(null);
-  if (!ctx.dep.eid) return `<h1>Edificios</h1>${sinCliente()}`;
-  if (!edificios.length) {
-    return `<h1>Edificios</h1>
-      <p class="sub">Cada edificio define sus propios niveles.</p>
-      <div class="vacio"><span class="ilu">${ilustracion()}</span>
-        <p>Todavía no hay edificios</p>
-        <small>Creá el primero para empezar a definir sus niveles y su contenido.</small>
-        <button class="btn" data-act="abrirCrear">+ Agregar edificio</button></div>
-      ${msgHTML('borrar')}`;
-  }
-  return `<h1>Edificios</h1>
-    <p class="sub">${edificios.length} ${edificios.length === 1 ? 'edificio' : 'edificios'} en el depósito.</p>
-    <div class="grid">${edificios.map(tarjetaLugar).join('')}</div>
-    ${msgHTML('borrar')}`;
 }
 
 // ---------- Niveles de un edificio ----------
@@ -130,36 +111,6 @@ function editorNiveles(ed) {
   </section>`;
 }
 
-// ---------- Contenido de un lugar ----------
-export function vistaEstructura() {
-  const d = ctx.dep;
-  const nodo = d.porId(S.nodo);
-  if (!nodo) return vistaEdificios();
-  const ed = d.edificioDe(nodo);
-  const esEdificio = d.prof(nodo) === 0;
-  const { def } = d.nivelParaHijo(nodo.id);
-  const kids = d.hijos(nodo.id);
-
-  const cabecera = `<h1>${esc(def ? plural(def.nombre) : 'Contenido')} de ${esc(d.dir(nodo))}</h1>
-    <p class="sub">${esEdificio ? 'Definí los niveles y después cargá lo que hay adentro.'
-      : `Niveles del edificio ${esc(ed.codigo)}: ${esc(ed.niveles.map(n => n.nombre).join(' › ') || '—')}.`}</p>`;
-
-  const niveles = esEdificio ? editorNiveles(nodo) : '';
-  const objs = d.objetosDe(nodo.id).length;
-  const contenido = !def
-    ? `<div class="aviso">Este es el último nivel del edificio: no tiene lugares adentro.</div>
-      <section class="panel"><h2>Objetos</h2>
-        <p class="ayuda">${objs ? `${objs} ${objs === 1 ? 'objeto' : 'objetos'} en este lugar.` : 'Todavía no hay objetos en este lugar.'}</p>
-        <button class="btn sec" data-act="verObjetos" data-id="${nodo.id}">Ver objetos</button></section>`
-    : kids.length
-      ? `<section class="panel"><h2>Contenido</h2><p class="ayuda">${kids.length} ${kids.length === 1 ? 'elemento' : 'elementos'}. Tocá una tarjeta para entrar.</p><div class="grid">${kids.map(tarjetaLugar).join('')}</div></section>`
-      : `<div class="vacio"><span class="ilu">${ilustracion()}</span><p>Todavía no hay ${esc(plural(def.nombre.toLowerCase()))} aquí</p>
-          <small>Agregá el primero y empezá a armar el contenido.</small>
-          <button class="btn" data-act="abrirCrear">+ Agregar ${esc(def.nombre.toLowerCase())}</button></div>`;
-
-  return `${cabecera}${niveles}${contenido}${msgHTML('borrar')}`;
-}
-
 // ---------- Plano ----------
 export function vistaPlano() {
   const d = ctx.dep;
@@ -185,16 +136,16 @@ export function vistaPlano() {
     return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
       ${eds.length ? '' : '<p class="vacio" style="margin:0 0 16px;border:0">Todavía no hay edificios.</p>'}
-      <div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>
-      ${leyenda()}${msgHTML('borrar')}`;
+      <div class="plano-marco"><div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>${leyenda()}</div>
+      ${msgHTML('borrar')}`;
   }
   const kids = d.hijos(foco.id);
-  const plano = kids.length ? `<div class="plano">${lienzo(kids)}</div>` : '<p class="vacio" style="border:0">Este lugar está vacío.</p>';
+  const plano = kids.length ? `<div class="plano-marco"><div class="plano">${lienzo(kids)}</div>${leyenda()}</div>` : `<p class="vacio" style="border:0">Este lugar está vacío.</p>${leyenda()}`;
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
     <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>${mover ? contenidoMover(foco) : contenidoAsignacion(foco)}</section></div>
-    ${leyenda()}${msgHTML('borrar')}`;
+    ${msgHTML('borrar')}`;
 }
 
 // ---------- Stock (unidades y productos) ----------
@@ -210,9 +161,11 @@ export function vistaCodigo() {
         ${campo('Código del objeto', `<input data-f="codObjeto" data-enter="asignarPorCodigo" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC (o escaneá)" autocomplete="off">`)}
         ${campo('Cantidad', `<input data-f="codCant" value="${esc(S.f.codCant)}" size="5" inputmode="numeric">`)}
       </div>
-      <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button>
-        <button class="btn sec" data-act="escanear" data-campo="codLugar">${ic('qr', 14)} Escanear lugar</button>
-        <button class="btn sec" data-act="escanear" data-campo="codObjeto">${ic('qr', 14)} Escanear objeto</button></div>
+      <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button></div>
+      <div class="escaneo">
+        <button class="btn sec" data-act="escanear" data-campo="codLugar">${ic('qr', 16)} Escanear lugar</button>
+        <button class="btn sec" data-act="escanear" data-campo="codObjeto">${ic('qr', 16)} Escanear objeto</button>
+      </div>
       ${msgHTML('codigo')}
     </section>
     <section class="panel" style="max-width:560px;margin-top:16px">
@@ -427,7 +380,7 @@ function bloqueEstructura(padre, def) {
 // ---------- Ventanas (modales) ----------
 // SALIDA: lugar fijo para los objetos que salen del sistema. No se guarda en la base.
 const bloqueSalida = (pos, interactivo) => {
-  const cuerpo = '<span class="nivel">Salida</span><span class="codigo">SALIDA</span><span class="nombre">Los objetos que salen del sistema</span>';
+  const cuerpo = '<span class="nivel">Salida</span><span class="codigo">SALIDA</span><span class="nombre">Lo que sale</span>';
   const estilo = `left:${pos.x}px;top:${pos.y}px`;
   return interactivo
     ? `<button class="bloque salida" style="${estilo}" data-act="elegir" data-id="SALIDA" aria-label="Sacar del sistema (salida)">${cuerpo}</button>`

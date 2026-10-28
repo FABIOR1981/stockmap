@@ -149,7 +149,7 @@ tbody tr:hover { background: var(--hov-2); }
 
 /* ---------- Plano ---------- */
 .plano-y-panel { display:flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.plano-y-panel > .plano { flex: 0 0 auto; }
+.plano-y-panel > .plano-marco { flex: 0 0 auto; }
 .objetos-lugar { flex: 1 1 280px; max-width: 420px; margin: 0; }
 .sub-titulo { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); margin: 18px 0 8px; font-weight: 600; }
 .plano { position: relative; width: fit-content; max-width: 100%; background-color: var(--sur-2); background-image: radial-gradient(var(--punto) 1px, transparent 1px); background-size: 18px 18px; border: 1px solid var(--lin); border-radius: var(--r); height: auto; max-height: min(66vh, 620px); overflow: auto; }
@@ -287,7 +287,7 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .plano { width: 100%; }
   .contenido.elementos h1 { display: none; }
   .contenido.elementos .sub { font-size: 13px; margin: 0 0 12px; }
-  .plano-y-panel > .plano { flex: 1 1 520px; width: auto; min-width: 0; }
+  .plano-y-panel > .plano-marco { flex: 1 1 520px; width: auto; min-width: 0; }
   .objetos-lugar { flex: 0 1 300px; max-width: 340px; }
   .bloque, .tarjeta { border-radius: 18px; box-shadow: var(--sombra-h); }
   .bloque .codigo, .tarjeta .codigo { letter-spacing: -.03em; }
@@ -297,4 +297,31 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 @media (min-width: 861px) and (hover: hover) {
   .bloque .acc, .tarjeta .acc { opacity: 0; transition: opacity .15s ease; }
   .bloque:hover .acc, .bloque:focus-within .acc, .tarjeta:hover .acc, .tarjeta:focus-within .acc { opacity: 1; }
+}
+
+/* ---------- Leyenda flotando sobre el plano ---------- */
+.plano-marco { position: relative; max-width: 100%; }
+.plano-marco > .leyenda { position: absolute; right: 12px; bottom: 12px; margin: 0; padding: 6px 10px; background: var(--sur); border: 1px solid var(--lin); border-radius: 999px; box-shadow: var(--sombra); z-index: 2; }
+
+/* ---------- Botones de escaneo grandes (Por código) ---------- */
+.escaneo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.escaneo .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 10px; font-size: 15px; }
+
+/* ---------- Celular: navegación inferior, cuenta arriba a la derecha, acciones en una fila ---------- */
+@media (max-width: 860px) {
+  body { padding-bottom: 76px; }
+  .side { flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
+  .marca { padding: 0 4px; }
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; flex-direction: row; flex-wrap: nowrap; justify-content: space-around; gap: 2px; background: var(--sur); border-top: 1px solid var(--lin); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .nav button { flex: 1 1 0; min-width: 0; width: auto; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 2px; border-radius: 10px; }
+  .nav button span { display: block; font-size: 10px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .rail-mas { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: none; color: var(--mut); cursor: pointer; margin-left: auto; }
+  .cuenta { display: none; position: fixed; top: 58px; right: 12px; left: 12px; width: auto; bottom: auto; background: var(--sur); border: 1px solid var(--lin); border-radius: 16px; box-shadow: var(--sombra-h); padding: 16px; flex-direction: column; gap: 16px; z-index: 6; }
+  .rail-mas:focus + .cuenta, .cuenta:focus-within { display: flex; }
+  .cuenta h4 { display: block; }
+  .top #acciones { display: flex; gap: 8px; width: 100%; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .top #acciones > * { flex: 0 0 auto; }
+  .plano-marco { max-width: 100%; }
+  .plano-marco > .leyenda { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; box-shadow: none; }
+  .escaneo { grid-template-columns: 1fr; }
 }
