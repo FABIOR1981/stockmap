@@ -16,6 +16,9 @@ const almacen = crearAlmacenMemoria();
 ctx.dep = new Deposito(almacen);
 let estadoSync = null;
 
+// Nombres cortos para la barra inferior del celular (en pantalla chica no entran los largos).
+const CORTO = { plano: 'Asignar', codigo: 'Código', movimientos: 'Movim.' };
+
 const NAV = [
   ['plano', 'Asignación', 'plano'],
   ['codigo', 'Por código', 'buscar'],
@@ -43,7 +46,7 @@ function render() {
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
   $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
-    `<button data-act="vista" data-v="${v}" title="${txt}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span>${txt}</span></button>`
+    `<button data-act="vista" data-v="${v}" title="${txt}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();

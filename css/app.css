@@ -314,6 +314,7 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .marca { padding: 0 4px; }
   .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; flex-direction: row; flex-wrap: nowrap; justify-content: space-around; gap: 2px; background: var(--sur); border-top: 1px solid var(--lin); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
   .nav button { flex: 1 1 0; min-width: 0; width: auto; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 2px; border-radius: 10px; }
+  .nav button .largo { display: none; }
   .nav button span { display: block; font-size: 10px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
   .rail-mas { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: none; color: var(--mut); cursor: pointer; margin-left: auto; }
   .cuenta { display: none; position: fixed; top: 58px; right: 12px; left: 12px; width: auto; bottom: auto; background: var(--sur); border: 1px solid var(--lin); border-radius: 16px; box-shadow: var(--sombra-h); padding: 16px; flex-direction: column; gap: 16px; z-index: 6; }
@@ -324,4 +325,5 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .plano-marco { max-width: 100%; }
   .plano-marco > .leyenda { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; box-shadow: none; }
   .escaneo { grid-template-columns: 1fr; }
+  .oc-celular { display: none; }
 }

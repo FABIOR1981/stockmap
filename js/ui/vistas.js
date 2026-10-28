@@ -182,7 +182,7 @@ export function vistaStock() {
   const q = S.q.trim().toLowerCase();
 
   const buscador = `<div class="panel">
-    <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código, código propio o descripción" aria-label="Buscar objeto">
+    <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código o descripción" aria-label="Buscar objeto">
     ${q ? resultadosBusqueda(q) : ''}
   </div>`;
 
@@ -214,7 +214,7 @@ export function vistaStock() {
     return `<tr>
       <td><strong>${esc(o.codigo_interno)}</strong></td>
       <td><span class="chip ${o.tipo === 'producto' ? 'obj' : 'sub'}">${TIPOS[o.tipo] || 'Unidad'}</span></td>
-      <td>${esc(o.codigo_propio) || '<span class="dim">—</span>'}</td>
+      <td class="oc-celular">${esc(o.codigo_propio) || '<span class="dim">—</span>'}</td>
       <td>${esc(o.descripcion) || '<span class="dim">—</span>'}</td>
       <td>${existencias}</td>
       <td>${ubicaciones}</td>
@@ -233,7 +233,7 @@ export function vistaStock() {
     ${buscador}
     <section class="panel" style="margin-top:16px;padding:0;overflow:auto">
       <table>
-        <thead><tr><th>Interno</th><th>Tipo</th><th>Propio</th><th>Descripción</th><th>Existencias</th><th>Ubicación</th><th>Acciones</th></tr></thead>
+        <thead><tr><th>Interno</th><th>Tipo</th><th class="oc-celular">Propio</th><th>Descripción</th><th>Existencias</th><th>Ubicación</th><th>Acciones</th></tr></thead>
         <tbody>${filas}</tbody>
       </table>
     </section>
