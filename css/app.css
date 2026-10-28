@@ -276,6 +276,8 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .contenido { padding: 14px 28px 40px; }
   .plano { max-height: none; height: calc(100vh - 230px); min-height: 460px; border-radius: 24px; background-size: 22px 22px; }
   .plano { width: 100%; }
+  .contenido.elementos h1 { display: none; }
+  .contenido.elementos .sub { font-size: 13px; margin: 0 0 12px; }
   .plano-y-panel > .plano { flex: 1 1 520px; width: auto; min-width: 0; }
   .objetos-lugar { flex: 0 1 300px; max-width: 340px; }
   .bloque, .tarjeta { border-radius: 18px; box-shadow: var(--sombra-h); }

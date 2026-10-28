@@ -51,6 +51,8 @@ function render() {
   const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
   const cuerpo = (vistas[S.vista] || vistaEstructura)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
+  // En las vistas de elementos, el título ya lo dice la ruta de arriba: se oculta en escritorio (ver css).
+  $('#contenido').classList.toggle('elementos', ['plano', 'mover'].includes(S.vista));
 
   if (S.enfocar) { document.querySelector(`[data-f="${S.enfocar}"]`)?.focus(); S.enfocar = null; }
   const dlg = $('#modal');
