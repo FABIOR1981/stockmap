@@ -138,7 +138,7 @@ function bloqueContenido(l, estilo) {
   const n = objs.length;
   const cls = n ? 'obj' : 'libre';
   const seleccion = S.elegido === l.id ? ' elegido' : '';
-  return `<div class="bloque ${cls}${seleccion}" data-act="planoSeleccionar" data-id="${l.id}" role="button" tabindex="0" style="${estilo}">
+  return `<div class="bloque ${cls}${seleccion}" data-act="planoSeleccionar" data-contenido="1" data-id="${l.id}" role="button" tabindex="0" style="${estilo}">
     <span class="nivel">Contenido</span>
     <div class="cab"><span class="codigo">${n}</span></div>
     <div class="pie"><span class="chip ${cls}">${n === 1 ? '1 objeto' : n ? `${n} objetos` : 'Libre'}</span></div>

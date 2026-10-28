@@ -29,7 +29,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'planoIr', 'planoEntrar', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
 
 function sesionHTML() {
@@ -158,7 +158,8 @@ document.addEventListener('click', async e => {
     const ahora = Date.now();
     const doble = ultimoLugar.id === b.dataset.id && ahora - ultimoLugar.t < 450;
     ultimoLugar = doble ? { id: null, t: 0 } : { id: b.dataset.id, t: ahora };
-    if (doble) accion = 'planoEntrar';
+    // Doble clic: en la tarjeta Contenido abre su lista; en cualquier otro lugar, entra.
+    if (doble) accion = b.dataset.contenido ? 'verContenido' : 'planoIr';
   }
   const fn = ACCIONES[accion];
   if (fn) await fn(b.dataset);
