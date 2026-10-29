@@ -10,7 +10,8 @@ const VP = { x: 500, y: 280 };   // punto de fuga
 const WC = 400;                  // mitad del ancho del pasillo a la altura de la vista
 const HT = 220, HB = 200;        // altura hasta el techo y hasta el piso (a la altura de la vista)
 const G = 0.38;                  // cuánto se achica cada tramo al alejarse
-const PROFUNDIDAD = 5;           // cuántos tramos se ven a la vez
+const PROFUNDIDAD = 8;           // cuántos tramos se ven a la vez (hasta el fondo del pasillo)
+const PASO = 0.5;                // cuánto avanza cada clic, en tramos (medio tramo = una estantería)
 
 const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const escala = d => 1 / (1 + G * d);
@@ -106,10 +107,13 @@ function escenaPasillo(kids) {
   ].join(' ')}"/>`;
   const fin = `<rect class="rec-fondo" x="${(VP.x - WC * fondo).toFixed(1)}" y="${yt(fondo).toFixed(1)}" width="${(2 * WC * fondo).toFixed(1)}" height="${((HT + HB) * fondo).toFixed(1)}"/>`;
 
-  // Tramos visibles desde S.rec.i: cada tramo tiene un módulo a cada lado.
+  // Tramos alrededor de la posición actual (S.rec.i puede ser fraccionaria): cada tramo tiene un módulo a cada lado.
+  // Los que quedan justo al costado del que camina se dibujan y el SVG los recorta.
   const modulos = [];
-  for (let d = 0; d < PROFUNDIDAD; d++) {
-    const p = S.rec.i + d;
+  const desde = Math.max(0, Math.floor(S.rec.i) - 1);
+  for (let p = desde; p * 2 < kids.length && p < S.rec.i + PROFUNDIDAD; p++) {
+    const d = p - S.rec.i;
+    if (d < -0.9) continue;
     const izq = kids[2 * p], der = kids[2 * p + 1];
     if (izq) modulos.push(modulo(izq, 'izq', d));
     if (der) modulos.push(modulo(der, 'der', d));
@@ -171,14 +175,15 @@ export function vistaRecorrido() {
 
   const controles = `<div class="rec-controles">
       <button class="btn sec sm" data-act="recPaso" data-dir="-1" ${i <= 0 ? 'disabled' : ''}>← Atrás</button>
-      <span class="rec-tramo">Tramo ${i + 1} de ${tramos}</span>
+      <span class="rec-tramo">Tramo ${Math.floor(i) + 1} de ${tramos}</span>
+      <button class="btn sec sm" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
       <button class="btn sec sm" data-act="recPaso" data-dir="1" ${i >= tramos - 1 ? 'disabled' : ''}>Adelante →</button>
     </div>`;
 
   return `${cab}${buscar}${msgHTML('recorrido')}
     <div class="plano-y-panel">
       <div class="plano-marco rec-marco"><div class="rec-escena">${escenaPasillo(kids)}</div>${leyenda()}</div>
-      <section class="panel">${detalle()}</section>
+      <section class="panel rec-panel">${detalle()}</section>
     </div>
     ${controles}`;
 }
@@ -193,11 +198,17 @@ export const accionesRecorrido = {
     S.nodo = l?.padre_id || null;
     S.rec = { i: 0, resaltado: null }; S.elegido = null; S.msg = {};
   },
-  // Avanza (1) o retrocede (-1) un tramo, sin salirse del pasillo.
+  // Avanza (1) o retrocede (-1) medio tramo, sin salirse del pasillo.
   recPaso: el => {
     const tramos = tramosDe(hijosDelPasillo());
-    S.rec.i = Math.min(Math.max(S.rec.i + Number(el.dir), 0), tramos - 1);
+    const nuevo = S.rec.i + Number(el.dir) * PASO;
+    S.rec.i = Math.round(Math.min(Math.max(nuevo, 0), tramos - 1) * 2) / 2;
     S.rec.resaltado = null;
+  },
+  // Pantalla completa para ver el pasillo más grande (con las flechas se sigue caminando; Esc sale).
+  recAmpliar: () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
   },
   // Busca un código de lugar u objeto y lleva la vista a su módulo.
   recBuscar: () => {

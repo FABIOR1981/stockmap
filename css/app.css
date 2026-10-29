@@ -340,9 +340,9 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .rec-escena { background: var(--sub-f); border: 1px solid var(--lin); border-radius: var(--r); overflow: hidden; }
 .rec-escena svg { display: block; width: 100%; height: auto; }
 .rec-fondo { fill: var(--sub-s); }
-.rec-pared { fill: var(--sub-s); }
-.rec-piso { fill: var(--sub-l); opacity: .45; }
-.rec-techo { fill: var(--sur); }
+.rec-pared { fill: var(--sub-l); }
+.rec-piso { fill: var(--sub-l); opacity: .7; }
+.rec-techo { fill: var(--sub-s); }
 .rec-mod, .rec-celda { cursor: pointer; }
 .rec-marco-mod { stroke-width: 3; }
 .rec-mod.libre > .rec-marco-mod { fill: var(--ok-f); stroke: var(--ok-l); }
@@ -365,7 +365,14 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .rec-tramo { color: var(--mut); font-size: 14px; }
 .rec-edificios { display: flex; gap: 10px; flex-wrap: wrap; }
 .rec-lista { margin: 8px 0 14px; padding-left: 18px; }
-.rec-marco { flex: 1 1 520px; }
+.rec-marco { flex: 1 1 640px; }
+/* Pantalla completa: el pasillo ocupa toda la pantalla. */
+html:fullscreen { background: var(--sur); }
+html:fullscreen .rec-marco { position: fixed; inset: 0; z-index: 50; max-width: none; margin: 0; padding: 12px; background: var(--sur); display: flex; flex-direction: column; }
+html:fullscreen .rec-escena { flex: 1; min-height: 0; border: 0; display: flex; align-items: center; }
+html:fullscreen .rec-escena svg { height: 100%; width: 100%; }
+html:fullscreen .rec-marco > .leyenda { position: absolute; }
+.plano-y-panel > .rec-panel { flex: 0 0 260px; }
 @media (max-width: 860px) { .nav .solo-pc { display: none; } }
 
 /* En celular, un toque se registra al instante (sin zoom de doble toque que retrase el segundo toque). */
