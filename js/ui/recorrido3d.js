@@ -2,7 +2,7 @@
 // Cada estante es una tabla que sale de la columna hacia el pasillo; los objetos son cajas apoyadas sobre el estante.
 // Usa Three.js, cargado en index.html como global THREE (js/vendor/three.min.js).
 
-import { ctx, S, esc } from './estado.js';
+import { ctx, S, esc, msgHTML } from './estado.js';
 import { pasillosDe } from './recorrido.js';
 
 const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
@@ -54,7 +54,7 @@ function etiqueta(texto, grande) {
 
 // Una estantería: columna contra la pared y sus estantes saliendo hacia el pasillo.
 // zFrente es el borde más cercano al pasillo de inicio; la estantería se extiende hacia -z.
-function estanteria(l, lado, zFrente, M, grupo) {
+function estanteria(l, lado, zFrente, M, grupo, hits) {
   const dep = ctx.dep;
   const dir = lado === 'izq' ? 1 : -1;                 // hacia dónde salen los estantes (el pasillo)
   const xPared = lado === 'izq' ? -MITAD : MITAD;
@@ -99,6 +99,13 @@ function estanteria(l, lado, zFrente, M, grupo) {
       const rot = etiqueta(c.codigo, false);
       rot.position.set(xMed, yTabla + 0.5, zCentro);
       grupo.add(rot);
+      // Zona invisible sobre el hueco: sirve para tocarlo y saber qué lugar es.
+      const bandH = ALTO / n;
+      const zona = new THREE.Mesh(new THREE.BoxGeometry(FONDO, bandH, cl), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
+      zona.position.set(xMed, yTabla + bandH / 2, zCentro);
+      zona.userData.lugar = c.id;
+      grupo.add(zona);
+      hits.push(zona);
     });
   });
 }
@@ -122,13 +129,15 @@ function construirEscena(fila) {
 
   // Pares de estanterías: los de índice par a la izquierda, los impares a la derecha.
   const grupo = new THREE.Group();
+  const hits = [];
   const pares = Math.ceil(fila.length / 2);
   for (let p = 0; p < pares; p++) {
     const zF = -1.2 - p * SEP;
-    if (fila[2 * p]) estanteria(fila[2 * p], 'izq', zF, M, grupo);
-    if (fila[2 * p + 1]) estanteria(fila[2 * p + 1], 'der', zF, M, grupo);
+    if (fila[2 * p]) estanteria(fila[2 * p], 'izq', zF, M, grupo, hits);
+    if (fila[2 * p + 1]) estanteria(fila[2 * p + 1], 'der', zF, M, grupo, hits);
   }
   escena.add(grupo);
+  escena.userData.hits = hits;
   return { escena, zMin: -(pares * SEP) - 2 };
 }
 
@@ -164,6 +173,14 @@ export function montarRecorrido3D() {
   cont.innerHTML = '';
   cont.appendChild(renderer.domElement);
 
+  // Búsqueda: si acaba de buscarse un lugar, la cámara se pone frente a su estantería, mirándola.
+  if (S.rec.irA) {
+    S.rec.irA = false;
+    const sel = S.elegido ? ctx.dep.porId(S.elegido) : null;
+    const est = sel ? ctx.dep.ruta(sel)[1] : null;
+    const idx = est ? fila.findIndex(k => k.id === est.id) : -1;
+    if (idx >= 0) pos = { clave, z: -1.2 - Math.floor(idx / 2) * SEP + 1.1, yaw: idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2 };
+  }
   if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0 };
   const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 60);
   camara.position.set(0, OJOS, pos.z);
@@ -179,6 +196,19 @@ export function montarRecorrido3D() {
   window.addEventListener('keyup', onUp);
 
   mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw, giroDestino: pos.yaw };
+
+  // Tocar un hueco selecciona su lugar; la lista de abajo muestra lo que tiene.
+  const rayo = new THREE.Raycaster();
+  renderer.domElement.addEventListener('click', e => {
+    const r = renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    rayo.setFromCamera(ndc, camara);
+    const golpe = rayo.intersectObjects(escena.userData.hits || [], false)[0];
+    if (!golpe) return;
+    S.elegido = golpe.object.userData.lugar;
+    S.msg = {};
+    ctx.render();
+  });
   const frame = t => {
     if (!cont.isConnected) return desmontarRecorrido3D();
     const dt = Math.min((t - mot.ultimo) / 1000, 0.05);
@@ -222,9 +252,26 @@ export function vistaRecorrido3D() {
       <button class="btn sec sm" data-act="recIr">Edificios</button>
     </div>
     <h1>${esc(dep.dir(edificio))}</h1>
-    <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Prototipo: los estantes y las cajas son de verdad en 3D.</p>
+    <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Tocá un hueco para ver qué tiene.</p>
+    <div class="rec-barra">
+      <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
+      <button class="btn sec" data-act="recBuscar">Ir</button>
+    </div>
+    ${msgHTML('recorrido')}
     <div class="r3d-marco">
       <div id="r3d" class="r3d" aria-label="Recorrido 3D del pasillo"></div>
     </div>
-    ${cruce}`;
+    ${cruce}
+    ${detalleLugar3D()}`;
+}
+
+// Lo que tiene el lugar tocado (o una indicación si no se tocó ninguno).
+function detalleLugar3D() {
+  const dep = ctx.dep;
+  const l = S.elegido ? dep.porId(S.elegido) : null;
+  if (!l) return `<p class="sub" style="margin-top:12px">Tocá un hueco en el pasillo para ver qué tiene.</p>`;
+  const objs = dep.objetosDe(l.id);
+  return `<section class="panel" style="margin-top:12px"><h2>${esc(dep.dir(l))}</h2>${objs.length
+    ? `<ul class="rec-lista">${objs.map(o => `<li><b>${esc(o.codigo_interno)}</b> ${esc(o.descripcion || '')}</li>`).join('')}</ul>`
+    : '<p class="vacio" style="border:0;margin:0">Libre.</p>'}</section>`;
 }

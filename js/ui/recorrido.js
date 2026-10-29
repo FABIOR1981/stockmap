@@ -356,6 +356,8 @@ export const accionesRecorrido = {
     }
     S.elegido = ruta.length > 1 ? lugar.id : null;
     S.f.recBusca = raw;
+    // Para el recorrido 3D: la cámara va frente a la estantería encontrada.
+    S.rec.irA = true;
     aviso('recorrido', null, obj ? `${obj.codigo_interno} está en ${dep.dir(lugar)}.` : `Lugar encontrado: ${dep.dir(lugar)}.`);
   },
 };
