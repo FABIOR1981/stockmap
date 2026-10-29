@@ -49,7 +49,7 @@ function modulo(l, lado, d) {
   const estantes = dep.hijos(l.id);
   const filas = estantes.length ? estantes : [l];
   const n = filas.length;
-  let huecos = '';
+  let huecos = '', tablas = '';
   filas.forEach((f, fi) => {
     // El estante está en el borde inferior de su franja (h1). Sus huecos se reparten a lo largo del pasillo.
     const h0 = fi / n, h1 = (fi + 1) / n;
@@ -78,8 +78,14 @@ function modulo(l, lado, d) {
       const tabla = poli([Pt(t0, h1, 0), Pt(t1, h1, 0), Pt(t1, h1, 1), Pt(t0, h1, 1)]);
       huecos += `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${c.id}">
         <title>${esc(dep.dir(c))}: ${cant}</title>
-        <polygon class="rec-hueco" points="${tabla}"/>${cajas}</g>`;
+        <polygon class="rec-zona" points="${tabla}"/>${cajas}</g>`;
     });
+  });
+
+  // Cada estante es una tabla sólida que sale de la columna (una sola pieza por estante, sin líneas por hueco).
+  filas.forEach((f, fi) => {
+    const h1 = (fi + 1) / n;
+    tablas += `<polygon class="rec-tablon-p" points="${poli([Pt(0, h1, 0), Pt(1, h1, 0), Pt(1, h1 + 0.012, 1), Pt(0, h1 + 0.012, 1)])}"/>`;
   });
 
   const clases = ['rec-mod', st.cls];
@@ -92,7 +98,7 @@ function modulo(l, lado, d) {
     : '';
   return `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${l.id}">
     <title>${esc(dep.dir(l))} · ${esc(st.chip)}</title>
-    <polygon class="rec-marco-mod" points="${columna}"/>${huecos}${texto}</g>`;
+    <polygon class="rec-marco-mod" points="${columna}"/>${tablas}${huecos}${texto}</g>`;
 }
 
 // Paredes laterales, piso, techo y fondo del pasillo, como capas debajo de los módulos.

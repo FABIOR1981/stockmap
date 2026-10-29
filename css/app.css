@@ -360,6 +360,12 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .rec-caja-tapa { fill: color-mix(in srgb, var(--obj) 55%, #fff); }
 .rec-tabla { stroke: var(--sub); stroke-linecap: square; }
 .rec-tablon { fill: var(--sub); }
+/* En el pasillo: los estantes son tablas sólidas y cada hueco es solo una zona para hacer clic. */
+.rec-tablon-p { fill: var(--sub); }
+.rec-zona { fill: transparent; stroke: none; }
+.rec-celda:hover > .rec-zona { fill: color-mix(in srgb, var(--acc) 10%, transparent); }
+.rec-celda.elegido > .rec-zona { fill: color-mix(in srgb, var(--acc) 18%, transparent); stroke: var(--acc); stroke-width: 2; }
+.rec-celda.buscado > .rec-zona { fill: color-mix(in srgb, var(--acc) 28%, transparent); stroke: var(--acc); stroke-width: 3; }
 .rec-marco-frente { fill: var(--sub-s); stroke: var(--sub); stroke-width: 3; }
 .rec-etiqueta-fila { font-weight: 700; fill: var(--ink); }
 .rec-cod { font-weight: 700; fill: var(--ink); text-anchor: middle; pointer-events: none; }
