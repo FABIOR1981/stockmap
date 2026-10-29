@@ -12,7 +12,7 @@ const HT = 220, HB = 200;        // altura hasta el techo y hasta el piso (a la 
 const G = 0.38;                  // cuánto se achica cada tramo al alejarse
 const PROFUNDIDAD = 8;           // cuántos tramos se ven a la vez (hasta el fondo del pasillo)
 const PASO = 0.5;                // cuánto avanza cada clic, en tramos (medio tramo = una estantería)
-const LARGO = 0.8;               // largo de cada estantería dentro de su tramo (el resto es el espacio entre ellas)
+const LARGO = 0.45;               // largo de cada estantería dentro de su tramo (el resto es el espacio entre ellas)
 const SALIDA = 0.5;              // hasta dónde salen los estantes hacia el pasillo (1 = hasta el centro del pasillo, 0 = pegados a la pared)
 
 const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
