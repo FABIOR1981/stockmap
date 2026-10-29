@@ -12,8 +12,7 @@ const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada col
 const ALTO = 2.6;        // altura de las estanterías
 const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
-const SUAVE_GIRO = 6;    // cuán rápido llega la cámara al giro pedido (más bajo = giro más suave)
-const GIRO = Math.PI / 2;
+const GIRO_VEL = 1.1;     // velocidad al girar (radianes por segundo): igual que caminar, mientras se mantiene la tecla
 const TECLAS_CAMINAR = { ArrowUp: 1, w: 1, ArrowDown: -1, s: -1 };
 const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
 
@@ -194,14 +193,13 @@ export function montarRecorrido3D() {
   const teclas = new Set();
   const onDown = e => {
     if (e.target.matches?.('input, select, textarea')) return;
-    if (TECLAS_GIRAR[e.key] && mot) { e.preventDefault(); if (!e.repeat) mot.giroDestino += TECLAS_GIRAR[e.key] * GIRO; return; }
-    if (TECLAS_CAMINAR[e.key]) { e.preventDefault(); teclas.add(e.key); }
+    if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key]) { e.preventDefault(); teclas.add(e.key); }
   };
   const onUp = e => teclas.delete(e.key);
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
 
-  mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw, giroDestino: pos.yaw };
+  mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw };
 
   // Tocar un hueco selecciona su lugar; la lista de abajo muestra lo que tiene.
   const rayo = new THREE.Raycaster();
@@ -236,7 +234,9 @@ export function montarRecorrido3D() {
     // Caminar: W/flecha arriba hacia adelante, S/flecha abajo hacia atrás, en la dirección que mira la cámara.
     let avance = 0;
     for (const k of mot.teclas) { avance += TECLAS_CAMINAR[k] || 0; }
-    mot.yaw += (mot.giroDestino - mot.yaw) * Math.min(1, dt * SUAVE_GIRO);
+    let giro = 0;
+    for (const k of mot.teclas) { giro += TECLAS_GIRAR[k] || 0; }
+    mot.yaw += Math.max(-1, Math.min(1, giro)) * GIRO_VEL * dt;
     const v = Math.max(-1, Math.min(1, avance)) * VEL * dt;
     mot.camara.position.x -= Math.sin(mot.yaw) * v;
     mot.camara.position.z -= Math.cos(mot.yaw) * v;
