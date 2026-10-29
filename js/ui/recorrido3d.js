@@ -18,6 +18,7 @@ const TECLAS_CAMINAR = { ArrowUp: 1, w: 1, ArrowDown: -1, s: -1 };
 const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
 
 let mot = null;                              // motor activo
+let salto = null;                            // posición a usar al cruzar a otro pasillo (se aplica al redibujar)
 let pos = { clave: null, z: 0.6, yaw: 0 };   // posición recordada entre re-dibujos de la pantalla
 
 function caja(w, h, d, mat, x, y, z) {
@@ -32,6 +33,7 @@ function materiales() {
     poste: new THREE.MeshStandardMaterial({ color: 0x3b4b63, roughness: 0.6 }),
     obj: new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.6 }),
     piso: new THREE.MeshStandardMaterial({ color: 0x3f4a5c, roughness: 0.95 }),
+    libre: new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.45 }),
   };
 }
 
@@ -91,6 +93,8 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
       const objs = dep.objetosDe(c.id);
       const m = Math.min(objs.length, 4);
       const zCentro = zFrente - cl * (ci + 0.5);
+      // Hueco libre: una marca verde sobre la tabla. Los ocupados muestran sus cajas.
+      if (objs.length === 0) grupo.add(caja(FONDO * 0.8, 0.01, cl * 0.8, M.libre, xMed, yTabla + 0.06, zCentro));
       for (let j = 0; j < m; j++) {
         const z = zCentro - (cl * 0.6) / 2 + (cl * 0.6) * (j + 0.5) / m;
         grupo.add(caja(0.4, 0.3, 0.35, M.obj, xMed, yTabla + 0.05 + 0.15, z));
@@ -148,6 +152,7 @@ export function desmontarRecorrido3D() {
   window.removeEventListener('keydown', mot.onDown);
   window.removeEventListener('keyup', mot.onUp);
   pos = { clave: mot.clave, z: mot.camara.position.z, yaw: mot.yaw };
+  if (salto) { pos = salto; salto = null; }
   mot.renderer.dispose();
   mot.renderer.forceContextLoss?.();
   mot = null;
@@ -179,7 +184,8 @@ export function montarRecorrido3D() {
     const sel = S.elegido ? ctx.dep.porId(S.elegido) : null;
     const est = sel ? ctx.dep.ruta(sel)[1] : null;
     const idx = est ? fila.findIndex(k => k.id === est.id) : -1;
-    if (idx >= 0) pos = { clave, z: -1.2 - Math.floor(idx / 2) * SEP + 1.1, yaw: idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2 };
+    // La cámara queda frente al centro de la estantería (mirando hacia la pared donde está).
+    if (idx >= 0) pos = { clave, z: -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2, yaw: idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2 };
   }
   if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0 };
   const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 60);
@@ -209,6 +215,20 @@ export function montarRecorrido3D() {
     S.msg = {};
     ctx.render();
   });
+  // Cruza al pasillo transversal siguiente (dir 1) o anterior (dir -1), entrando por su inicio.
+  const cruzar = dir => {
+    const [eid, f] = mot.clave.split('|');
+    const edif = ctx.dep.porId(eid);
+    const filas = edif ? pasillosDe(edif) : [];
+    const nf = +f + dir;
+    if (nf < 0 || nf >= filas.length) return false;
+    const pares = Math.ceil(filas[nf].length / 2);
+    salto = { clave: `${eid}|${nf}`, z: dir > 0 ? 0.6 : -(pares * SEP) - 1.5, yaw: mot.yaw };
+    S.rec.fila = nf; S.rec.i = 0; S.rec.resaltado = null; S.elegido = null;
+    ctx.render();
+    return true;
+  };
+
   const frame = t => {
     if (!cont.isConnected) return desmontarRecorrido3D();
     const dt = Math.min((t - mot.ultimo) / 1000, 0.05);
@@ -222,7 +242,11 @@ export function montarRecorrido3D() {
     mot.camara.position.z -= Math.cos(mot.yaw) * v;
     // Quedarse dentro del pasillo.
     mot.camara.position.x = Math.max(-MITAD + 0.5, Math.min(MITAD - 0.5, mot.camara.position.x));
-    mot.camara.position.z = Math.max(zMin, Math.min(0.6, mot.camara.position.z));
+    // Llegar al final del pasillo y seguir caminando cruza al pasillo transversal.
+    const zAct = mot.camara.position.z;
+    if (avance > 0 && zAct <= zMin + 0.05 && cruzar(1)) return;
+    if (avance < 0 && zAct >= 0.55 && cruzar(-1)) return;
+    mot.camara.position.z = Math.max(zMin, Math.min(0.6, zAct));
     mot.camara.rotation.set(0, mot.yaw, 0, 'YXZ');
     mot.renderer.render(escena, mot.camara);
     mot.raf = requestAnimationFrame(frame);
