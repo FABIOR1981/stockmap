@@ -8,6 +8,7 @@ import { api } from '../almacen/nube.js';
 import { sonAledanos } from './plano.js';
 import { abrirEtiquetas } from './etiquetas.js';
 import { escanearCamara } from './escaner.js';
+import { accionesRecorrido } from './recorrido.js';
 
 const d = () => ctx.dep;
 
@@ -20,14 +21,19 @@ const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.v
 const cerrarElegir = mensaje => { limpiarModal(); aviso('obj', null, mensaje); };
 
 export const ACCIONES = {
+  ...accionesRecorrido,
   // Navegación
-  // Entre Asignación y Mover se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
+  // Entre Asignación, Mover y Recorrido se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
   vista:   el => {
-    const enPlano = v => v === 'plano' || v === 'mover';
+    const enPlano = v => v === 'plano' || v === 'mover' || v === 'recorrido';
     if (!(enPlano(S.vista) && enPlano(el.v))) { S.nodo = null; S.elegido = null; }
     S.vista = el.v; S.msg = {};
   },
-  planoIr: el => { S.vista = S.vista === 'mover' ? 'mover' : 'plano'; S.nodo = el.id || null; S.elegido = null; S.msg = {}; },
+  // Entrar a un lugar se queda en la vista donde se está (Asignación, Mover o Recorrido).
+  planoIr: el => {
+    S.vista = ['mover', 'recorrido'].includes(S.vista) ? S.vista : 'plano';
+    S.nodo = el.id || null; S.elegido = null; S.rec = { i: 0, resaltado: null }; S.msg = {};
+  },
   // Doble clic en la tarjeta Contenido: muestra en un modal los objetos puestos en ese lugar.
   verContenido: el => { S.verObj = el.id; S.modal = 'contenido'; S.msg = {}; },
   // Un clic en un lugar lo selecciona: es el destino de 'Por asignar'.

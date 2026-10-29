@@ -7,6 +7,7 @@ export const S = {
   vista: 'plano',          // 'plano' (Asignación) | 'codigo' (Por código) | 'mover' | 'stock' | 'movimientos' | 'accesos'
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   elegido: null,           // lugar seleccionado con un clic (doble clic = entrar). Es el destino de 'Por asignar'.
+  rec: { i: 0, resaltado: null },  // Recorrido: tramo del pasillo que se ve y el módulo que resalta la búsqueda
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
   modal: null,             // 'crear' | 'editar' | 'clonarNivel' | 'niveles' | 'objetos' | 'nuevoObjeto' | 'elegirLugar' | null

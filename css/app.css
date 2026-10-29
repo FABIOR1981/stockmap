@@ -333,5 +333,33 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .obj-asignable:hover { background: var(--hov); }
 .obj-asignable:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
 
+/* ---------- Recorrido (prototipo, solo PC) ---------- */
+.rec-cab { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.rec-barra { display: flex; gap: 8px; margin: 0 0 12px; max-width: 520px; }
+.rec-barra input { flex: 1; min-width: 0; }
+.rec-escena { background: var(--sub-f); border: 1px solid var(--lin); border-radius: var(--r); overflow: hidden; }
+.rec-escena svg { display: block; width: 100%; height: auto; }
+.rec-fondo { fill: var(--sub-s); }
+.rec-pared { fill: var(--sub-s); }
+.rec-piso { fill: var(--sub-l); opacity: .45; }
+.rec-techo { fill: var(--sur); }
+.rec-mod { cursor: pointer; }
+.rec-mod polygon { stroke-width: 2; }
+.rec-mod.libre polygon { fill: var(--ok-f); stroke: var(--ok-l); }
+.rec-mod.obj polygon   { fill: var(--obj-f); stroke: var(--obj-l); }
+.rec-mod.lleno polygon { fill: color-mix(in srgb, var(--peligro) 9%, var(--sur)); stroke: color-mix(in srgb, var(--peligro) 35%, transparent); }
+.rec-mod.sub polygon   { fill: var(--sub-f); stroke: var(--sub-l); }
+.rec-mod.elegido polygon { stroke: var(--acc); stroke-width: 4; }
+.rec-mod.buscado polygon { stroke: var(--acc); stroke-width: 6; }
+.rec-mod:hover polygon { stroke: var(--acc); }
+.rec-cod { font-weight: 700; fill: var(--ink); text-anchor: middle; pointer-events: none; }
+.rec-chip { fill: var(--mut); text-anchor: middle; pointer-events: none; }
+.rec-controles { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.rec-tramo { color: var(--mut); font-size: 14px; }
+.rec-edificios { display: flex; gap: 10px; flex-wrap: wrap; }
+.rec-lista { margin: 8px 0 14px; padding-left: 18px; }
+.rec-marco { flex: 1 1 520px; }
+@media (max-width: 860px) { .nav .solo-pc { display: none; } }
+
 /* En celular, un toque se registra al instante (sin zoom de doble toque que retrase el segundo toque). */
 .bloque, .tarjeta, .celda, .celda-cab, .celda-total { touch-action: manipulation; }

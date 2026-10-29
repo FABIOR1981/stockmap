@@ -9,6 +9,7 @@ import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
 import { vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
+import { vistaRecorrido } from './ui/recorrido.js';
 import { ACCIONES } from './ui/acciones.js';
 
 // El almacén en memoria es la copia de trabajo; la verdad está en el servidor.
@@ -23,6 +24,7 @@ const NAV = [
   ['plano', 'Asignación', 'plano'],
   ['codigo', 'Por código', 'buscar'],
   ['mover', 'Mover', 'mover'],
+  ['recorrido', 'Recorrido', 'pasillo'],   // prototipo: solo en PC (en celular se oculta, ver css .solo-pc)
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
   ['accesos', 'Accesos', 'mas']
@@ -30,7 +32,7 @@ const NAV = [
 
 // Acciones que no cambian datos: no disparan sincronización.
 const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
-  'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
+  'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recBuscar']);
 
 function sesionHTML() {
   const d = ctx.dep;
@@ -46,12 +48,12 @@ function render() {
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
   $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
-    `<button data-act="vista" data-v="${v}" title="${txt}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
+    `<button data-act="vista" data-v="${v}" title="${txt}" class="${v === 'recorrido' ? 'solo-pc' : ''}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
+  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido: vistaRecorrido, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
   const cuerpo = (vistas[S.vista] || vistaPlano)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
   // En las vistas de elementos, el título ya lo dice la ruta de arriba: se oculta en escritorio (ver css).
@@ -179,6 +181,15 @@ document.addEventListener('keydown', async e => {
   if (fn) await fn({ ...e.target.dataset });
   render();
   if (!SIN_SYNC.has(act) && ctx.sesion) sincronizarAhora();
+});
+
+// Recorrido: las flechas izquierda y derecha avanzan y retroceden (fuera de los campos de texto).
+document.addEventListener('keydown', e => {
+  if (S.vista !== 'recorrido' || S.modal || e.target.matches?.('input, select, textarea')) return;
+  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  e.preventDefault();
+  ACCIONES.recPaso({ dir: e.key === 'ArrowRight' ? '1' : '-1' });
+  render();
 });
 
 // Tarjetas que actúan como botón (role="button"): Enter o Espacio sobre la tarjeta misma equivalen a un clic.
