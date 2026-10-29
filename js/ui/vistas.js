@@ -130,6 +130,33 @@ function editorNiveles(ed) {
   </section>`;
 }
 
+const cuenta = (n, palabra) => `${n} ${n === 1 ? palabra : plural(palabra)}`;
+
+// Vista en grilla: una fila por estante (hijo) y una columna por división (nieto).
+// La primera fila es el contenido del lugar. Un clic selecciona; un doble clic entra (o abre el contenido).
+function matrizLugares(l, filas) {
+  const d = ctx.dep;
+  const cols = Math.max(...filas.map(f => d.hijos(f.id).length));
+  const celda = x => {
+    const objs = d.objetosDe(x.id);
+    const cls = objs.length ? 'obj' : 'libre';
+    const sel = S.elegido === x.id ? ' elegido' : '';
+    const dato = objs.length ? esc(objs[0].codigo_interno) + (objs.length > 1 ? ` +${objs.length - 1}` : '') : 'libre';
+    return `<button class="celda ${cls}${sel}" data-act="planoSeleccionar" data-id="${x.id}" aria-label="${esc(d.dir(x))}: ${objs.length ? cuenta(objs.length, 'objeto') : 'libre'}">
+      <span class="celda-codigo">${esc(x.codigo)}</span><span class="celda-dato">${dato}</span></button>`;
+  };
+  const n = d.objetosDe(l.id).length;
+  const contenido = `<span class="celda-cab">Contenido</span>
+    <button class="celda-total ${S.elegido === l.id ? 'elegido' : ''}" data-act="planoSeleccionar" data-id="${l.id}" data-contenido="1" style="grid-column: span ${cols}">${n ? cuenta(n, 'objeto') + ' acá' : 'Sin objetos acá'}</button>`;
+  const cuerpo = filas.map(f => {
+    const ds = d.hijos(f.id);
+    const cab = `<button class="celda-cab ${S.elegido === f.id ? 'elegido' : ''}" data-act="planoSeleccionar" data-id="${f.id}">${esc(f.codigo)}</button>`;
+    const celdas = Array.from({ length: cols }, (_, i) => ds[i] ? celda(ds[i]) : '<span class="celda vacia" aria-hidden="true"></span>').join('');
+    return cab + celdas;
+  }).join('');
+  return `<div class="matriz" style="grid-template-columns: 110px repeat(${cols}, minmax(72px, 1fr))">${contenido}${cuerpo}</div>`;
+}
+
 // Primera tarjeta dentro de un lugar: lo que hay puesto en ese mismo lugar (no sus divisiones).
 // Tocarla selecciona el lugar como destino de 'Por asignar'.
 function bloqueContenido(l, estilo) {
@@ -180,7 +207,11 @@ export function vistaPlano() {
   const elegido = S.elegido ? d.porId(S.elegido) : null;
   const destino = elegido && d.descendientes(foco).some(x => x.id === elegido.id) ? elegido : foco;
   const kids = d.hijos(foco.id);
-  const plano = `<div class="plano-marco"><div class="plano">${lienzo(kids)}</div>${leyenda()}</div>`;
+  // Si cada hijo tiene sus propios lugares (estantería con estantes y divisiones), se muestra como grilla.
+  const esGrilla = kids.length && kids.every(k => d.hijos(k.id).length);
+  const plano = esGrilla
+    ? `<div class="plano-marco">${matrizLugares(foco, kids)}${leyenda()}</div>`
+    : `<div class="plano-marco"><div class="plano">${lienzo(kids)}</div>${leyenda()}</div>`;
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
