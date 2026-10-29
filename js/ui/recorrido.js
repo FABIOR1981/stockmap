@@ -12,6 +12,7 @@ const HT = 220, HB = 200;        // altura hasta el techo y hasta el piso (a la 
 const G = 0.38;                  // cuánto se achica cada tramo al alejarse
 const PROFUNDIDAD = 8;           // cuántos tramos se ven a la vez (hasta el fondo del pasillo)
 const PASO = 0.5;                // cuánto avanza cada clic, en tramos (medio tramo = una estantería)
+const LARGO = 0.6;               // largo de cada estantería dentro de su tramo (el resto es el espacio entre ellas)
 
 const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const escala = d => 1 / (1 + G * d);
@@ -32,7 +33,7 @@ function modulo(l, lado, d) {
   const dep = ctx.dep;
   const st = estadoDe(l);
   const sgn = lado === 'izq' ? -1 : 1;
-  const s0 = escala(d), s1 = escala(d + 0.9);   // 0.9: deja una franja libre entre estanterías
+  const s0 = escala(d), s1 = escala(d + LARGO);   // el espacio libre entre estanterías queda después de LARGO
   // Punto de la cara: t de 0 (cerca) a 1 (lejos) a lo largo del pasillo; h de 0 (arriba) a 1 (piso).
   const P = (t, h) => {
     const s = s0 + (s1 - s0) * t;
