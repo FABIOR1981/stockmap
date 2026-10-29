@@ -332,3 +332,6 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .obj-asignable { cursor: pointer; }
 .obj-asignable:hover { background: var(--hov); }
 .obj-asignable:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
+
+/* En celular, un toque se registra al instante (sin zoom de doble toque que retrase el segundo toque). */
+.bloque, .tarjeta, .celda, .celda-cab, .celda-total { touch-action: manipulation; }

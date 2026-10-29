@@ -156,10 +156,13 @@ document.addEventListener('click', async e => {
   let accion = b.dataset.act;
   if (accion === 'planoSeleccionar') {
     const ahora = Date.now();
-    const doble = ultimoLugar.id === b.dataset.id && ahora - ultimoLugar.t < 450;
+    // Doble clic (o doble toque) abre el lugar. Un toque sobre el lugar que ya está seleccionado también lo abre:
+    // en celular el doble toque no siempre llega, y así no depende del tiempo entre toques.
+    const doble = ultimoLugar.id === b.dataset.id && ahora - ultimoLugar.t < 600;
+    const yaElegido = S.elegido === b.dataset.id;
     ultimoLugar = doble ? { id: null, t: 0 } : { id: b.dataset.id, t: ahora };
-    // Doble clic: en la tarjeta Contenido abre su lista; en cualquier otro lugar, entra.
-    if (doble) accion = b.dataset.contenido ? 'verContenido' : 'planoIr';
+    // En la tarjeta Contenido abre su lista; en cualquier otro lugar, entra.
+    if (doble || yaElegido) accion = b.dataset.contenido ? 'verContenido' : 'planoIr';
   }
   const fn = ACCIONES[accion];
   if (fn) await fn(b.dataset);
