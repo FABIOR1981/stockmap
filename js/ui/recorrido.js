@@ -13,6 +13,7 @@ const G = 0.38;                  // cuánto se achica cada tramo al alejarse
 const PROFUNDIDAD = 8;           // cuántos tramos se ven a la vez (hasta el fondo del pasillo)
 const PASO = 0.5;                // cuánto avanza cada clic, en tramos (medio tramo = una estantería)
 const LARGO = 0.6;               // largo de cada estantería dentro de su tramo (el resto es el espacio entre ellas)
+const SALIDA = 0.5;              // hasta dónde salen los estantes hacia el pasillo (1 = hasta el centro del pasillo, 0 = pegados a la pared)
 
 const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const escala = d => 1 / (1 + G * d);
@@ -34,22 +35,23 @@ function modulo(l, lado, d) {
   const st = estadoDe(l);
   const sgn = lado === 'izq' ? -1 : 1;
   const s0 = escala(d), s1 = escala(d + LARGO);   // el espacio libre entre estanterías queda después de LARGO
-  // Punto de la cara: t de 0 (cerca) a 1 (lejos) a lo largo del pasillo; h de 0 (arriba) a 1 (piso).
-  const P = (t, h) => {
+  // Punto de la estantería: t de 0 (cerca) a 1 (lejos) a lo largo del pasillo; h de 0 (arriba) a 1 (piso).
+  // u = 0 es la columna contra la pared; u = 1 es el borde del estante hacia el pasillo.
+  // Los estantes salen horizontales desde la columna, en el mismo lado de la pared.
+  const Pt = (t, h, u) => {
     const s = s0 + (s1 - s0) * t;
-    return [VP.x + sgn * WC * s, VP.y - HT * s + h * (HT + HB) * s];
+    return [VP.x + sgn * WC * s * (1 - u * (1 - SALIDA)), VP.y - HT * s + h * (HT + HB) * s];
   };
-  const area = (t0, t1, h0, h1) => [P(t0, h0), P(t1, h0), P(t1, h1), P(t0, h1)].map(([a, b]) => pt(a, b)).join(' ');
-  const tabla = (h, grosor) => {
-    const [x0, y0] = P(0, h), [x1, y1] = P(1, h);
-    return `<line class="rec-tabla" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke-width="${grosor.toFixed(1)}"/>`;
-  };
+  const poli = pts => pts.map(([a, b]) => pt(a, b)).join(' ');
+  // Columna: la cara contra la pared.
+  const columna = poli([Pt(0, 0, 0), Pt(1, 0, 0), Pt(1, 1, 0), Pt(0, 1, 0)]);
 
   const estantes = dep.hijos(l.id);
   const filas = estantes.length ? estantes : [l];
   const n = filas.length;
-  let huecos = '', tablas = '';
+  let huecos = '';
   filas.forEach((f, fi) => {
+    // El estante está en el borde inferior de su franja (h1). Sus huecos se reparten a lo largo del pasillo.
     const h0 = fi / n, h1 = (fi + 1) / n;
     const subs = estantes.length ? dep.hijos(f.id) : [];
     const celdas = subs.length ? subs : [f];
@@ -62,34 +64,35 @@ function modulo(l, lado, d) {
       const objs = dep.objetosDe(c.id);
       const m = Math.min(objs.length, 4);
       const sw = (t1 - t0) / Math.max(m, 1);
-      const alto = (h1 - h0) * 0.5;
+      const alto = (h1 - h0) * 0.6;   // altura de la caja, en la misma escala que la franja
       let cajas = '';
       for (let j = 0; j < m; j++) {
         const ta = t0 + sw * j + sw * 0.15, tb = ta + sw * 0.7;
-        const hb = h1 - (h1 - h0) * 0.06, ht = hb - alto;
-        cajas += `<polygon class="rec-caja" points="${area(ta, tb, ht, hb)}"/>`
-          + `<polygon class="rec-caja-tapa" points="${area(ta, tb, ht - (h1 - h0) * 0.08, ht)}"/>`;
+        // Caja apoyada sobre el estante: cara hacia el pasillo y tapa.
+        const arriba = h1 - alto;
+        cajas += `<polygon class="rec-caja" points="${poli([Pt(ta, h1, 0.2), Pt(tb, h1, 0.2), Pt(tb, arriba, 0.2), Pt(ta, arriba, 0.2)])}"/>`
+          + `<polygon class="rec-caja-tapa" points="${poli([Pt(ta, arriba, 0.2), Pt(tb, arriba, 0.2), Pt(tb, arriba, 0.8), Pt(ta, arriba, 0.8)])}"/>`;
       }
       const cant = `${objs.length} ${objs.length === 1 ? 'objeto' : 'objetos'}`;
+      // La superficie del estante para este hueco (horizontal, desde la columna hacia el pasillo).
+      const tabla = poli([Pt(t0, h1, 0), Pt(t1, h1, 0), Pt(t1, h1, 1), Pt(t0, h1, 1)]);
       huecos += `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${c.id}">
         <title>${esc(dep.dir(c))}: ${cant}</title>
-        <polygon class="rec-hueco" points="${area(t0 + 0.01, t1 - 0.01, h0 + 0.02, h1 - 0.02)}"/>${cajas}</g>`;
+        <polygon class="rec-hueco" points="${tabla}"/>${cajas}</g>`;
     });
-    // Tabla entre estantes (la de arriba del todo es el marco).
-    if (fi > 0) tablas += tabla(h0, 3 + 5 * s0);
   });
 
   const clases = ['rec-mod', st.cls];
   if (S.elegido === l.id) clases.push('elegido');
   if (S.rec.resaltado === l.id) clases.push('buscado');
   // Código de la estantería solo si es lo bastante grande para leerlo.
-  const [cx, cy] = P(0.5, 0.1);
+  const [cx, cy] = Pt(0.5, 0.1, 0);
   const texto = s0 >= 0.45
     ? `<text class="rec-cod" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="${(22 * s0).toFixed(1)}">${esc(l.codigo)}</text>`
     : '';
   return `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${l.id}">
     <title>${esc(dep.dir(l))} · ${esc(st.chip)}</title>
-    <polygon class="rec-marco-mod" points="${area(0, 1, 0, 1)}"/>${huecos}${tablas}${texto}</g>`;
+    <polygon class="rec-marco-mod" points="${columna}"/>${huecos}${texto}</g>`;
 }
 
 // Paredes laterales, piso, techo y fondo del pasillo, como capas debajo de los módulos.
@@ -140,6 +143,70 @@ function detalle() {
     <button class="btn sec sm" data-act="planoIr" data-id="${l.id}">Entrar a ${esc(l.codigo)}</button>`;
 }
 
+// Vista de frente: dentro de una estantería, sus estantes van horizontales, uno encima del otro.
+// Cada estante es una tabla; sus huecos van de izquierda a derecha y los objetos se apoyan sobre la tabla.
+function frente(foco) {
+  const dep = ctx.dep;
+  const X0 = 110, X1 = 960, Y0 = 30, Y1 = 530;
+  const estantes = dep.hijos(foco.id);
+  const alto = (Y1 - Y0) / estantes.length;
+  let svg = `<rect class="rec-marco-frente" x="${X0 - 14}" y="${Y0 - 14}" width="${X1 - X0 + 28}" height="${Y1 - Y0 + 28}"/>`;
+  estantes.forEach((e, fi) => {
+    const y = Y0 + fi * alto, h = alto;
+    const huecos = dep.hijos(e.id);
+    const celdas = huecos.length ? huecos : [e];
+    const k = celdas.length, cw = (X1 - X0) / k;
+    svg += `<text class="rec-etiqueta-fila" x="${X0 - 26}" y="${(y + h / 2 + 7).toFixed(1)}" text-anchor="end" font-size="20">${esc(e.codigo)}</text>`;
+    celdas.forEach((c, ci) => {
+      const x = X0 + ci * cw;
+      const objs = dep.objetosDe(c.id);
+      const m = Math.min(objs.length, 6);
+      const clases = ['rec-celda'];
+      if (S.elegido === c.id) clases.push('elegido');
+      if (S.rec.resaltado === c.id) clases.push('buscado');
+      let cajas = '';
+      const bw = (cw * 0.8) / Math.max(m, 1);
+      for (let j = 0; j < m; j++) {
+        const bx = x + cw * 0.1 + j * bw + 3, ancho = bw - 6;
+        const bh = (h - 22) * 0.55, by = y + h - 12 - bh;
+        cajas += `<rect class="rec-caja" x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${ancho.toFixed(1)}" height="${bh.toFixed(1)}"/>`
+          + `<rect class="rec-caja-tapa" x="${bx.toFixed(1)}" y="${(by - 6).toFixed(1)}" width="${ancho.toFixed(1)}" height="6"/>`;
+      }
+      const cant = `${objs.length} ${objs.length === 1 ? 'objeto' : 'objetos'}`;
+      svg += `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${c.id}">
+        <title>${esc(dep.dir(c))}: ${cant}</title>
+        <rect class="rec-hueco" x="${(x + 4).toFixed(1)}" y="${(y + 4).toFixed(1)}" width="${(cw - 8).toFixed(1)}" height="${(h - 16).toFixed(1)}"/>${cajas}</g>`;
+    });
+    svg += `<rect class="rec-tablon" x="${X0}" y="${(y + h - 12).toFixed(1)}" width="${X1 - X0}" height="12"/>`;
+  });
+  return `<svg viewBox="0 0 1000 560" role="img" aria-label="Frente de ${esc(dep.dir(foco))}">${svg}</svg>`;
+}
+
+function vistaFrente(foco) {
+  const dep = ctx.dep;
+  const estantes = dep.hijos(foco.id);
+  const cab = `<div class="rec-cab">
+      <button class="btn sec sm" data-act="recSubir">← Subir</button>
+      <button class="btn sec sm" data-act="recIr">Edificios</button>
+    </div>
+    <h1>${esc(dep.dir(foco))}</h1>
+    <p class="sub">Cada tabla es un estante. Clic para seleccionar un hueco, doble clic para entrar.</p>`;
+  const buscar = `<div class="rec-barra">
+      <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
+      <button class="btn sec" data-act="recBuscar">Ir</button>
+    </div>`;
+  if (!estantes.length) return `${cab}${buscar}${msgHTML('recorrido')}<p class="vacio">Esta estantería no tiene estantes cargados.</p>`;
+  return `${cab}${buscar}${msgHTML('recorrido')}
+    <div class="plano-y-panel">
+      <div class="plano-marco rec-marco"><div class="rec-escena">${frente(foco)}</div>${leyenda()}</div>
+      <section class="panel rec-panel">${detalle()}</section>
+    </div>
+    <div class="rec-controles">
+      <span class="rec-tramo">${estantes.length} ${estantes.length === 1 ? 'estante' : 'estantes'}</span>
+      <button class="btn sec sm" data-act="recAmpliar">Ampliar</button>
+    </div>`;
+}
+
 export function vistaRecorrido() {
   const dep = ctx.dep;
   if (!dep.eid) return `<h1>Recorrido</h1><p class="vacio">Elegí un cliente en el menú de cuenta para ver su depósito.</p>`;
@@ -154,6 +221,8 @@ export function vistaRecorrido() {
         : '<p class="vacio">Todavía no hay edificios.</p>'}`;
   }
 
+  // Dentro de una estantería, sus estantes se ven de frente (horizontales); en el edificio, las estanterías se recorren.
+  if (dep.prof(foco) >= 1) return vistaFrente(foco);
   const kids = hijosDelPasillo();
   const tramos = tramosDe(kids);
   const i = Math.min(S.rec.i, tramos - 1);
