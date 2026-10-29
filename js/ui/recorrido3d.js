@@ -82,6 +82,9 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
     const subs = estantes.length ? dep.hijos(f.id) : [];
     const celdas = subs.length ? subs : [f];
     const cl = LARGO / celdas.length;
+    // Espacio libre sobre la tabla hasta el estante de arriba: las cajas no pueden pasarlo.
+    const bandH = ALTO / n;
+    const cajaH = Math.max(0.05, Math.min(0.3, bandH - 0.12));
     // Código del estante (si tiene huecos adentro) al frente de la tabla.
     if (subs.length) {
       const rot = etiqueta(f.codigo, false);
@@ -96,14 +99,13 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
       if (objs.length === 0) grupo.add(caja(FONDO * 0.8, 0.01, cl * 0.8, M.libre, xMed, yTabla + 0.06, zCentro));
       for (let j = 0; j < m; j++) {
         const z = zCentro - (cl * 0.6) / 2 + (cl * 0.6) * (j + 0.5) / m;
-        grupo.add(caja(0.4, 0.3, 0.35, M.obj, xMed, yTabla + 0.05 + 0.15, z));
+        grupo.add(caja(0.4, cajaH, 0.35, M.obj, xMed, yTabla + 0.05 + cajaH / 2, z));
       }
       // Código del hueco (o del estante, si no tiene huecos), encima de las cajas.
       const rot = etiqueta(c.codigo, false);
       rot.position.set(xMed, yTabla + 0.5, zCentro);
       grupo.add(rot);
       // Zona invisible sobre el hueco: sirve para tocarlo y saber qué lugar es.
-      const bandH = ALTO / n;
       const zona = new THREE.Mesh(new THREE.BoxGeometry(FONDO, bandH, cl), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
       zona.position.set(xMed, yTabla + bandH / 2, zCentro);
       zona.userData.lugar = c.id;
