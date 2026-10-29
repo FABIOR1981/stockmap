@@ -11,7 +11,8 @@ const FONDO = 0.9;       // cuánto sobresale cada estante hacia el pasillo
 const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada columna
 const ALTO = 2.6;        // altura de las estanterías
 const OJOS = 1.55;       // altura de la cámara
-const VEL = 2.2;         // velocidad al caminar (unidades por segundo)
+const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
+const SUAVE_GIRO = 6;    // cuán rápido llega la cámara al giro pedido (más bajo = giro más suave)
 const GIRO = Math.PI / 2;
 const TECLAS_CAMINAR = { ArrowUp: 1, w: 1, ArrowDown: -1, s: -1 };
 const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
@@ -34,6 +35,23 @@ function materiales() {
   };
 }
 
+// Etiqueta con el código de un lugar: un rótulo que siempre mira a la cámara.
+function etiqueta(texto, grande) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(15, 23, 42, 0.88)';
+  g.fillRect(0, 0, 256, 64);
+  g.fillStyle = '#f8fafc';
+  g.font = `bold ${grande ? 38 : 30}px sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(String(texto), 128, 34);
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  sp.scale.set(grande ? 0.9 : 0.5, grande ? 0.225 : 0.125, 1);
+  return sp;
+}
+
 // Una estantería: columna contra la pared y sus estantes saliendo hacia el pasillo.
 // zFrente es el borde más cercano al pasillo de inicio; la estantería se extiende hacia -z.
 function estanteria(l, lado, zFrente, M, grupo) {
@@ -47,6 +65,10 @@ function estanteria(l, lado, zFrente, M, grupo) {
   // Columna trasera y postes en el frente.
   grupo.add(caja(0.05, ALTO, LARGO, M.poste, xPared, ALTO / 2, zc));
   [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, ALTO, 0.05, M.poste, xFrente, ALTO / 2, z)));
+  // Código de la estantería, arriba de la columna.
+  const rotulo = etiqueta(l.codigo, true);
+  rotulo.position.set(xPared, ALTO + 0.25, zc);
+  grupo.add(rotulo);
 
   // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
   const estantes = dep.hijos(l.id);
@@ -59,6 +81,12 @@ function estanteria(l, lado, zFrente, M, grupo) {
     const subs = estantes.length ? dep.hijos(f.id) : [];
     const celdas = subs.length ? subs : [f];
     const cl = LARGO / celdas.length;
+    // Código del estante (si tiene huecos adentro) al frente de la tabla.
+    if (subs.length) {
+      const rot = etiqueta(f.codigo, false);
+      rot.position.set(xFrente + dir * 0.05, yTabla + 0.12, zFrente - 0.12);
+      grupo.add(rot);
+    }
     celdas.forEach((c, ci) => {
       const objs = dep.objetosDe(c.id);
       const m = Math.min(objs.length, 4);
@@ -67,6 +95,10 @@ function estanteria(l, lado, zFrente, M, grupo) {
         const z = zCentro - (cl * 0.6) / 2 + (cl * 0.6) * (j + 0.5) / m;
         grupo.add(caja(0.4, 0.3, 0.35, M.obj, xMed, yTabla + 0.05 + 0.15, z));
       }
+      // Código del hueco (o del estante, si no tiene huecos), encima de las cajas.
+      const rot = etiqueta(c.codigo, false);
+      rot.position.set(xMed, yTabla + 0.5, zCentro);
+      grupo.add(rot);
     });
   });
 }
@@ -154,7 +186,7 @@ export function montarRecorrido3D() {
     // Caminar: W/flecha arriba hacia adelante, S/flecha abajo hacia atrás, en la dirección que mira la cámara.
     let avance = 0;
     for (const k of mot.teclas) { avance += TECLAS_CAMINAR[k] || 0; }
-    mot.yaw += (mot.giroDestino - mot.yaw) * Math.min(1, dt * 10);
+    mot.yaw += (mot.giroDestino - mot.yaw) * Math.min(1, dt * SUAVE_GIRO);
     const v = Math.max(-1, Math.min(1, avance)) * VEL * dt;
     mot.camara.position.x -= Math.sin(mot.yaw) * v;
     mot.camara.position.z -= Math.cos(mot.yaw) * v;
