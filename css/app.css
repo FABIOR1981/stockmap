@@ -343,15 +343,22 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .rec-pared { fill: var(--sub-s); }
 .rec-piso { fill: var(--sub-l); opacity: .45; }
 .rec-techo { fill: var(--sur); }
-.rec-mod { cursor: pointer; }
-.rec-mod polygon { stroke-width: 2; }
-.rec-mod.libre polygon { fill: var(--ok-f); stroke: var(--ok-l); }
-.rec-mod.obj polygon   { fill: var(--obj-f); stroke: var(--obj-l); }
-.rec-mod.lleno polygon { fill: color-mix(in srgb, var(--peligro) 9%, var(--sur)); stroke: color-mix(in srgb, var(--peligro) 35%, transparent); }
-.rec-mod.sub polygon   { fill: var(--sub-f); stroke: var(--sub-l); }
-.rec-mod.elegido polygon { stroke: var(--acc); stroke-width: 4; }
-.rec-mod.buscado polygon { stroke: var(--acc); stroke-width: 6; }
-.rec-mod:hover polygon { stroke: var(--acc); }
+.rec-mod, .rec-celda { cursor: pointer; }
+.rec-marco-mod { stroke-width: 3; }
+.rec-mod.libre > .rec-marco-mod { fill: var(--ok-f); stroke: var(--ok-l); }
+.rec-mod.obj > .rec-marco-mod   { fill: var(--obj-f); stroke: var(--obj-l); }
+.rec-mod.lleno > .rec-marco-mod { fill: color-mix(in srgb, var(--peligro) 9%, var(--sur)); stroke: color-mix(in srgb, var(--peligro) 35%, transparent); }
+.rec-mod.sub > .rec-marco-mod   { fill: var(--sub-f); stroke: var(--sub-l); }
+.rec-mod.elegido > .rec-marco-mod { stroke: var(--acc); stroke-width: 5; }
+.rec-mod.buscado > .rec-marco-mod { stroke: var(--acc); stroke-width: 6; }
+.rec-mod:hover > .rec-marco-mod { stroke: var(--acc); }
+.rec-hueco { fill: var(--sub-f); stroke: var(--sub-l); stroke-width: 1.5; }
+.rec-celda:hover > .rec-hueco { stroke: var(--acc); }
+.rec-celda.elegido > .rec-hueco { stroke: var(--acc); stroke-width: 3; }
+.rec-celda.buscado > .rec-hueco { stroke: var(--acc); stroke-width: 4; }
+.rec-caja { fill: var(--obj); }
+.rec-caja-tapa { fill: color-mix(in srgb, var(--obj) 55%, #fff); }
+.rec-tabla { stroke: var(--sub); stroke-linecap: square; }
 .rec-cod { font-weight: 700; fill: var(--ink); text-anchor: middle; pointer-events: none; }
 .rec-chip { fill: var(--mut); text-anchor: middle; pointer-events: none; }
 .rec-controles { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }

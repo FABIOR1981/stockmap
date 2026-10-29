@@ -24,26 +24,70 @@ function tramosDe(kids) {
   return Math.max(1, Math.ceil(kids.length / 2));
 }
 
-// Un módulo: cuadrilátero sobre la pared, en el tramo d (0 = el más cercano).
+// Una estantería: su cara sobre la pared, en el tramo d (0 = el más cercano).
+// Estantes = hijos de la estantería; huecos = hijos de cada estante (si no tiene, el estante mismo es el hueco).
+// Cada objeto puesto en un hueco se dibuja como una caja sobre el estante.
 function modulo(l, lado, d) {
+  const dep = ctx.dep;
   const st = estadoDe(l);
   const sgn = lado === 'izq' ? -1 : 1;
-  const s0 = escala(d), s1 = escala(d + 0.9);   // 0.9: deja una franja libre entre módulos
-  const x = s => VP.x + sgn * WC * s;
-  const yt = s => VP.y - HT * s, yb = s => VP.y + HB * s;
-  const puntos = [[x(s0), yt(s0)], [x(s1), yt(s1)], [x(s1), yb(s1)], [x(s0), yb(s0)]]
-    .map(([a, b]) => pt(a, b)).join(' ');
-  const cx = (x(s0) + x(s1)) / 2;
+  const s0 = escala(d), s1 = escala(d + 0.9);   // 0.9: deja una franja libre entre estanterías
+  // Punto de la cara: t de 0 (cerca) a 1 (lejos) a lo largo del pasillo; h de 0 (arriba) a 1 (piso).
+  const P = (t, h) => {
+    const s = s0 + (s1 - s0) * t;
+    return [VP.x + sgn * WC * s, VP.y - HT * s + h * (HT + HB) * s];
+  };
+  const area = (t0, t1, h0, h1) => [P(t0, h0), P(t1, h0), P(t1, h1), P(t0, h1)].map(([a, b]) => pt(a, b)).join(' ');
+  const tabla = (h, grosor) => {
+    const [x0, y0] = P(0, h), [x1, y1] = P(1, h);
+    return `<line class="rec-tabla" x1="${x0.toFixed(1)}" y1="${y0.toFixed(1)}" x2="${x1.toFixed(1)}" y2="${y1.toFixed(1)}" stroke-width="${grosor.toFixed(1)}"/>`;
+  };
+
+  const estantes = dep.hijos(l.id);
+  const filas = estantes.length ? estantes : [l];
+  const n = filas.length;
+  let huecos = '', tablas = '';
+  filas.forEach((f, fi) => {
+    const h0 = fi / n, h1 = (fi + 1) / n;
+    const subs = estantes.length ? dep.hijos(f.id) : [];
+    const celdas = subs.length ? subs : [f];
+    const k = celdas.length;
+    celdas.forEach((c, ci) => {
+      const t0 = ci / k, t1 = (ci + 1) / k;
+      const clases = ['rec-celda'];
+      if (S.elegido === c.id) clases.push('elegido');
+      if (S.rec.resaltado === c.id) clases.push('buscado');
+      const objs = dep.objetosDe(c.id);
+      const m = Math.min(objs.length, 4);
+      const sw = (t1 - t0) / Math.max(m, 1);
+      const alto = (h1 - h0) * 0.5;
+      let cajas = '';
+      for (let j = 0; j < m; j++) {
+        const ta = t0 + sw * j + sw * 0.15, tb = ta + sw * 0.7;
+        const hb = h1 - (h1 - h0) * 0.06, ht = hb - alto;
+        cajas += `<polygon class="rec-caja" points="${area(ta, tb, ht, hb)}"/>`
+          + `<polygon class="rec-caja-tapa" points="${area(ta, tb, ht - (h1 - h0) * 0.08, ht)}"/>`;
+      }
+      const cant = `${objs.length} ${objs.length === 1 ? 'objeto' : 'objetos'}`;
+      huecos += `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${c.id}">
+        <title>${esc(dep.dir(c))}: ${cant}</title>
+        <polygon class="rec-hueco" points="${area(t0 + 0.01, t1 - 0.01, h0 + 0.02, h1 - 0.02)}"/>${cajas}</g>`;
+    });
+    // Tabla entre estantes (la de arriba del todo es el marco).
+    if (fi > 0) tablas += tabla(h0, 3 + 5 * s0);
+  });
+
   const clases = ['rec-mod', st.cls];
   if (S.elegido === l.id) clases.push('elegido');
   if (S.rec.resaltado === l.id) clases.push('buscado');
-  // Texto solo si el módulo es lo bastante grande para leerlo.
+  // Código de la estantería solo si es lo bastante grande para leerlo.
+  const [cx, cy] = P(0.5, 0.1);
   const texto = s0 >= 0.45
-    ? `<text class="rec-cod" x="${cx.toFixed(1)}" y="${(VP.y - 6 * s0).toFixed(1)}" font-size="${(26 * s0).toFixed(1)}">${esc(l.codigo)}</text>
-       <text class="rec-chip" x="${cx.toFixed(1)}" y="${(VP.y + 22 * s0).toFixed(1)}" font-size="${(14 * s0).toFixed(1)}">${esc(st.chip)}</text>`
+    ? `<text class="rec-cod" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="${(22 * s0).toFixed(1)}">${esc(l.codigo)}</text>`
     : '';
   return `<g class="${clases.join(' ')}" data-act="planoSeleccionar" data-id="${l.id}">
-    <polygon points="${puntos}"/>${texto}</g>`;
+    <title>${esc(dep.dir(l))} · ${esc(st.chip)}</title>
+    <polygon class="rec-marco-mod" points="${area(0, 1, 0, 1)}"/>${huecos}${tablas}${texto}</g>`;
 }
 
 // Paredes laterales, piso, techo y fondo del pasillo, como capas debajo de los módulos.
@@ -173,18 +217,17 @@ export const accionesRecorrido = {
       lugar = ubicaciones[0];
     }
 
-    // Va al pasillo que contiene el lugar (su padre) y lo resalta. Si es un edificio, se recorre él mismo.
-    const padre = lugar.padre_id || null;
-    S.nodo = padre ?? lugar.id;
-    S.rec = { i: 0, resaltado: null };
-    if (padre) {
-      const idx = Math.max(0, dep.hijos(padre).findIndex(k => k.id === lugar.id));
+    // El pasillo es el edificio: así se ven sus estanterías con los estantes adentro.
+    // Se resalta la estantería que contiene el lugar y se selecciona el lugar buscado.
+    const ruta = dep.ruta(lugar);
+    const edificio = ruta[0], estanteria = ruta[1] || null;
+    S.nodo = edificio.id;
+    S.rec = { i: 0, resaltado: estanteria ? estanteria.id : null };
+    if (estanteria) {
+      const idx = Math.max(0, dep.hijos(edificio.id).findIndex(k => k.id === estanteria.id));
       S.rec.i = Math.floor(idx / 2);
-      S.rec.resaltado = lugar.id;
-      S.elegido = lugar.id;
-    } else {
-      S.elegido = null;
     }
+    S.elegido = ruta.length > 1 ? lugar.id : null;
     S.f.recBusca = raw;
     aviso('recorrido', null, obj ? `${obj.codigo_interno} está en ${dep.dir(lugar)}.` : `Lugar encontrado: ${dep.dir(lugar)}.`);
   },
