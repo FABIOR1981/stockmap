@@ -32,7 +32,7 @@ const NAV = [
 
 // Acciones que no cambian datos: no disparan sincronización.
 const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
-  'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recBuscar']);
+  'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recCruzar', 'recBuscar']);
 
 function sesionHTML() {
   const d = ctx.dep;
@@ -186,9 +186,10 @@ document.addEventListener('keydown', async e => {
 // Recorrido: las flechas izquierda y derecha avanzan y retroceden (fuera de los campos de texto).
 document.addEventListener('keydown', e => {
   if (S.vista !== 'recorrido' || S.modal || e.target.matches?.('input, select, textarea')) return;
-  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
   e.preventDefault();
-  ACCIONES.recPaso({ dir: e.key === 'ArrowRight' ? '1' : '-1' });
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') ACCIONES.recCruzar({ dir: e.key === 'ArrowDown' ? '1' : '-1' });
+  else ACCIONES.recPaso({ dir: e.key === 'ArrowRight' ? '1' : '-1' });
   render();
 });
 

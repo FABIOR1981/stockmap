@@ -5,6 +5,7 @@
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { estadoDe, leyenda } from './componentes.js';
 import { ic } from './iconos.js';
+import { posEnPlano } from './plano.js';
 
 const VP = { x: 500, y: 280 };   // punto de fuga
 const WC = 400;                  // mitad del ancho del pasillo a la altura de la vista
@@ -19,9 +20,28 @@ const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 const escala = d => 1 / (1 + G * d);
 const pt = (x, y) => `${x.toFixed(1)},${y.toFixed(1)}`;
 
-// Hijos del pasillo actual (S.nodo) y cantidad de tramos.
+// Agrupa las estanterías del edificio por fila en el plano: cada fila es un pasillo longitudinal.
+// El espacio entre filas es el pasillo transversal. Dentro de cada fila, de izquierda a derecha.
+function pasillosDe(edificio) {
+  const filas = new Map();
+  ctx.dep.hijos(edificio.id).forEach(k => {
+    const p = posEnPlano(k);
+    const clave = Math.round(p.y / 100);
+    if (!filas.has(clave)) filas.set(clave, []);
+    filas.get(clave).push({ k, x: p.x });
+  });
+  return [...filas.keys()].sort((a, b) => a - b).map(c => filas.get(c).sort((a, b) => a.x - b.x).map(e => e.k));
+}
+
+// Estanterías del pasillo actual. En el edificio, es la fila de estanterías que indica S.rec.fila.
 function hijosDelPasillo() {
-  return S.nodo ? ctx.dep.hijos(S.nodo) : [];
+  if (!S.nodo) return [];
+  const l = ctx.dep.porId(S.nodo);
+  if (l && ctx.dep.prof(l) === 0) {
+    const filas = pasillosDe(l);
+    return filas[Math.min(S.rec.fila || 0, filas.length - 1)] || [];
+  }
+  return ctx.dep.hijos(S.nodo);
 }
 function tramosDe(kids) {
   return Math.max(1, Math.ceil(kids.length / 2));
@@ -237,7 +257,7 @@ export function vistaRecorrido() {
       <button class="btn sec sm" data-act="recIr">Edificios</button>
     </div>
     <h1>${esc(dep.dir(foco))}</h1>
-    <p class="sub">Caminá con las flechas del teclado o con los botones. Los módulos se alternan a izquierda y derecha. Clic para seleccionar, doble clic para entrar.</p>`;
+    <p class="sub">Izquierda y derecha caminan por el pasillo. Arriba y abajo cruzan al pasillo transversal. Clic para seleccionar, doble clic para entrar.</p>`;
 
   const buscar = `<div class="rec-barra">
       <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
@@ -249,6 +269,14 @@ export function vistaRecorrido() {
       <p class="vacio">Este lugar no tiene módulos adentro. Entrá a otro lugar o subí un nivel.</p>`;
   }
 
+  // Cruce entre pasillos (filas de estanterías del plano). Solo si hay más de uno.
+  const filas = pasillosDe(foco);
+  const f = Math.min(S.rec.fila || 0, filas.length - 1);
+  const cruce = filas.length > 1 ? `<div class="rec-controles">
+      <button class="btn sec sm" data-act="recCruzar" data-dir="-1" ${f <= 0 ? 'disabled' : ''}>↑ Pasillo anterior</button>
+      <span class="rec-tramo">Pasillo ${f + 1} de ${filas.length}</span>
+      <button class="btn sec sm" data-act="recCruzar" data-dir="1" ${f >= filas.length - 1 ? 'disabled' : ''}>Pasillo siguiente ↓</button>
+    </div>` : '';
   const controles = `<div class="rec-controles">
       <button class="btn sec sm" data-act="recPaso" data-dir="-1" ${i <= 0 ? 'disabled' : ''}>← Atrás</button>
       <span class="rec-tramo">Tramo ${Math.floor(i) + 1} de ${tramos}</span>
@@ -261,7 +289,7 @@ export function vistaRecorrido() {
       <div class="plano-marco rec-marco"><div class="rec-escena">${escenaPasillo(kids)}</div>${leyenda()}</div>
       <section class="panel rec-panel">${detalle()}</section>
     </div>
-    ${controles}`;
+    ${cruce}${controles}`;
 }
 
 // Acciones de la vista. Se suman a ACCIONES en acciones.js.
@@ -280,6 +308,14 @@ export const accionesRecorrido = {
     const nuevo = S.rec.i + Number(el.dir) * PASO;
     S.rec.i = Math.round(Math.min(Math.max(nuevo, 0), tramos - 1) * 2) / 2;
     S.rec.resaltado = null;
+  },
+  // Cruza al pasillo transversal anterior (-1) o siguiente (1): pasa a otra fila de estanterías del edificio.
+  recCruzar: el => {
+    const edificio = ctx.dep.porId(S.nodo);
+    if (!edificio || ctx.dep.prof(edificio) !== 0) return;
+    const filas = pasillosDe(edificio);
+    S.rec.fila = Math.min(Math.max((S.rec.fila || 0) + Number(el.dir), 0), filas.length - 1);
+    S.rec.i = 0; S.rec.resaltado = null; S.elegido = null;
   },
   // Pantalla completa para ver el pasillo más grande (con las flechas se sigue caminando; Esc sale).
   recAmpliar: () => {
@@ -311,7 +347,11 @@ export const accionesRecorrido = {
     S.nodo = edificio.id;
     S.rec = { i: 0, resaltado: estanteria ? estanteria.id : null };
     if (estanteria) {
-      const idx = Math.max(0, dep.hijos(edificio.id).findIndex(k => k.id === estanteria.id));
+      // Va a la fila de estanterías (pasillo) que contiene la estantería, y a su tramo dentro de esa fila.
+      const filasEd = pasillosDe(edificio);
+      const fi = Math.max(0, filasEd.findIndex(fila => fila.some(k => k.id === estanteria.id)));
+      const idx = Math.max(0, filasEd[fi].findIndex(k => k.id === estanteria.id));
+      S.rec.fila = fi;
       S.rec.i = Math.floor(idx / 2);
     }
     S.elegido = ruta.length > 1 ? lugar.id : null;
