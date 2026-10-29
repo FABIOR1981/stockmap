@@ -360,6 +360,10 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .rec-caja-tapa { fill: color-mix(in srgb, var(--obj) 55%, #fff); }
 .rec-tabla { stroke: var(--sub); stroke-linecap: square; }
 .rec-tablon { fill: var(--sub); }
+/* Recorrido 3D: el canvas de Three.js ocupa todo el marco. */
+.r3d-marco { max-width: 960px; }
+.r3d { width: 100%; height: 520px; border: 1px solid var(--lin); border-radius: var(--r); overflow: hidden; background: #1e293b; }
+.r3d canvas { display: block; width: 100% !important; height: 100% !important; }
 /* En el pasillo: los estantes son tablas sólidas y cada hueco es solo una zona para hacer clic. */
 .rec-tablon-p { fill: var(--sub); }
 .rec-zona { fill: transparent; stroke: none; }

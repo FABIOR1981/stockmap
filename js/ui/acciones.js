@@ -25,7 +25,7 @@ export const ACCIONES = {
   // Navegación
   // Entre Asignación, Mover y Recorrido se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
   vista:   el => {
-    const enPlano = v => v === 'plano' || v === 'mover' || v === 'recorrido';
+    const enPlano = v => ['plano', 'mover', 'recorrido', 'recorrido3d'].includes(v);
     if (!(enPlano(S.vista) && enPlano(el.v))) { S.nodo = null; S.elegido = null; }
     S.vista = el.v; S.msg = {};
   },

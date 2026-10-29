@@ -10,6 +10,7 @@ import { migasHTML, accionPrincipal } from './ui/componentes.js';
 import { vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
 import { vistaRecorrido } from './ui/recorrido.js';
+import { vistaRecorrido3D, montarRecorrido3D, desmontarRecorrido3D } from './ui/recorrido3d.js';
 import { ACCIONES } from './ui/acciones.js';
 
 // El almacén en memoria es la copia de trabajo; la verdad está en el servidor.
@@ -25,6 +26,7 @@ const NAV = [
   ['codigo', 'Por código', 'buscar'],
   ['mover', 'Mover', 'mover'],
   ['recorrido', 'Recorrido', 'pasillo'],   // prototipo: solo en PC (en celular se oculta, ver css .solo-pc)
+  ['recorrido3d', 'Recorrido 3D', 'edificio'],   // prototipo 3D: solo en PC
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
   ['accesos', 'Accesos', 'mas']
@@ -48,14 +50,16 @@ function render() {
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
   $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
-    `<button data-act="vista" data-v="${v}" title="${txt}" class="${v === 'recorrido' ? 'solo-pc' : ''}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
+    `<button data-act="vista" data-v="${v}" title="${txt}" class="${v.startsWith('recorrido') ? 'solo-pc' : ''}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido: vistaRecorrido, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
+  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido: vistaRecorrido, recorrido3d: vistaRecorrido3D, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
   const cuerpo = (vistas[S.vista] || vistaPlano)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
+  // El recorrido 3D dibuja en un canvas dentro de #contenido: se arma después de cada dibujo.
+  if (S.vista === 'recorrido3d') montarRecorrido3D(); else desmontarRecorrido3D();
   // En las vistas de elementos, el título ya lo dice la ruta de arriba: se oculta en escritorio (ver css).
   $('#contenido').classList.toggle('elementos', ['plano', 'mover'].includes(S.vista));
 

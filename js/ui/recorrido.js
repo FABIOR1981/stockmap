@@ -22,7 +22,7 @@ const pt = (x, y) => `${x.toFixed(1)},${y.toFixed(1)}`;
 
 // Agrupa las estanterías del edificio por fila en el plano: cada fila es un pasillo longitudinal.
 // El espacio entre filas es el pasillo transversal. Dentro de cada fila, de izquierda a derecha.
-function pasillosDe(edificio) {
+export function pasillosDe(edificio) {
   const filas = new Map();
   ctx.dep.hijos(edificio.id).forEach(k => {
     const p = posEnPlano(k);
