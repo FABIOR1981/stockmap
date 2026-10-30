@@ -50,14 +50,70 @@ function altoOjos(sel, est) {
 // Ángulo normalizado entre -π y π.
 const angulo = a => Math.atan2(Math.sin(a), Math.cos(a));
 
+// Texturas de depósito dibujadas con canvas (sin imágenes externas). Se crean una sola vez.
+function texturaCanvas(ancho, alto, dibujar) {
+  const c = document.createElement('canvas');
+  c.width = ancho; c.height = alto;
+  dibujar(c.getContext('2d'), ancho, alto);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+function puntos(g, w, h, n, color, tam) {
+  g.fillStyle = color;
+  for (let i = 0; i < n; i++) g.fillRect(Math.random() * w, Math.random() * h, tam, tam);
+}
+const dibujarPiso = (g, w, h) => {   // concreto: gris con manchas y juntas
+  g.fillStyle = '#6b7280'; g.fillRect(0, 0, w, h);
+  puntos(g, w, h, 1500, 'rgba(0,0,0,0.12)', 2);
+  puntos(g, w, h, 900, 'rgba(255,255,255,0.06)', 2);
+  g.strokeStyle = '#4b5563'; g.lineWidth = 2; g.strokeRect(0, 0, w, h);
+};
+const dibujarPared = (g, w, h) => {  // panel metálico con nervios verticales y una franja horizontal
+  g.fillStyle = '#d1d5db'; g.fillRect(0, 0, w, h);
+  for (const x of [0, w / 2]) {
+    g.fillStyle = '#9ca3af'; g.fillRect(x - 3, 0, 6, h);
+    g.fillStyle = 'rgba(255,255,255,0.6)'; g.fillRect(x + 3, 0, 2, h);
+  }
+  g.fillStyle = '#9ca3af'; g.fillRect(0, h / 2 - 3, w, 6);
+};
+const dibujarCarton = (g, w, h) => { // caja de cartón con cinta y etiqueta
+  g.fillStyle = '#b8875a'; g.fillRect(0, 0, w, h);
+  puntos(g, w, h, 300, 'rgba(0,0,0,0.08)', 2);
+  g.fillStyle = '#d9b382'; g.fillRect(w / 2 - 10, 0, 20, h);
+  g.fillStyle = '#f8fafc'; g.fillRect(w * 0.12, h * 0.2, w * 0.3, h * 0.18);
+};
+let texCache = null;
+function texturasDeposito() {
+  if (!texCache) texCache = {
+    piso: texturaCanvas(256, 256, dibujarPiso),
+    pared: texturaCanvas(256, 256, dibujarPared),
+    carton: texturaCanvas(128, 128, dibujarCarton),
+  };
+  return texCache;
+}
+
 function materiales() {
+  const T = texturasDeposito();
   return {
-    estante: new THREE.MeshStandardMaterial({ color: 0x9aa4b5, roughness: 0.7 }),
-    poste: new THREE.MeshStandardMaterial({ color: 0x3b4b63, roughness: 0.6 }),
-    obj: new THREE.MeshStandardMaterial({ color: 0x2563eb, roughness: 0.6 }),
-    piso: new THREE.MeshStandardMaterial({ color: 0x3f4a5c, roughness: 0.95 }),
+    estante: new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.6 }),   // tablas naranjas
+    poste: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.5, metalness: 0.2 }),   // columnas azules
+    obj: new THREE.MeshStandardMaterial({ map: T.carton, roughness: 0.9 }),
+    piso: new THREE.MeshStandardMaterial({ map: T.piso, roughness: 0.95 }),
+    pared: new THREE.MeshStandardMaterial({ map: T.pared, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }),
+    amarillo: new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.7 }),
     libre: new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.45 }),
   };
+}
+
+// Superficie con la textura repetida a un tamaño fijo (en metros por repetición).
+function conTextura(mat, tex, anchoM, altoM, tile) {
+  const t = tex.clone();
+  t.repeat.set(anchoM / tile, altoM / tile);
+  t.needsUpdate = true;
+  const m = mat.clone();
+  m.map = t;
+  return m;
 }
 
 // Etiqueta con el código de la estantería: un rótulo que siempre mira a la cámara.
@@ -229,10 +285,24 @@ function construirEscena(fila, disp) {
   escena.add(sol);
 
   const largo = Math.ceil(fila.length / 2) * SEP + 10;
-  const piso = new THREE.Mesh(new THREE.PlaneGeometry(MITAD * 2 + 8, largo), M.piso);
+  const ancho = MITAD * 2 + 8, alto = 5;
+  const zc = -largo / 2 + 4;
+  const T = texturasDeposito();
+  const piso = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), conTextura(M.piso, T.piso, ancho, largo, 2.5));
   piso.rotation.x = -Math.PI / 2;
-  piso.position.set(0, 0, -largo / 2 + 4);
+  piso.position.set(0, 0, zc);
   escena.add(piso);
+  // Líneas amarillas de seguridad a los costados del pasillo.
+  for (const x of [-1, 1]) escena.add(caja(0.08, 0.004, largo, M.amarillo, x, 0.003, zc));
+  // Paredes: dos laterales y el fondo del depósito.
+  const muro = (w, rot, x, z) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, alto), conTextura(M.pared, T.pared, w, alto, 2));
+    m.position.set(x, alto / 2, z); m.rotation.y = rot;
+    escena.add(m);
+  };
+  muro(largo, Math.PI / 2, -ancho / 2, zc);
+  muro(largo, -Math.PI / 2, ancho / 2, zc);
+  muro(ancho, 0, 0, zc - largo / 2);
 
   // Las de índice par van a la izquierda y las impares a la derecha (como en el plano).
   const grupo = new THREE.Group();
@@ -327,7 +397,7 @@ function montarAerea(cont, edificio) {
   const sol = new THREE.DirectionalLight(0xffffff, 0.7);
   sol.position.set(2, 10, 3);
   escena.add(sol);
-  const piso = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), M.piso);
+  const piso = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x3f4a5c, roughness: 0.95 }));
   piso.rotation.x = -Math.PI / 2;
   escena.add(piso);
 
