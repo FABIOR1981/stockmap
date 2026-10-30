@@ -4,12 +4,14 @@
 import { S, ctx, aviso } from '../estado.js';
 import { LARGO, FONDO, huella, frenteDe } from './disposicion.js';
 import { limitesDentroDelGalpon, dentroDe, acomodarEnGalpon } from './ruta.js';
+import { aEsquinaCm } from '../../core/medidas.js';
 import { materiales, etiqueta, tapete } from './escena.js';
 
 // Guarda la posición y el giro de todas las estanterías del edificio.
-export function guardarDisposicion(disp) {
+export function guardarDisposicion(disp, edificio) {
+  const ancho = edificio?.dim_ancho && edificio?.dim_largo ? edificio.dim_ancho : 0;
   for (const [id, d] of disp) {
-    const err = ctx.dep.posicionarVista(id, Math.round(d.x * 100), Math.round(d.z * 100), d.giro);
+    const err = ctx.dep.posicionarVista(id, aEsquinaCm(Math.round(d.x * 100), ancho), Math.round(d.z * 100), d.giro);
     if (err) return aviso('recorrido', err);
   }
 }
@@ -138,7 +140,7 @@ export function montarAerea(cont, edificio, { R, disp, desmontar }) {
     const { movido } = arrastre;
     arrastre = null;
     if (movido) {
-      guardarDisposicion(disp);
+      guardarDisposicion(disp, edificio);
       ctx.sincronizar?.();   // el arrastre no pasa por un botón: hay que mandar el cambio al servidor
     }
     ctx.render();   // redibuja (también marca la estantería elegida)

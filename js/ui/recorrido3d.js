@@ -7,7 +7,7 @@ import { posEnPlano } from './plano.js';
 import { calcularRuta, limitesDentroDelGalpon, dentroDe, acomodarEnGalpon, pisoLibre, RADIO_CUERPO } from './recorrido/ruta.js';
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
 import { caja, construirEscena } from './recorrido/escena.js';
-import { metrosACm } from '../core/medidas.js';
+import { metrosACm, desdeEsquinaCm } from '../core/medidas.js';
 import { montarAerea, guardarDisposicion } from './recorrido/aerea.js';
 
 const OJOS = 1.55;       // altura de la cámara
@@ -61,7 +61,14 @@ export function desmontarRecorrido3D() {
 }
 
 // Disposición de las estanterías: funciones puras en recorrido/disposicion.js.
-const filasDe = edificio => agruparPasillos(ctx.dep.hijos(edificio.id), posEnPlano);
+// Las posiciones guardadas están desde la esquina del galpón; el recorrido las usa centradas en el ancho.
+const lugaresDe = edificio => {
+  const ds = ctx.dep.hijos(edificio.id);
+  const ancho = edificio.dim_ancho;
+  if (!ancho || !edificio.dim_largo) return ds;
+  return ds.map(l => l.vista_x == null ? l : { ...l, vista_x: desdeEsquinaCm(l.vista_x, ancho) });
+};
+const filasDe = edificio => agruparPasillos(lugaresDe(edificio), posEnPlano);
 function disposicionEdificio(edificio) { return calcularDisposicion(filasDe(edificio)); }
 // Medidas del galpón en metros (null si el edificio todavía no tiene medidas).
 function galponDe(edificio) {
@@ -396,7 +403,7 @@ export const accionesRecorrido3d = {
     const d = disp.get(id);
     if (!d) return;
     d.giro = (d.giro + 1) % 4;
-    guardarDisposicion(disp);
+    guardarDisposicion(disp, edificio);
   },
   // Busca un código de lugar u objeto y lleva la vista a su módulo.
   recBuscar: el => {

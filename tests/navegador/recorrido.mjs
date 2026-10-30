@@ -116,8 +116,8 @@ prueba('en la vista aérea se cargan las medidas del galpón y las estanterías 
   const guardadas = tablas.lugares.filter(l => l.vista_x != null);
   assert.ok(guardadas.length > 0, 'se guardó la posición');
   for (const l of guardadas) {
-    // Galpón 12 × 16 m: x entre −6 y 6, z entre −16 y 0, menos media huella (0,45 m o 1,1 m).
-    assert.ok(Math.abs(l.vista_x) <= 600 - 45, `x de ${l.codigo} dentro del galpón`);
+    // Galpón 12 × 16 m, medido desde la esquina frontal izquierda: x entre 0 y 12 m, z entre −16 y 0, menos media huella.
+    assert.ok(l.vista_x >= 45 && l.vista_x <= 1200 - 45, `x de ${l.codigo} dentro del galpón`);
     assert.ok(l.vista_z <= -45 && l.vista_z >= -1600 + 45, `z de ${l.codigo} dentro del galpón`);
   }
   assert.deepEqual(errores, []);

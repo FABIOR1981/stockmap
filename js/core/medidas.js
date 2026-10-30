@@ -22,3 +22,9 @@ export function validarMedidas(medidas) {
   if (vals.some(v => !Number.isInteger(v) || v < 1 || v > 100000)) return { error: 'Las medidas deben ser de 1 cm o más.' };
   return { valores: { dim_ancho: vals[0], dim_largo: vals[1], dim_alto: vals[2] } };
 }
+
+// Origen en la esquina: las posiciones guardadas se miden desde el vértice frontal izquierdo del galpón
+// (x crece hacia la derecha, z hacia el fondo). Internamente el recorrido trabaja con x centrado en el ancho.
+// anchoCm = 0 (sin medidas) deja la posición como está.
+export function aEsquinaCm(xCentroCm, anchoCm) { return Math.round(xCentroCm + (anchoCm || 0) / 2); }
+export function desdeEsquinaCm(xEsquinaCm, anchoCm) { return xEsquinaCm - (anchoCm || 0) / 2; }

@@ -12,7 +12,7 @@
 //   - Movimiento: registro de entrada, salida o transferencia. Es el historial de todo cambio de stock.
 
 import { FORMATOS, NIVEL_EDIFICIO } from './formatos.js';
-import { validarMedidas } from './medidas.js';
+import { validarMedidas, aEsquinaCm } from './medidas.js';
 
 const ROLES = ['admin', 'editor', 'lector'];
 const TIPOS = ['unidad', 'producto'];
@@ -195,6 +195,13 @@ export class Deposito {
     const v = validarMedidas(medidas);
     if (v.error) return v.error;
     if (!v.valores) return 'Indicá ancho, largo y alto.';
+    // Si el edificio no tenía medidas, sus estanterías estaban guardadas centradas: se pasan a la esquina para que no se muevan.
+    const tenia = !!(l.dim_ancho && l.dim_largo);
+    if (!tenia) {
+      for (const h of this.hijos(id)) {
+        if (h.vista_x != null) this.almacen.actualizar('lugares', h.id, { vista_x: aEsquinaCm(h.vista_x, v.valores.dim_ancho) });
+      }
+    }
     this.almacen.actualizar('lugares', id, v.valores);
     return null;
   }
