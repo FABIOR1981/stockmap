@@ -21,12 +21,12 @@ let estadoSync = null;
 const CORTO = { plano: 'Asignar', codigo: 'Código', movimientos: 'Movim.' };
 
 const NAV = [
-  ['plano', 'Asignación', 'plano'],
   ['codigo', 'Por código', 'buscar'],
+  ['plano', 'Asignación', 'plano'],
   ['mover', 'Mover', 'mover'],
-  ['recorrido3d', 'Recorrido', 'edificio'],   // solo en PC (en celular se oculta, ver css .solo-pc)
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
+  ['recorrido3d', 'Recorrido', 'edificio'],   // solo en PC (en celular se oculta, ver css .solo-pc)
   ['accesos', 'Accesos', 'mas']
 ];
 

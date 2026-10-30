@@ -74,7 +74,7 @@ await page.goto(`http://localhost:${PUERTO}/index.html`);
 await page.waitForSelector('#formIngreso');
 await page.fill('#ingEmail', 'admin@x.com'); await page.fill('#ingClave', 'clave');
 await page.click('#formIngreso button[type="submit"]');
-await page.waitForSelector('.bloque');
+await page.waitForSelector('#nav button[data-v]');
 
 const pruebas = [];
 const prueba = (nombre, fn) => pruebas.push({ nombre, fn });
