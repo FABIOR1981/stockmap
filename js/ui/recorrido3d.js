@@ -12,6 +12,7 @@ const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada col
 const ALTO = 2.6;        // altura de las estanterías
 const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
+const BANDA_MIN = 0.62;   // alto mínimo de cada estante (para que quepan cajas y etiquetas)
 const GIRO_VEL = 1.1;     // velocidad al girar (radianes por segundo): igual que caminar, mientras se mantiene la tecla
 const TECLAS_CAMINAR = { ArrowUp: 1, w: 1, ArrowDown: -1, s: -1 };
 const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
@@ -37,7 +38,7 @@ function materiales() {
 }
 
 // Etiqueta con el código de un lugar: un rótulo que siempre mira a la cámara.
-function etiqueta(texto, grande) {
+function etiqueta(texto, grande, tipo) {
   const c = document.createElement('canvas');
   c.width = 256; c.height = 64;
   const g = c.getContext('2d');
@@ -49,12 +50,14 @@ function etiqueta(texto, grande) {
   g.textBaseline = 'middle';
   g.fillText(String(texto), 128, 34);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
-  sp.scale.set(grande ? 0.9 : 0.5, grande ? 0.225 : 0.125, 1);
+  const ancho = grande ? 0.9 : tipo === 'estante' ? 0.36 : 0.26;
+  sp.scale.set(ancho, ancho / 4, 1);
   return sp;
 }
 
 // Una estantería: columna contra la pared y sus estantes saliendo hacia el pasillo.
 // zFrente es el borde más cercano al pasillo de inicio; la estantería se extiende hacia -z.
+// La altura crece con la cantidad de estantes para que cada uno tenga lugar holgado.
 function estanteria(l, lado, zFrente, M, grupo, hits) {
   const dep = ctx.dep;
   const dir = lado === 'izq' ? 1 : -1;                 // hacia dónde salen los estantes (el pasillo)
@@ -63,32 +66,34 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   const zc = zFrente - LARGO / 2;
   const xFrente = xPared + dir * FONDO;
 
-  // Columna trasera y postes en el frente.
-  grupo.add(caja(0.05, ALTO, LARGO, M.poste, xPared, ALTO / 2, zc));
-  [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, ALTO, 0.05, M.poste, xFrente, ALTO / 2, z)));
-  // Código de la estantería, arriba de la columna.
-  const rotulo = etiqueta(l.codigo, true);
-  rotulo.position.set(xPared, ALTO + 0.25, zc);
-  grupo.add(rotulo);
-
-  // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
   const estantes = dep.hijos(l.id);
   const filas = estantes.length ? estantes : [l];
   const n = filas.length;
+  const alto = Math.max(ALTO, n * BANDA_MIN + 0.3);    // altura de esta estantería
+
+  // Columna trasera y postes en el frente.
+  grupo.add(caja(0.05, alto, LARGO, M.poste, xPared, alto / 2, zc));
+  [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, alto, 0.05, M.poste, xFrente, alto / 2, z)));
+  // Código de la estantería, arriba de la columna.
+  const rotulo = etiqueta(l.codigo, true);
+  rotulo.position.set(xPared, alto + 0.25, zc);
+  grupo.add(rotulo);
+
+  // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
+  const bandH = alto / n;
   filas.forEach((f, fi) => {
-    const yTabla = ALTO * (1 - (fi + 1) / n);
+    const yTabla = alto * (1 - (fi + 1) / n);
     grupo.add(caja(FONDO, 0.05, LARGO, M.estante, xMed, yTabla + 0.025, zc));
     // Cada hueco del estante reparte sus objetos a lo largo de la tabla.
     const subs = estantes.length ? dep.hijos(f.id) : [];
     const celdas = subs.length ? subs : [f];
     const cl = LARGO / celdas.length;
     // Espacio libre sobre la tabla hasta el estante de arriba: las cajas no pueden pasarlo.
-    const bandH = ALTO / n;
-    const cajaH = Math.max(0.05, Math.min(0.3, bandH - 0.12));
-    // Código del estante (si tiene huecos adentro) al frente de la tabla.
+    const cajaH = Math.max(0.05, Math.min(0.3, bandH - 0.2));
+    // Número del estante: en el borde izquierdo de su tabla (visto de frente), arriba de la franja.
     if (subs.length) {
-      const rot = etiqueta(f.codigo, false);
-      rot.position.set(xFrente + dir * 0.05, yTabla + 0.12, zFrente - 0.12);
+      const rot = etiqueta(f.codigo, false, 'estante');
+      rot.position.set(xFrente + dir * 0.03, yTabla + bandH - 0.14, zFrente - 0.14);
       grupo.add(rot);
     }
     celdas.forEach((c, ci) => {
@@ -101,9 +106,9 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
         const z = zCentro - (cl * 0.6) / 2 + (cl * 0.6) * (j + 0.5) / m;
         grupo.add(caja(0.4, cajaH, 0.35, M.obj, xMed, yTabla + 0.05 + cajaH / 2, z));
       }
-      // Código del hueco (o del estante, si no tiene huecos), encima de las cajas.
-      const rot = etiqueta(c.codigo, false);
-      rot.position.set(xMed, yTabla + 0.5, zCentro);
+      // Letra del hueco: al frente de su división, a la altura del borde de la tabla.
+      const rot = etiqueta(c.codigo, false, 'hueco');
+      rot.position.set(xFrente + dir * 0.03, yTabla + 0.16, zCentro);
       grupo.add(rot);
       // Zona invisible sobre el hueco: sirve para tocarlo y saber qué lugar es.
       const zona = new THREE.Mesh(new THREE.BoxGeometry(FONDO, bandH, cl), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
