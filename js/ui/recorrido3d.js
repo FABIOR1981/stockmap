@@ -15,6 +15,9 @@ const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
 const VEL_MIRAR = 1.2;    // velocidad al mirar arriba/abajo (radianes por segundo)
 const TECLAS_MIRAR = { PageUp: 1, r: 1, PageDown: -1, f: -1 };
+const VEL_OJOS = 1.0;     // velocidad para subir o bajar la altura de los ojos (metros por segundo)
+const TECLAS_OJOS = { e: 1, q: -1 };
+const OJO_MIN = 0.5, OJO_MAX = 3.6;   // altura mínima y máxima de los ojos
 const GIRO_VEL = 1.1;     // velocidad al girar (radianes por segundo): igual que caminar, mientras se mantiene la tecla
 const TECLAS_CAMINAR = { ArrowUp: 1, w: 1, ArrowDown: -1, s: -1 };
 const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
@@ -29,6 +32,18 @@ function caja(w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
   return m;
+}
+
+// Altura de los ojos para ver de frente un estante: medio metro sobre su tabla.
+function altoOjos(sel, est) {
+  const dep = ctx.dep;
+  const estante = sel ? dep.ruta(sel)[2] : null;
+  const hermanos = est ? dep.hijos(est.id) : [];
+  const fi = estante ? hermanos.findIndex(h => h.id === estante.id) : -1;
+  if (fi < 0) return OJOS;
+  const n = hermanos.length;
+  const tabla = BASE + (ALTO / n) * (n - 1 - fi);
+  return Math.max(OJO_MIN, Math.min(OJO_MAX, tabla + 0.5));
 }
 
 // Ángulo normalizado entre -π y π.
@@ -182,7 +197,7 @@ export function desmontarRecorrido3D() {
   cancelAnimationFrame(mot.raf);
   window.removeEventListener('keydown', mot.onDown);
   window.removeEventListener('keyup', mot.onUp);
-  pos = { clave: mot.clave, z: mot.camara.position.z, x: mot.camara.position.x, yaw: mot.yaw, pitch: mot.pitch };
+  pos = { clave: mot.clave, z: mot.camara.position.z, x: mot.camara.position.x, y: mot.camara.position.y, yaw: mot.yaw, pitch: mot.pitch };
   if (salto) { pos = salto; salto = null; }
   mot.renderer.dispose();
   mot.renderer.forceContextLoss?.();
@@ -221,25 +236,26 @@ export function montarRecorrido3D() {
     if (idx >= 0) {
       const z = -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2;
       const yaw = idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
+      const ojo = altoOjos(sel, est);
       if (pasear) {
         // Pasear: camina desde donde está hasta frente al lugar (si está en otro pasillo, arranca desde su inicio).
         if (pos.clave !== clave) pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
-        paseo = { x: 0, z, yaw };
+        paseo = { x: 0, z, yaw, y: ojo };
       } else {
-        pos = { clave, z, x: 0, yaw, pitch: 0 };
+        pos = { clave, z, x: 0, y: ojo, yaw, pitch: 0 };
         paseo = null;
       }
     }
   }
   if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0, pitch: 0 };
   const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 60);
-  camara.position.set(pos.x || 0, OJOS, pos.z);
+  camara.position.set(pos.x || 0, pos.y ?? OJOS, pos.z);
 
   const teclas = new Set();
   const onDown = e => {
     if (e.target.matches?.('input, select, textarea')) return;
     if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key]) paseo = null;   // tocar una tecla de movimiento corta la caminata
-    if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key] || TECLAS_MIRAR[e.key]) { e.preventDefault(); teclas.add(e.key); }
+    if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key] || TECLAS_MIRAR[e.key] || TECLAS_OJOS[e.key]) { e.preventDefault(); teclas.add(e.key); }
   };
   const onUp = e => teclas.delete(e.key);
   window.addEventListener('keydown', onDown);
@@ -299,6 +315,9 @@ export function montarRecorrido3D() {
     let mirar = 0;
     for (const k of mot.teclas) { mirar += TECLAS_MIRAR[k] || 0; }
     mot.pitch = Math.max(-1.25, Math.min(1.25, mot.pitch + Math.max(-1, Math.min(1, mirar)) * VEL_MIRAR * dt));
+    let subir = 0;
+    for (const k of mot.teclas) { subir += TECLAS_OJOS[k] || 0; }
+    mot.camara.position.y = Math.max(OJO_MIN, Math.min(OJO_MAX, mot.camara.position.y + Math.max(-1, Math.min(1, subir)) * VEL_OJOS * dt));
     // Si cambia el tamaño (pantalla completa), la escena se ajusta al nuevo recuadro.
     const w = cont.clientWidth, h = cont.clientHeight;
     if (w && h && (w !== mot.w || h !== mot.h)) {
@@ -313,6 +332,7 @@ export function montarRecorrido3D() {
     // Caminata automática (botón Pasear): gira hacia el lugar, camina a la velocidad normal y gira a su frente.
     if (paseo && avance === 0) {
       const cam = mot.camara.position;
+      if (paseo.y !== undefined) { const dy = paseo.y - cam.y; cam.y += Math.sign(dy) * Math.min(Math.abs(dy), VEL_OJOS * dt); }
       const dx = paseo.x - cam.x, dz = paseo.z - cam.z, d = Math.hypot(dx, dz);
       if (d > 0.05) {
         const diff = angulo(Math.atan2(-dx, -dz) - mot.yaw);
@@ -363,7 +383,7 @@ export function vistaRecorrido3D() {
       <button class="btn sec sm" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
     </div>
     <h1>${esc(dep.dir(edificio))}</h1>
-    <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Tocá un hueco para ver qué tiene.</p>
+    <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Subí o bajá la vista con E y Q. Tocá un hueco para ver qué tiene.</p>
     <div class="rec-barra">
       <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
       <button class="btn sec" data-act="recBuscar">Ir</button>
