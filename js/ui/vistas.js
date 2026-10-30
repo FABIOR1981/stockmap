@@ -414,7 +414,8 @@ export function vistaAccesos() {
 
   return `<h1>Accesos</h1>
     <p class="sub">${esGeneral ? 'Administrador general: controlás clientes, usuarios y accesos.' : 'Accesos a los clientes que te corresponden.'}</p>
-    ${clientes}${acceso}${usuarios}`;
+    <div class="acc-grid">${clientes}${acceso}</div>
+    ${usuarios ? `<div class="acc-ancho">${usuarios}</div>` : ''}`;
 }
 
 // ---------- Resultado de las pruebas de reglas ----------
@@ -459,6 +460,16 @@ export function ventana() {
   const d = ctx.dep;
   const nodo = S.nodo ? d.porId(S.nodo) : null;
   switch (S.modal) {
+    case 'confirmar': {
+      const c = S.confirmar || {};
+      const datos = Object.entries(c.datos || {}).map(([k, v]) => `data-${k}="${esc(v)}"`).join(' ');
+      return {
+        titulo: c.titulo || 'Confirmar',
+        cuerpo: `<p class="aviso">${esc(c.texto || '')}</p>`,
+        pie: `<button class="btn sec" data-act="modalCerrar">Cancelar</button>
+          <button class="btn peligro-lleno" data-act="${esc(c.accion || 'modalCerrar')}" ${datos}>${esc(c.boton || 'Confirmar')}</button>`,
+      };
+    }
     case 'crear': {
       const { def } = d.nivelParaHijo(S.nodo);
       if (!def) return { titulo: 'Crear lugar', cuerpo: `<p class="aviso">Este edificio no tiene niveles. Definilos primero.</p>`, pie: `<button class="btn sec" data-act="modalCerrar">Cerrar</button>` };

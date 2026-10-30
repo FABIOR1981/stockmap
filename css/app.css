@@ -81,6 +81,14 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .btn.peligro { background: transparent; border-color: transparent; color: var(--peligro); padding: 6px 8px; font-weight: 500; }
 .btn.sm { padding: 5px 10px; font-size: 13px; }
 .acciones-fila .btn.peligro { margin-left: 8px; }
+/* Ventana de confirmación: el botón de borrar se ve como acción destructiva. */
+.btn.peligro-lleno { background: var(--peligro); border-color: var(--peligro); color: #fff; }
+.btn.peligro-lleno:hover { filter: brightness(.92); background: var(--peligro); border-color: var(--peligro); }
+/* Accesos: clientes y accesos a su lado; usuarios abajo a lo ancho. */
+.acc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.acc-grid .panel + .panel { margin-top: 0; }
+.acc-ancho { margin-top: 16px; }
+@media (max-width: 860px) { .acc-grid { grid-template-columns: 1fr; } }
 /* Formularios: los botones tienen la misma altura que los campos; la casilla va alineada con su texto. */
 .form .btn.sm { padding: 8px 14px; font-size: 14px; }
 .check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); min-height: 36px; cursor: pointer; }

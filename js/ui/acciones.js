@@ -20,7 +20,9 @@ const cuentasDelFormulario = () => S.f.usarEstructura
   ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))
   : [];
 
-const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.elegirOrigen = null; S.msg = {}; };
+// Pide confirmación con una ventana de la app (en vez del cuadro del navegador). La acción confirmada es `accion`.
+const pedirConfirmacion = (titulo, texto, accion, datos, boton) => { S.confirmar = { titulo, texto, accion, datos, boton }; S.modal = 'confirmar'; S.msg = {}; };
+const limpiarModal = () => { S.confirmar = null; S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.elegirOrigen = null; S.msg = {}; };
 const cerrarElegir = mensaje => { limpiarModal(); aviso('obj', null, mensaje); };
 
 export const ACCIONES = {
@@ -107,10 +109,10 @@ export const ACCIONES = {
     const l = d().porId(el.id);
     if (!l) return;
     const dentro = d().descendientes(l).length;
-    const pregunta = `¿Borrar "${d().dir(l)}"?` + (dentro ? ` Se borran también ${dentro} lugares que tiene adentro.` : '');
-    if (!window.confirm(pregunta)) return;
-    aviso('borrar', d().borrarLugar(el.id), 'Borrado.');
+    const texto = `Se borra "${d().dir(l)}".` + (dentro ? ` También se borran los ${dentro} lugares que tiene adentro.` : '') + ' No se puede deshacer.';
+    pedirConfirmacion('Borrar lugar', texto, 'borrarLugarOk', { id: el.id }, 'Borrar lugar');
   },
+  borrarLugarOk: el => { limpiarModal(); aviso('borrar', d().borrarLugar(el.id), 'Borrado.'); },
   toggleNiveles: () => { S.editarNiveles = !S.editarNiveles; S.msg = {}; },
   abrirNiveles: () => { S.editarNiveles = true; S.modal = 'niveles'; S.msg = {}; },
   nivelesTipicos: () => aviso('niveles', d().ponerNivelesTipicos(S.nodo), 'Niveles definidos.'),
@@ -312,9 +314,12 @@ export const ACCIONES = {
   },
   borrarObjeto: el => {
     const o = d().objetoPorId(el.oid);
-    if (o && !window.confirm(`¿Borrar el objeto ${o.codigo_interno}?`)) return;
-    aviso('obj', d().borrarObjeto(el.oid), 'Objeto borrado.');
+    if (!o) return;
+    // Con stock no se puede borrar: se avisa antes de pedir confirmación.
+    if (d().existenciaTotal(o.id) > 0) return aviso('obj', 'Ese objeto tiene existencias. Sacalas antes de borrarlo.');
+    pedirConfirmacion('Borrar objeto', `Se borra ${o.codigo_interno} y todo lo que tiene registrado. No se puede deshacer.`, 'borrarObjetoOk', { oid: el.oid }, 'Borrar objeto');
   },
+  borrarObjetoOk: el => { limpiarModal(); aviso('obj', d().borrarObjeto(el.oid), 'Objeto borrado.'); },
 
   // Ventanas y pruebas
   modalCerrar:   () => limpiarModal(),
