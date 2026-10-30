@@ -7,6 +7,7 @@ import { posEnPlano } from './plano.js';
 import { calcularRuta, limitesDentroDelGalpon, dentroDe } from './recorrido/ruta.js';
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
 import { caja, construirEscena } from './recorrido/escena.js';
+import { metrosACm } from '../core/medidas.js';
 import { montarAerea } from './recorrido/aerea.js';
 
 const OJOS = 1.55;       // altura de la cámara
@@ -229,6 +230,19 @@ export function montarRecorrido3D() {
   if (!R.fsListo) { R.fsListo = true; document.addEventListener('fullscreenchange', () => ctx.render()); }
 }
 
+// Medidas del galpón (en metros): sin ellas no hay contorno ni límites para las estanterías.
+function panelMedidas(edificio) {
+  const tieneMedidas = !!(edificio.dim_ancho && edificio.dim_largo && edificio.dim_alto);
+  return `<div class="rec-medidas">
+    <span class="rec-tramo">${tieneMedidas ? 'Galpón' : 'Sin medidas: las estanterías pueden salir del galpón.'}</span>
+    <label>Ancho <input data-f="medAncho" inputmode="decimal" value="${esc(S.f.medAncho ?? '')}" placeholder="m"></label>
+    <label>Largo <input data-f="medLargo" inputmode="decimal" value="${esc(S.f.medLargo ?? '')}" placeholder="m"></label>
+    <label>Alto <input data-f="medAlto" inputmode="decimal" value="${esc(S.f.medAlto ?? '')}" placeholder="m"></label>
+    <button class="btn sec sm" data-act="medirEdificio">Guardar medidas</button>
+    ${msgHTML('medir')}
+  </div>`;
+}
+
 export function vistaRecorrido3D() {
   const dep = ctx.dep;
   if (!dep.eid) return `<h1>Recorrido</h1><p class="vacio">Elegí un cliente en el menú de cuenta para ver su depósito.</p>`;
@@ -267,6 +281,7 @@ export function vistaRecorrido3D() {
     </div>
     <h1>${esc(dep.dir(edificio))}</h1>
     <p class="sub">${ayuda}</p>
+    ${aerea ? panelMedidas(edificio) : ''}
     ${msgHTML('recorrido')}
     <div class="r3d-marco">
       <div id="r3d" class="r3d" aria-label="${aerea ? 'Vista aérea del edificio' : 'Recorrido 3D del pasillo'}"></div>
@@ -320,7 +335,23 @@ export const accionesRecorrido3d = {
     else document.documentElement.requestFullscreen?.().catch(() => {});
   },
   // Alterna entre el recorrido y la vista aérea del edificio.
-  recAerea: () => { S.rec.aerea = !S.rec.aerea; S.rec.irA = false; S.elegido = null; S.msg = {}; },
+  recAerea: () => {
+    S.rec.aerea = !S.rec.aerea; S.rec.irA = false; S.elegido = null; S.msg = {};
+    // Al entrar a la vista aérea, el formulario de medidas muestra las del edificio.
+    const ed = S.rec.aerea && S.nodo ? ctx.dep.porId(S.nodo) : null;
+    if (ed) {
+      const m = (v) => (v ? String(v / 100) : '');
+      Object.assign(S.f, { medAncho: m(ed.dim_ancho), medLargo: m(ed.dim_largo), medAlto: m(ed.dim_alto) });
+    }
+  },
+  // Guarda las medidas del galpón (en metros) del edificio que se está viendo.
+  medirEdificio: () => {
+    const medidas = metrosACm(S.f.medAncho, S.f.medLargo, S.f.medAlto);
+    if (!medidas) return aviso('medir', 'Indicá ancho, largo y alto en metros.');
+    if (medidas.error) return aviso('medir', medidas.error);
+    const err = ctx.dep.medirEdificio(S.nodo, medidas);
+    aviso('medir', err, 'Medidas guardadas.');
+  },
   // Gira 90° la estantería elegida en la vista aérea y guarda la disposición del edificio.
   recGirar: () => {
     const id = S.rec.aereaSel;

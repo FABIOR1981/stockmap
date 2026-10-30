@@ -4,6 +4,7 @@
 
 import { ctx, S, aviso } from './estado.js';
 import { correrPruebas } from '../core/pruebas.js';
+import { metrosACm } from '../core/medidas.js';
 import { api } from '../almacen/nube.js';
 import { sonAledanos } from './plano.js';
 import { abrirEtiquetas } from './etiquetas.js';
@@ -13,15 +14,7 @@ import { accionesRecorrido3d } from './recorrido3d.js';
 const d = () => ctx.dep;
 
 // Cantidades de la estructura, si el usuario la eligió (vacío = sin estructura).
-// Medidas en metros del formulario -> centímetros. Vacías = null. Parcial = error.
-function medidasDelFormulario() {
-  const campos = [S.f.ancho, S.f.largo, S.f.alto];
-  if (campos.every(v => !String(v ?? '').trim())) return null;
-  if (campos.some(v => !String(v ?? '').trim())) return { error: 'Para medir el edificio, completá ancho, largo y alto (o dejalos vacíos).' };
-  const cm = campos.map(v => Math.round(Number(String(v).trim().replace(',', '.')) * 100));
-  if (cm.some(n => !Number.isFinite(n) || n < 1)) return { error: 'Las medidas deben ser números en metros, de 0,01 m o más.' };
-  return { ancho: cm[0], largo: cm[1], alto: cm[2] };
-}
+const medidasDelFormulario = () => metrosACm(S.f.ancho, S.f.largo, S.f.alto);
 
 const cuentasDelFormulario = () => S.f.usarEstructura
   ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))

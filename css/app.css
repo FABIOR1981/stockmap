@@ -355,3 +355,6 @@ html:fullscreen { background: var(--sur); }
 
 /* En celular, un toque se registra al instante (sin zoom de doble toque que retrase el segundo toque). */
 .bloque, .tarjeta, .celda, .celda-cab, .celda-total { touch-action: manipulation; }
+.rec-medidas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.rec-medidas label { display: flex; gap: 4px; align-items: center; font-size: 14px; color: var(--mut); }
+.rec-medidas input { width: 72px; padding: 4px 6px; font-size: 14px; }

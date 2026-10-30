@@ -21,13 +21,13 @@ const ESTANTE_A = 'bbbbbbbb-0000-4000-8000-000000000001', ESTANTE_B = 'bbbbbbbb-
 const HUECO = 'dddddddd-0000-4000-8000-000000000001', OBJ = 'cccccccc-0000-4000-8000-000000000001';
 const ENV = { SUPABASE_URL: 'https://p.supabase.co', SUPABASE_SERVICE_KEY: 'clave', SESSION_SECRET: 'x'.repeat(32) };
 
-// Datos de ejemplo: un edificio medido (1200 × 1600 × 800 cm) con dos estanterías.
+// Datos de ejemplo: un edificio sin medidas (se cargan desde la vista aérea) con dos estanterías.
 const tablas = {
   perfiles: [{ id: ADMIN, nombre: 'Fabio', es_admin: true }],
   establecimientos: [{ id: EID, nombre: 'Cliente' }],
   membresias: [],
   lugares: [
-    { id: EDI, establecimiento_id: EID, padre_id: null, codigo: '1', nombre: '', dim_ancho: 1200, dim_largo: 1600, dim_alto: 800 },
+    { id: EDI, establecimiento_id: EID, padre_id: null, codigo: '1', nombre: '' },
     { id: ESTANTE_A, establecimiento_id: EID, padre_id: EDI, codigo: 'A', nombre: '' },
     { id: ESTANTE_B, establecimiento_id: EID, padre_id: EDI, codigo: 'B', nombre: '' },
     { id: HUECO, establecimiento_id: EID, padre_id: ESTANTE_A, codigo: '1', nombre: '' },
@@ -99,8 +99,14 @@ function enPantalla(x, z, w, h) {
   return { px: w / 2 + (x / mitadAncho) * (w / 2), py: h / 2 + ((z + 8) * (h / 2)) / mitadAlto };
 }
 
-prueba('en la vista aérea, una estantería arrastrada afuera queda dentro del galpón', async () => {
+prueba('en la vista aérea se cargan las medidas del galpón y las estanterías no salen de él', async () => {
   await page.click('button[data-act="recAerea"]'); await page.waitForTimeout(800);
+  assert.match(await page.textContent('.rec-medidas'), /Sin medidas/);
+  await page.fill('input[data-f="medAncho"]', '12');
+  await page.fill('input[data-f="medLargo"]', '16');
+  await page.fill('input[data-f="medAlto"]', '8');
+  await page.click('button[data-act="medirEdificio"]'); await page.waitForTimeout(500);
+  assert.deepEqual([tablas.lugares[0].dim_ancho, tablas.lugares[0].dim_largo, tablas.lugares[0].dim_alto], [1200, 1600, 800]);
   const r = await page.$eval('#r3d canvas', e => { const b = e.getBoundingClientRect(); return { x: b.x, y: b.y, w: b.width, h: b.height }; });
   // La estantería A está en (−1,85; −2,3) m; se arrastra hacia la esquina de abajo a la derecha, fuera del galpón.
   const { px, py } = enPantalla(-1.85, -2.3, r.w, r.h);

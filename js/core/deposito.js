@@ -12,6 +12,7 @@
 //   - Movimiento: registro de entrada, salida o transferencia. Es el historial de todo cambio de stock.
 
 import { FORMATOS, NIVEL_EDIFICIO } from './formatos.js';
+import { validarMedidas } from './medidas.js';
 
 const ROLES = ['admin', 'editor', 'lector'];
 const TIPOS = ['unidad', 'producto'];
@@ -162,16 +163,11 @@ export class Deposito {
 
   crearLugar(padreId, codigo, nombre, medidas = null) {
     const err = this._exigir('editar'); if (err) return { error: err };
-    // Medidas del edificio (cm): solo para edificios (raíz), todas o ninguna.
-    const dims = {};
-    if (medidas) {
-      if (padreId) return { error: 'Las medidas se indican solo al crear un edificio.' };
-      const vals = ['ancho', 'largo', 'alto'].map(k => medidas[k]);
-      if (vals.some(v => v != null)) {
-        if (vals.some(v => !Number.isInteger(v) || v < 1 || v > 100000)) return { error: 'Las medidas deben ser de 1 cm o más.' };
-        Object.assign(dims, { dim_ancho: vals[0], dim_largo: vals[1], dim_alto: vals[2] });
-      }
-    }
+    // Medidas del edificio (cm): solo para edificios (raíz).
+    if (medidas && padreId) return { error: 'Las medidas se indican solo al crear un edificio.' };
+    const medidasOk = validarMedidas(medidas);
+    if (medidasOk.error) return { error: medidasOk.error };
+    const dims = medidasOk.valores || {};
     const { def, ed } = this.nivelParaHijo(padreId);
     if (!def) return { error: `Este edificio no tiene nivel para esta profundidad. Agregalo en "Niveles de ${ed.codigo}".` };
     const F = FORMATOS[def.formato];
@@ -189,6 +185,18 @@ export class Deposito {
       niveles: [], ...dims
     });
     return { id };
+  }
+
+  // Guarda las medidas (cm) de un edificio ya creado.
+  medirEdificio(id, medidas) {
+    const err = this._exigir('editar'); if (err) return err;
+    const l = this.porId(id);
+    if (!l || l.padre_id) return 'Solo se miden los edificios.';
+    const v = validarMedidas(medidas);
+    if (v.error) return v.error;
+    if (!v.valores) return 'Indicá ancho, largo y alto.';
+    this.almacen.actualizar('lugares', id, v.valores);
+    return null;
   }
 
   // Niveles que tendría dentro un hijo nuevo de padreId (los que define el edificio debajo de él).
