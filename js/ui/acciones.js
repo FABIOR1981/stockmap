@@ -287,6 +287,10 @@ export const ACCIONES = {
     const r = d().cargarPaquetesPrueba();
     aviso('objetos', r.error, `Paquetes de prueba agregados: ${r.creados}.`);
   },
+  ubicarPaquetesPrueba: () => {
+    const r = d().ubicarPaquetesPrueba();
+    aviso('objetos', r.error, `Paquetes de prueba ubicados en lugares al azar: ${r.ubicados}.`);
+  },
   devolverPaquetesPrueba: () => {
     const r = d().devolverPaquetesPrueba();
     aviso('objetos', r.error, `Paquetes de prueba devueltos a pendientes: ${r.sacados}.`);

@@ -45,6 +45,7 @@ function contenidoPendientes(l, destino) {
   const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
   const pruebas = `<div class="acciones-fila" style="margin:6px 0 10px">
     <button class="btn sec sm" data-act="cargarPaquetesPrueba">Agregar 12 paquetes de prueba</button>
+    <button class="btn sec sm" data-act="ubicarPaquetesPrueba">Ubicar paquetes de prueba en lugares al azar</button>
     <button class="btn sec sm" data-act="devolverPaquetesPrueba">Devolver paquetes de prueba a pendientes</button>
   </div>`;
   if (!pendientes.length) return `${pruebas}<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;

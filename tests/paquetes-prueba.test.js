@@ -42,3 +42,21 @@ test('devolver a pendientes saca los paquetes de prueba de sus lugares y no toca
   assert.equal(pendientes(dep).length, 12);
   assert.equal(dep.ubicacionesDe(otro.id).length, 1, 'el objeto real sigue en su lugar');
 });
+
+test('ubicar en lugares al azar pone cada paquete sin lugar en un lugar válido, y no mueve los que ya tienen lugar', () => {
+  const dep = dep0();
+  const ed = dep.crearLugar(null, '1', '').id;
+  dep.ponerNivelesTipicos(ed);
+  dep.crearArbol(ed, 'A', '', [1, 1]);
+  dep.cargarPaquetesPrueba();
+  const ya = dep.objetos.find(o => o.codigo_propio === 'PEND-03');
+  const hueco = dep.lugares.find(l => typeof dep.lugarDestino(l.id) !== 'string');
+  dep.asignar(ya.id, hueco.id);
+  const antes = dep.ubicacionesDe(ya.id).map(l => l.id);
+  assert.equal(dep.ubicarPaquetesPrueba().error, undefined);
+  assert.equal(pendientes(dep).length, 0);
+  for (const o of dep.objetos.filter(o => o.codigo_propio.startsWith('PEND-'))) {
+    assert.ok(dep.ubicacionesDe(o.id).length >= 1, `${o.codigo_propio} tiene lugar`);
+  }
+  assert.deepEqual(dep.ubicacionesDe(ya.id).map(l => l.id), antes);
+});
