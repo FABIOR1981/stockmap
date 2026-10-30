@@ -8,7 +8,7 @@ import { calcularRuta, limitesDentroDelGalpon, dentroDe } from './recorrido/ruta
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
 import { caja, construirEscena } from './recorrido/escena.js';
 import { metrosACm } from '../core/medidas.js';
-import { montarAerea } from './recorrido/aerea.js';
+import { montarAerea, guardarDisposicion } from './recorrido/aerea.js';
 
 const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo

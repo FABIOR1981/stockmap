@@ -123,6 +123,15 @@ prueba('en la vista aérea se cargan las medidas del galpón y las estanterías 
   assert.deepEqual(errores, []);
 });
 
+prueba('Girar 90° en la vista aérea gira la estantería elegida y lo guarda', async () => {
+  // La estantería elegida en la prueba anterior queda seleccionada: se gira y se revisa el giro guardado.
+  const antes = tablas.lugares.find(l => l.id === ESTANTE_A)?.vista_giro ?? 0;
+  await page.click('button[data-act="recGirar"]'); await page.waitForTimeout(500);
+  const despues = tablas.lugares.find(l => l.id === ESTANTE_A)?.vista_giro;
+  assert.equal(despues, (antes + 1) % 4);
+  assert.deepEqual(errores, []);
+});
+
 try {
   let fallas = 0;
   for (const { nombre, fn } of pruebas) {

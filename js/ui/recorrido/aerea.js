@@ -7,7 +7,7 @@ import { limitesDentroDelGalpon, dentroDe } from './ruta.js';
 import { materiales, etiqueta } from './escena.js';
 
 // Guarda la posición y el giro de todas las estanterías del edificio.
-function guardarDisposicion(disp) {
+export function guardarDisposicion(disp) {
   for (const [id, d] of disp) {
     const err = ctx.dep.posicionarVista(id, Math.round(d.x * 100), Math.round(d.z * 100), d.giro);
     if (err) return aviso('recorrido', err);
