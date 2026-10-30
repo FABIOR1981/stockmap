@@ -10,7 +10,7 @@ const SEP = 3.4;         // distancia entre pares de estanterías (y entre estan
 const FONDO = 0.9;       // cuánto sobresale cada estante hacia el pasillo
 const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada columna
 const ALTO = 2.6;        // altura de los estantes, desde la base hacia arriba
-const BASE = 0.65;       // altura de la tabla más baja: las estanterías se construyen desde aquí hacia arriba
+const BASE = 0;          // altura de la tabla más baja (0 = desde el piso); los estantes se apilan hacia arriba
 const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
 const VEL_MIRAR = 1.2;    // velocidad al mirar arriba/abajo (radianes por segundo)
