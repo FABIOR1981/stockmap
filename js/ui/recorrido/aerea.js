@@ -2,9 +2,9 @@
 // Recibe el estado de la pantalla (R), la disposición del edificio y cómo desmontar la vista anterior.
 
 import { S, ctx, aviso } from '../estado.js';
-import { LARGO, FONDO, huella } from './disposicion.js';
+import { LARGO, FONDO, huella, frenteDe } from './disposicion.js';
 import { limitesDentroDelGalpon, dentroDe } from './ruta.js';
-import { materiales, etiqueta } from './escena.js';
+import { materiales, etiqueta, tapete } from './escena.js';
 
 // Guarda la posición y el giro de todas las estanterías del edificio.
 export function guardarDisposicion(disp) {
@@ -72,7 +72,25 @@ export function montarAerea(cont, edificio, { R, disp, desmontar }) {
     malla.position.set(d.x, 0.125, d.z);
     malla.rotation.y = d.giro * Math.PI / 2;
     malla.userData.rack = id;
+    // Frente (naranja): el lado por donde salen los estantes. El fondo queda azul oscuro.
+    const lado = d.lado ?? (d.x < 0 ? 'izq' : 'der');
+    const sal = lado === 'izq' ? 1 : -1;
+    const frente = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.27, LARGO), new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.6 }));
+    frente.position.set(sal * (FONDO / 2 + 0.02), 0.01, 0);
+    malla.add(frente);
+    const fondo = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.27, LARGO), new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.6 }));
+    fondo.position.set(-sal * (FONDO / 2 + 0.02), 0.01, 0);
+    malla.add(fondo);
     grupo.add(malla);
+    // Tapete con el código, tirado en el piso frente a la cara de los estantes.
+    if (l) {
+      const f = frenteDe({ ...d, lado });
+      const tap = new THREE.Group();
+      tap.add(tapete(l.codigo, LARGO * 0.95, 0.7));
+      tap.position.set(f.x, 0.005, f.z);
+      tap.rotation.y = f.yaw;
+      grupo.add(tap);
+    }
     mallas.set(id, malla);
     hits.push(malla);
     if (l) {
