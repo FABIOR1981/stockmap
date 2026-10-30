@@ -314,6 +314,7 @@ export function vistaRecorrido3D() {
         <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
         <button class="btn sec sm" data-act="recBuscar">Ir</button>
         <button class="btn sec sm" data-act="recBuscar" data-pasear="1">Pasear</button>
+        <button class="btn sec sm" data-act="recInicio" title="Vuelve a la entrada del pasillo">Volver al inicio</button>
       </div>`;
   const ayuda = aerea
     ? 'Arrastrá una estantería para moverla. Tocala para elegirla y girala de a 90°. Se guarda para todos los que usan este cliente.'
@@ -357,6 +358,12 @@ export function pasillosDe(edificio) {
 }
 
 export const accionesRecorrido3d = {
+  // Lleva la cámara a la entrada del pasillo, mirando hacia el fondo (para salir de entre las estanterías).
+  recInicio: () => {
+    if (!R.mot) return;
+    R.mot.camara.position.x = 0; R.mot.camara.position.z = 0.6;
+    R.mot.yaw = 0; R.mot.pitch = 0; R.paseo = null;
+  },
   // Elige el edificio cuyo pasillo se recorre (sin id: vuelve a la lista de edificios).
   recIr: el => { S.nodo = el.id || null; S.rec = { i: 0, resaltado: null }; S.elegido = null; S.msg = {}; },
   // Sube un nivel dentro del recorrido.
