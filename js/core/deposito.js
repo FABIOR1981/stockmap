@@ -468,18 +468,20 @@ export class Deposito {
     });
     return { creados };
   }
-  // Pone cada paquete de prueba que está sin lugar en un lugar al azar donde pueda ir.
+  // Pone cada paquete de prueba que está sin lugar en un lugar al azar, igual que "Asignar" por código:
+  // si el lugar no admite el objeto, prueba otro. Devuelve cuántos quedaron y cuántos no pudieron.
   ubicarPaquetesPrueba() {
     const err = this._exigir('editar'); if (err) return { error: err };
     const destinos = this.lugares.filter(l => typeof this.lugarDestino(l.id) !== 'string');
     if (!destinos.length) return { error: 'No hay lugares donde guardar objetos.' };
     const sinLugar = this.objetos.filter(o => (o.codigo_propio || '').startsWith('PEND-') && this.ubicacionesDe(o.id).length === 0);
-    let ubicados = 0;
+    let ubicados = 0, noPudieron = 0;
     for (const o of sinLugar) {
-      const lugar = destinos[Math.floor(Math.random() * destinos.length)];
-      if (!this.asignar(o.id, lugar.id)) ubicados++;
+      const orden = [...destinos].sort(() => Math.random() - 0.5);
+      const ok = orden.some(lugar => !this.asignar(o.id, lugar.id));
+      ok ? ubicados++ : noPudieron++;
     }
-    return { ubicados };
+    return { ubicados, noPudieron };
   }
   // Saca de sus lugares a los paquetes de prueba: vuelven a quedar pendientes de asignación.
   devolverPaquetesPrueba() {

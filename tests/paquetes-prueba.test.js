@@ -53,7 +53,9 @@ test('ubicar en lugares al azar pone cada paquete sin lugar en un lugar válido,
   const hueco = dep.lugares.find(l => typeof dep.lugarDestino(l.id) !== 'string');
   dep.asignar(ya.id, hueco.id);
   const antes = dep.ubicacionesDe(ya.id).map(l => l.id);
-  assert.equal(dep.ubicarPaquetesPrueba().error, undefined);
+  const r = dep.ubicarPaquetesPrueba();
+  assert.equal(r.error, undefined);
+  assert.equal(r.noPudieron, 0);
   assert.equal(pendientes(dep).length, 0);
   for (const o of dep.objetos.filter(o => o.codigo_propio.startsWith('PEND-'))) {
     assert.ok(dep.ubicacionesDe(o.id).length >= 1, `${o.codigo_propio} tiene lugar`);

@@ -289,7 +289,7 @@ export const ACCIONES = {
   },
   ubicarPaquetesPrueba: () => {
     const r = d().ubicarPaquetesPrueba();
-    aviso('objetos', r.error, `Paquetes de prueba ubicados en lugares al azar: ${r.ubicados}.`);
+    aviso('objetos', r.error, `Paquetes de prueba ubicados en lugares al azar: ${r.ubicados}${r.noPudieron ? `. No hubo lugar para ${r.noPudieron}` : ''}.`);
   },
   devolverPaquetesPrueba: () => {
     const r = d().devolverPaquetesPrueba();
