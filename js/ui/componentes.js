@@ -10,8 +10,9 @@ const tieneAlgo = (d, l) => d.objetosDe(l.id).length > 0 || d.descendientes(l).s
 export function estadoDe(l) {
   const d = ctx.dep;
   const hijos = d.hijos(l.id);
-  // Lleno: tiene lugares adentro y cada uno tiene algo (en cualquier nivel).
-  const lleno = hijos.length > 0 && hijos.every(h => tieneAlgo(d, h));
+  // Lleno: todos sus lugares del último nivel tienen objetos. Un solo hueco libre ya no es lleno.
+  const huecos = d.descendientes(l).filter(x => d.hijos(x.id).length === 0);
+  const lleno = huecos.length > 0 && huecos.every(h => d.objetosDe(h.id).length > 0);
   const ocupado = tieneAlgo(d, l);
   if (d.prof(l) === 0) return { cls: lleno ? 'lleno' : ocupado ? 'obj' : 'libre', chip: 'Edificio' };
   if (hijos.length) {
