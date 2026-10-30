@@ -6,7 +6,7 @@ import { ctx, S, esc, msgHTML } from './estado.js';
 import { pasillosDe } from './recorrido.js';
 
 const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
-const SEP = 2.7;         // distancia entre pares de estanterías
+const SEP = 3.4;         // distancia entre pares de estanterías (y entre estanterías del mismo lado)
 const FONDO = 0.9;       // cuánto sobresale cada estante hacia el pasillo
 const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada columna
 const ALTO = 2.6;        // altura de las estanterías
@@ -20,7 +20,8 @@ const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
 
 let mot = null;                              // motor activo
 let fsListo = false;                         // evita registrar dos veces el aviso de pantalla completa
-let salto = null;                            // posición a usar al cruzar a otro pasillo (se aplica al redibujar)
+let salto = null;
+let paseo = null;                            // caminata automática hasta frente a un lugar (botón Pasear)                            // posición a usar al cruzar a otro pasillo (se aplica al redibujar)
 let pos = { clave: null, z: 0.6, yaw: 0, pitch: 0 };   // posición recordada entre re-dibujos de la pantalla
 
 function caja(w, h, d, mat, x, y, z) {
@@ -28,6 +29,9 @@ function caja(w, h, d, mat, x, y, z) {
   m.position.set(x, y, z);
   return m;
 }
+
+// Ángulo normalizado entre -π y π.
+const angulo = a => Math.atan2(Math.sin(a), Math.cos(a));
 
 function materiales() {
   return {
@@ -39,22 +43,37 @@ function materiales() {
   };
 }
 
-// Etiqueta con el código de un lugar: un rótulo que siempre mira a la cámara.
-function etiqueta(texto, grande, tipo) {
+// Etiqueta con el código de la estantería: un rótulo que siempre mira a la cámara.
+function etiqueta(texto) {
   const c = document.createElement('canvas');
-  c.width = 256; c.height = 64;
+  c.width = 512; c.height = 128;
   const g = c.getContext('2d');
-  g.fillStyle = 'rgba(15, 23, 42, 0.88)';
-  g.fillRect(0, 0, 256, 64);
+  g.fillStyle = 'rgba(15, 23, 42, 0.9)';
+  g.fillRect(0, 0, 512, 128);
   g.fillStyle = '#f8fafc';
-  g.font = `bold ${grande ? 38 : 30}px sans-serif`;
+  g.font = 'bold 78px sans-serif';
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  g.fillText(String(texto), 128, 34);
+  g.fillText(String(texto), 256, 66);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
-  const ancho = grande ? 0.9 : tipo === 'estante' ? 0.4 : 0.32;
-  sp.scale.set(ancho, ancho / 4, 1);
+  sp.scale.set(1.5, 0.375, 1);
   return sp;
+}
+
+// Placa plana pegada a una superficie (no gira con la cámara): letras y números de los estantes.
+function placa(texto, ancho, alto) {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = Math.round(256 * alto / ancho);
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(15, 23, 42, 0.92)';
+  g.fillRect(0, 0, c.width, c.height);
+  g.fillStyle = '#f8fafc';
+  g.font = `bold ${Math.round(c.height * 0.62)}px sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(String(texto), c.width / 2, c.height / 2);
+  const mat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), side: THREE.DoubleSide });
+  return new THREE.Mesh(new THREE.PlaneGeometry(ancho, alto), mat);
 }
 
 // Una estantería: columna contra la pared y sus estantes saliendo hacia el pasillo.
@@ -77,8 +96,8 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   grupo.add(caja(0.05, alto, LARGO, M.poste, xPared, alto / 2, zc));
   [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, alto, 0.05, M.poste, xFrente, alto / 2, z)));
   // Código de la estantería, arriba de la columna.
-  const rotulo = etiqueta(l.codigo, true);
-  rotulo.position.set(xPared, alto + 0.25, zc);
+  const rotulo = etiqueta(l.codigo);
+  rotulo.position.set(xPared, alto + 0.35, zc);
   grupo.add(rotulo);
 
   // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
@@ -94,8 +113,9 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
     const cajaH = Math.max(0.08, Math.min(0.3, bandH - 0.12));
     // Número del estante: en el borde frontal de su tabla, en el extremo izquierdo (visto de frente).
     if (subs.length) {
-      const rot = etiqueta(f.codigo, false, 'estante');
-      rot.position.set(xFrente + dir * 0.01, yTabla + 0.025, zFrente + 0.1);
+      const rot = placa(f.codigo, 0.4, 0.09);
+      rot.position.set(xFrente + dir * 0.006, yTabla + 0.025, zFrente + 0.1);
+      rot.rotation.y = dir * Math.PI / 2;
       grupo.add(rot);
     }
     celdas.forEach((c, ci) => {
@@ -109,8 +129,9 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
         grupo.add(caja(0.4, cajaH, 0.35, M.obj, xMed, yTabla + 0.05 + cajaH / 2, z));
       }
       // Letra del hueco: sobre el borde frontal de la tabla de su división.
-      const rot = etiqueta(c.codigo, false, 'hueco');
-      rot.position.set(xFrente + dir * 0.01, yTabla + 0.025, zCentro);
+      const rot = placa(c.codigo, 0.32, 0.08);
+      rot.position.set(xFrente + dir * 0.006, yTabla + 0.025, zCentro);
+      rot.rotation.y = dir * Math.PI / 2;
       grupo.add(rot);
       // Zona invisible sobre el hueco: sirve para tocarlo y saber qué lugar es.
       const zona = new THREE.Mesh(new THREE.BoxGeometry(FONDO, bandH, cl), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
@@ -159,7 +180,7 @@ export function desmontarRecorrido3D() {
   cancelAnimationFrame(mot.raf);
   window.removeEventListener('keydown', mot.onDown);
   window.removeEventListener('keyup', mot.onUp);
-  pos = { clave: mot.clave, z: mot.camara.position.z, yaw: mot.yaw, pitch: mot.pitch };
+  pos = { clave: mot.clave, z: mot.camara.position.z, x: mot.camara.position.x, yaw: mot.yaw, pitch: mot.pitch };
   if (salto) { pos = salto; salto = null; }
   mot.renderer.dispose();
   mot.renderer.forceContextLoss?.();
@@ -189,19 +210,33 @@ export function montarRecorrido3D() {
   // Búsqueda: si acaba de buscarse un lugar, la cámara se pone frente a su estantería, mirándola.
   if (S.rec.irA) {
     S.rec.irA = false;
+    const pasear = !!S.rec.pasear;
+    S.rec.pasear = false;
     const sel = S.elegido ? ctx.dep.porId(S.elegido) : null;
     const est = sel ? ctx.dep.ruta(sel)[1] : null;
     const idx = est ? fila.findIndex(k => k.id === est.id) : -1;
     // La cámara queda frente al centro de la estantería (mirando hacia la pared donde está).
-    if (idx >= 0) pos = { clave, z: -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2, yaw: idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2, pitch: 0 };
+    if (idx >= 0) {
+      const z = -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2;
+      const yaw = idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
+      if (pasear) {
+        // Pasear: camina desde donde está hasta frente al lugar (si está en otro pasillo, arranca desde su inicio).
+        if (pos.clave !== clave) pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
+        paseo = { x: 0, z, yaw };
+      } else {
+        pos = { clave, z, x: 0, yaw, pitch: 0 };
+        paseo = null;
+      }
+    }
   }
   if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0, pitch: 0 };
   const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 60);
-  camara.position.set(0, OJOS, pos.z);
+  camara.position.set(pos.x || 0, OJOS, pos.z);
 
   const teclas = new Set();
   const onDown = e => {
     if (e.target.matches?.('input, select, textarea')) return;
+    if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key]) paseo = null;   // tocar una tecla de movimiento corta la caminata
     if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key] || TECLAS_MIRAR[e.key]) { e.preventDefault(); teclas.add(e.key); }
   };
   const onUp = e => teclas.delete(e.key);
@@ -273,6 +308,20 @@ export function montarRecorrido3D() {
     const v = Math.max(-1, Math.min(1, avance)) * VEL * dt;
     mot.camara.position.x -= Math.sin(mot.yaw) * v;
     mot.camara.position.z -= Math.cos(mot.yaw) * v;
+    // Caminata automática (botón Pasear): gira hacia el lugar, camina a la velocidad normal y gira a su frente.
+    if (paseo && avance === 0) {
+      const cam = mot.camara.position;
+      const dx = paseo.x - cam.x, dz = paseo.z - cam.z, d = Math.hypot(dx, dz);
+      if (d > 0.05) {
+        const diff = angulo(Math.atan2(-dx, -dz) - mot.yaw);
+        if (Math.abs(diff) > 0.05) mot.yaw += Math.sign(diff) * Math.min(Math.abs(diff), GIRO_VEL * dt);
+        else { const m = Math.min(VEL * dt, d); cam.x += dx / d * m; cam.z += dz / d * m; }
+      } else {
+        const diff = angulo(paseo.yaw - mot.yaw);
+        if (Math.abs(diff) > 0.02) mot.yaw += Math.sign(diff) * Math.min(Math.abs(diff), GIRO_VEL * dt);
+        else paseo = null;
+      }
+    }
     // Quedarse dentro del pasillo.
     mot.camara.position.x = Math.max(-MITAD + 0.5, Math.min(MITAD - 0.5, mot.camara.position.x));
     // Llegar al final del pasillo y seguir caminando cruza al pasillo transversal.
@@ -316,6 +365,7 @@ export function vistaRecorrido3D() {
     <div class="rec-barra">
       <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
       <button class="btn sec" data-act="recBuscar">Ir</button>
+      <button class="btn sec" data-act="recBuscar" data-pasear="1">Pasear</button>
     </div>
     ${msgHTML('recorrido')}
     <div class="r3d-marco">

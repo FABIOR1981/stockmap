@@ -323,7 +323,7 @@ export const accionesRecorrido = {
     else document.documentElement.requestFullscreen?.().catch(() => {});
   },
   // Busca un código de lugar u objeto y lleva la vista a su módulo.
-  recBuscar: () => {
+  recBuscar: el => {
     const dep = ctx.dep;
     const raw = String(S.f.recBusca || '').trim();
     const q = norm(raw);
@@ -358,6 +358,7 @@ export const accionesRecorrido = {
     S.f.recBusca = raw;
     // Para el recorrido 3D: la cámara va frente a la estantería encontrada.
     S.rec.irA = true;
+    S.rec.pasear = el?.pasear === '1';
     aviso('recorrido', null, obj ? `${obj.codigo_interno} está en ${dep.dir(lugar)}.` : `Lugar encontrado: ${dep.dir(lugar)}.`);
   },
 };
