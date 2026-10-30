@@ -57,7 +57,7 @@ function contenidoPendientes(l, destino) {
     const arriba = d.ancestros(destino).filter(x => d.objetosDe(x.id).length > 0).map(x => d.dir(x));
     const detalle = (adentro.length ? ` Tiene objetos en: ${adentro.join(', ')}.` : '')
       + (arriba.length ? ` Tiene objetos puestos más arriba: ${arriba.join(', ')}.` : '');
-    return `${cabecera}<p class="dim" style="font-size:13px;margin:0">No puede recibir objetos. ${esc(error)}${esc(detalle)} Elegí otro lugar en el plano.</p>${msgHTML('objetos')}`;
+    return `${cabecera}${pruebas}<p class="dim" style="font-size:13px;margin:0">No puede recibir objetos. ${esc(error)}${esc(detalle)} Elegí otro lugar en el plano.</p>${msgHTML('objetos')}`;
   }
   return `${cabecera}${pruebas}<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
     <div class="dlg-lista compacta">${pendientes.map(o => `<div class="r obj-asignable" role="button" tabindex="0" data-act="ponerObjeto" data-oid="${o.id}" data-lugar="${destino.id}">
