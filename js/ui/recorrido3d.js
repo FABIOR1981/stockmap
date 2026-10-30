@@ -6,8 +6,9 @@ import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
 import { calcularRuta, limitesDentroDelGalpon, dentroDe, acomodarEnGalpon, pisoLibre, RADIO_CUERPO } from './recorrido/ruta.js';
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
-import { caja, construirEscena } from './recorrido/escena.js';
+import { caja, construirEscena, agregarCajasSueltas } from './recorrido/escena.js';
 import { metrosACm, desdeEsquinaCm } from '../core/medidas.js';
+import { generarCajas, semillaDe } from './recorrido/obstaculos.js';
 import { montarAerea, guardarDisposicion } from './recorrido/aerea.js';
 
 const OJOS = 1.55;       // altura de la cámara
@@ -101,10 +102,22 @@ export function montarRecorrido3D() {
 
   const { disp } = disposicionFila(edificio, fi);
   const g = galponDe(edificio);
+  // Cajas sueltas: se evitan las estanterías (todas), sus frentes (los pasos) y la entrada. Misma semilla = misma distribución.
+  const todas = disposicionEdificio(edificio);
+  const evitar = [...todas.values()].map(d => {
+    const h = huella(d.giro), f = frenteDe({ ...d, lado: d.x < 0 ? 'izq' : 'der' });
+    return [{ x: d.x, z: d.z, ex: h.ex, ez: h.ez }, { x: f.x, z: f.z, ex: 0.8, ez: 0.8 }];
+  }).flat();
+  evitar.push({ x: 0, z: 0.5, ex: 1.2, ez: 1 });
   const { escena, zMin, xLim } = construirEscena(fila, disp, g);
-  // Dónde se puede pisar: con medidas, dentro de las paredes del galpón; siempre, fuera de las estanterías.
+  const zona = g
+    ? { x0: -g.A / 2 + 0.6, x1: g.A / 2 - 0.6, z0: zMin + 0.6, z1: -1.5 }
+    : { x0: -xLim + 0.5, x1: xLim - 0.5, z0: zMin + 0.6, z1: -1.5 };
+  const cajas = generarCajas({ semilla: semillaDe(edificio.id, fi * 7 + (S.rec.semillaCajas || 0) * 101), zona, evitar, cantidad: 10 });
+  agregarCajasSueltas(escena, cajas);
+  // Dónde se puede pisar: con medidas, dentro de las paredes del galpón; siempre, fuera de las estanterías y cajas.
   const piso = g ? { x0: -g.A / 2 + RADIO_CUERPO, x1: g.A / 2 - RADIO_CUERPO, z0: zMin + 0.05, z1: 1 } : null;
-  const libre = pisoLibre(disp, huella, piso);
+  const libre = pisoLibre(disp, huella, piso, cajas);
   const ancho = cont.clientWidth || 800, alto = 520;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -129,7 +142,7 @@ export function montarRecorrido3D() {
         if (R.pos.clave !== clave) R.pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
         // Camina con la vista a la altura normal; al llegar ajusta la vista al estante (si hace falta).
         R.paseo = { x: f.x, z: f.z, yaw: f.yaw, y: OJOS, yFin: ojo,
-          planear: (x, z) => calcularRuta(disp, { x, z }, { x: f.x, z: f.z }, huella, piso) };
+          planear: (x, z) => calcularRuta(disp, { x, z }, { x: f.x, z: f.z }, huella, piso, cajas) };
       } else {
         R.pos = { clave, z: f.z, x: f.x, y: ojo, yaw: f.yaw, pitch: 0 };
         R.paseo = null;
@@ -315,6 +328,7 @@ export function vistaRecorrido3D() {
         <button class="btn sec sm" data-act="recBuscar">Ir</button>
         <button class="btn sec sm" data-act="recBuscar" data-pasear="1">Pasear</button>
         <button class="btn sec sm" data-act="recInicio" title="Vuelve a la entrada del pasillo">Volver al inicio</button>
+        <button class="btn sec sm" data-act="recCajas" title="Otra distribución de las cajas del piso">Cambiar cajas</button>
       </div>`;
   const ayuda = aerea
     ? 'Arrastrá una estantería para moverla. Tocala para elegirla y girala de a 90°. Se guarda para todos los que usan este cliente.'
@@ -358,6 +372,8 @@ export function pasillosDe(edificio) {
 }
 
 export const accionesRecorrido3d = {
+  // Otra distribución al azar de las cajas sueltas del piso.
+  recCajas: () => { S.rec.semillaCajas = (S.rec.semillaCajas || 0) + 1; },
   // Lleva la cámara a la entrada del pasillo, mirando hacia el fondo (para salir de entre las estanterías).
   recInicio: () => {
     if (!R.mot) return;

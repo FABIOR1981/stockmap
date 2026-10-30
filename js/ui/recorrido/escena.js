@@ -143,6 +143,12 @@ export function posicionEnEstante(indice, cantidad, dir) {
   return dir > 0 ? indice : cantidad - 1 - indice;
 }
 
+// Cajas sueltas en el piso (sobras de la operativa): obstáculos que no tienen lugar asignado.
+export function agregarCajasSueltas(escena, cajas) {
+  const M = materiales();
+  cajas.forEach(c => escena.add(caja(c.w, c.h, c.d, M.obj, c.x, c.h / 2, c.z)));
+}
+
 export function estanteria(l, lado, zFrente, M, grupo, hits) {
   const dep = ctx.dep;
   const dir = lado === 'izq' ? 1 : -1;                 // hacia dónde salen los estantes (el pasillo)
