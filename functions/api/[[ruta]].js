@@ -427,3 +427,6 @@ export async function onRequest({ request, env, params }) {
     return json({ error: 'Error interno del servidor.' }, 500);
   }
 }
+
+// Tablas que el servidor acepta (para que las pruebas comparen con el esquema SQL).
+export { TABLAS };
