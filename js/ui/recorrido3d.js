@@ -459,7 +459,8 @@ export function montarRecorrido3D() {
       if (pasear) {
         // Pasear: camina desde donde está hasta frente al lugar (si está en otro pasillo, arranca desde su inicio).
         if (pos.clave !== clave) pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
-        paseo = { x: f.x, z: f.z, yaw: f.yaw, y: ojo };
+        // Camina con la vista a la altura normal; al llegar ajusta la vista al estante (si hace falta).
+        paseo = { x: f.x, z: f.z, yaw: f.yaw, y: OJOS, yFin: ojo };
       } else {
         pos = { clave, z: f.z, x: f.x, y: ojo, yaw: f.yaw, pitch: 0 };
         paseo = null;
@@ -558,8 +559,9 @@ export function montarRecorrido3D() {
         if (Math.abs(diff) > 0.05) mot.yaw += Math.sign(diff) * Math.min(Math.abs(diff), GIRO_VEL * dt);
         else { const m = Math.min(VEL * dt, d); cam.x += dx / d * m; cam.z += dz / d * m; }
       } else {
+        if (paseo.yFin !== undefined) paseo.y = paseo.yFin;   // ya llegó: sube o baja la vista al estante
         const diff = angulo(paseo.yaw - mot.yaw);
-        if (Math.abs(diff) > 0.02) mot.yaw += Math.sign(diff) * Math.min(Math.abs(diff), GIRO_VEL * dt);
+        if (Math.abs(diff) > 0.02 || (paseo.yFin !== undefined && Math.abs(paseo.yFin - cam.y) > 0.02)) mot.yaw += Math.sign(diff) * Math.min(Math.abs(diff), GIRO_VEL * dt);
         else paseo = null;
       }
     }
