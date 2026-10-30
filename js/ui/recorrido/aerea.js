@@ -3,7 +3,7 @@
 
 import { S, ctx, aviso } from '../estado.js';
 import { LARGO, FONDO, huella, frenteDe } from './disposicion.js';
-import { limitesDentroDelGalpon, dentroDe } from './ruta.js';
+import { limitesDentroDelGalpon, dentroDe, acomodarEnGalpon } from './ruta.js';
 import { materiales, etiqueta, tapete } from './escena.js';
 
 // Guarda la posición y el giro de todas las estanterías del edificio.
@@ -40,10 +40,7 @@ export function montarAerea(cont, edificio, { R, disp, desmontar }) {
   const g = edificio.dim_ancho && edificio.dim_largo ? { A: edificio.dim_ancho / 100, L: edificio.dim_largo / 100 } : null;
   if (g) {
     // Las que todavía están en la distribución por defecto se acomodan dentro del galpón (no se guarda hasta moverlas).
-    for (const d of disp.values()) {
-      const lim = limitesDentroDelGalpon(g.A, g.L, huella(d.giro));
-      d.x = dentroDe(d.x, lim.x0, lim.x1); d.z = dentroDe(d.z, lim.z0, lim.z1);
-    }
+    acomodarEnGalpon(disp, g, huella);
     const suelo = new THREE.Mesh(new THREE.PlaneGeometry(g.A, g.L), new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 }));
     suelo.rotation.x = -Math.PI / 2; suelo.position.set(0, 0.01, -g.L / 2);
     escena.add(suelo);

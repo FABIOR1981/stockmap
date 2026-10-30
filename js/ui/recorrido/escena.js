@@ -224,7 +224,8 @@ export function colocar(l, lado, d, M, grupo, hits) {
 }
 
 // Escena del pasillo: piso, luces y las estanterías de la fila en sus posiciones.
-export function construirEscena(fila, disp) {
+// g = { A, L } con el galpón en metros (o null): con medidas, el depósito es el galpón; sin medidas, se ajusta a las estanterías.
+export function construirEscena(fila, disp, g = null) {
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(0x1e293b);
   const M = materiales();
@@ -235,12 +236,15 @@ export function construirEscena(fila, disp) {
 
   // Tamaño del depósito según dónde están las estanterías (no según cuántas hay): ninguna queda afuera del piso.
   let zMin = -2, xMax = MITAD + 4;
-  fila.forEach(l => {
+  if (!g) fila.forEach(l => {
     const d = disp.get(l.id), h = huella(d.giro);
     zMin = Math.min(zMin, d.z - h.ez - 2);
     xMax = Math.max(xMax, Math.abs(d.x) + h.ex + 2);
   });
-  const zTope = 4, zFondo = zMin - 2;   // el piso llega 4 m delante de la entrada y 2 m detrás de la última estantería
+  // Con medidas: el frente del galpón es z = 0 (entrada, con 1 m de margen) y el fondo z = −L; ancho A centrado.
+  const zTope = g ? 1 : 4;
+  const zFondo = g ? -g.L : zMin - 2;   // sin medidas: el piso llega 2 m detrás de la última estantería
+  if (g) { zMin = -g.L; xMax = g.A / 2; }
   const largo = zTope - zFondo, zc = (zTope + zFondo) / 2;
   const ancho = 2 * xMax, alto = 5;
   const T = texturasDeposito();
@@ -267,8 +271,9 @@ export function construirEscena(fila, disp) {
   fila.forEach(l => {
     const d = disp.get(l.id);
     colocar(l, d.lado, d, M, grupo, hits);
-    xLim = Math.max(xLim, Math.abs(d.x) + 1.3);
+    if (!g) xLim = Math.max(xLim, Math.abs(d.x) + 1.3);
   });
+  if (g) xLim = Math.max(0.2, g.A / 2 - 0.5);   // el paso no se sale por las paredes del galpón
   escena.add(grupo);
   escena.userData.hits = hits;
   // La niebla se aleja con el tamaño del depósito, para que una estantería lejos no se pinte del color del fondo.

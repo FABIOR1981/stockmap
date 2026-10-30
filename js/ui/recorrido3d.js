@@ -4,7 +4,7 @@
 
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
-import { calcularRuta, limitesDentroDelGalpon, dentroDe } from './recorrido/ruta.js';
+import { calcularRuta, limitesDentroDelGalpon, dentroDe, acomodarEnGalpon } from './recorrido/ruta.js';
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
 import { caja, construirEscena } from './recorrido/escena.js';
 import { metrosACm } from '../core/medidas.js';
@@ -63,7 +63,21 @@ export function desmontarRecorrido3D() {
 // Disposición de las estanterías: funciones puras en recorrido/disposicion.js.
 const filasDe = edificio => agruparPasillos(ctx.dep.hijos(edificio.id), posEnPlano);
 function disposicionEdificio(edificio) { return calcularDisposicion(filasDe(edificio)); }
-function disposicionFila(edificio, fi) { return calcularFila(filasDe(edificio), fi); }
+// Medidas del galpón en metros (null si el edificio todavía no tiene medidas).
+function galponDe(edificio) {
+  return edificio.dim_ancho && edificio.dim_largo ? { A: edificio.dim_ancho / 100, L: edificio.dim_largo / 100 } : null;
+}
+// Pasillo fi con las mismas posiciones que la vista aérea si hay medidas; sin medidas, se centra el pasillo como antes.
+function disposicionFila(edificio, fi) {
+  const g = galponDe(edificio);
+  if (!g) return calcularFila(filasDe(edificio), fi);
+  const filas = filasDe(edificio);
+  const todas = acomodarEnGalpon(disposicionEdificio(edificio), g, huella);
+  const fila = filas[fi] || [];
+  const disp = new Map(fila.map(l => [l.id, { ...todas.get(l.id) }]));
+  disp.forEach(d => { d.lado = d.x < 0 ? 'izq' : 'der'; });
+  return { fila, disp };
+}
 
 // Arma la escena en el contenedor #r3d de la pantalla actual (se llama después de cada dibujo).
 export function montarRecorrido3D() {
@@ -79,7 +93,7 @@ export function montarRecorrido3D() {
   const clave = `${edificio.id}|${fi}`;
 
   const { disp } = disposicionFila(edificio, fi);
-  const { escena, zMin, xLim } = construirEscena(fila, disp);
+  const { escena, zMin, xLim } = construirEscena(fila, disp, galponDe(edificio));
   const ancho = cont.clientWidth || 800, alto = 520;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));

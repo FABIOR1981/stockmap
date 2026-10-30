@@ -100,6 +100,15 @@ export function limitesDentroDelGalpon(ancho, largo, h) {
   return { x0: -ancho / 2 + h.ex, x1: ancho / 2 - h.ex, z0: -largo + h.ez, z1: -h.ez };
 }
 
+// Acomoda en su lugar las estanterías de una disposición que se salgan del galpón (las guardadas no se tocan aparte de esto).
+export function acomodarEnGalpon(disp, g, huella) {
+  for (const d of disp.values()) {
+    const lim = limitesDentroDelGalpon(g.A, g.L, huella(d.giro));
+    d.x = dentroDe(d.x, lim.x0, lim.x1); d.z = dentroDe(d.z, lim.z0, lim.z1);
+  }
+  return disp;
+}
+
 // Acerca v al intervalo [a, b]; si el intervalo no entra (estantería más grande que el galpón), queda al centro.
 export function dentroDe(v, a, b) {
   return a > b ? (a + b) / 2 : Math.max(a, Math.min(b, v));
