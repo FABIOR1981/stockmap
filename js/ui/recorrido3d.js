@@ -113,7 +113,7 @@ export function montarRecorrido3D() {
   const zona = g
     ? { x0: -g.A / 2 + 0.6, x1: g.A / 2 - 0.6, z0: zMin + 0.6, z1: -1.5 }
     : { x0: -xLim + 0.5, x1: xLim - 0.5, z0: zMin + 0.6, z1: -1.5 };
-  const cajas = generarCajas({ semilla: semillaDe(edificio.id, fi * 7 + (S.rec.semillaCajas || 0) * 101), zona, evitar, cantidad: 10 });
+  const cajas = generarCajas({ semilla: semillaDe(edificio.id, fi * 7 + (S.cajas?.[edificio.id] || 0) * 101), zona, evitar, cantidad: 10 });
   agregarCajasSueltas(escena, cajas);
   // Dónde se puede pisar: con medidas, dentro de las paredes del galpón; siempre, fuera de las estanterías y cajas.
   const piso = g ? { x0: -g.A / 2 + RADIO_CUERPO, x1: g.A / 2 - RADIO_CUERPO, z0: zMin + 0.05, z1: 1 } : null;
@@ -373,7 +373,8 @@ export function pasillosDe(edificio) {
 
 export const accionesRecorrido3d = {
   // Otra distribución al azar de las cajas sueltas del piso.
-  recCajas: () => { S.rec.semillaCajas = (S.rec.semillaCajas || 0) + 1; },
+  // La distribución de cajas se guarda por edificio: no se pierde al buscar, Pasear o cambiar de pasillo.
+  recCajas: () => { S.cajas = { ...(S.cajas || {}), [S.nodo]: (S.cajas?.[S.nodo] || 0) + 1 }; },
   // Lleva la cámara a la entrada del pasillo, mirando hacia el fondo (para salir de entre las estanterías).
   recInicio: () => {
     if (!R.mot) return;
