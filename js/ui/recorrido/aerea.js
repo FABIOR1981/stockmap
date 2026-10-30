@@ -87,7 +87,7 @@ export function montarAerea(cont, edificio, { R, disp, desmontar }) {
       const f = frenteDe({ ...d, lado });
       const tap = new THREE.Group();
       tap.add(tapete(l.codigo, LARGO * 0.95, 0.7));
-      tap.position.set(f.x, 0.005, f.z);
+      tap.position.set(f.x, 0.05, f.z);   // por encima del piso del galpón (0,01) y de su contorno
       tap.rotation.y = f.yaw;
       grupo.add(tap);
     }
