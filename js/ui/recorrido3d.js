@@ -4,6 +4,7 @@
 
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
+import { calcularRuta } from './ruta.js';
 
 const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
 const SEP = 3.4;         // distancia entre pares de estanterías (y entre estanterías del mismo lado)
@@ -460,7 +461,8 @@ export function montarRecorrido3D() {
         // Pasear: camina desde donde está hasta frente al lugar (si está en otro pasillo, arranca desde su inicio).
         if (pos.clave !== clave) pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
         // Camina con la vista a la altura normal; al llegar ajusta la vista al estante (si hace falta).
-        paseo = { x: f.x, z: f.z, yaw: f.yaw, y: OJOS, yFin: ojo };
+        paseo = { x: f.x, z: f.z, yaw: f.yaw, y: OJOS, yFin: ojo,
+          planear: (x, z) => calcularRuta(disp, { x, z }, { x: f.x, z: f.z }, huella) };
       } else {
         pos = { clave, z: f.z, x: f.x, y: ojo, yaw: f.yaw, pitch: 0 };
         paseo = null;
@@ -552,12 +554,17 @@ export function montarRecorrido3D() {
     // Caminata automática (botón Pasear): gira hacia el lugar, camina a la velocidad normal y gira a su frente.
     if (paseo && avance === 0) {
       const cam = mot.camara.position;
+      // Ruta desde donde está hasta el frente del lugar, sin atravesar estanterías.
+      if (paseo.pts === undefined) paseo.pts = paseo.planear(cam.x, cam.z);
       if (paseo.y !== undefined) { const dy = paseo.y - cam.y; cam.y += Math.sign(dy) * Math.min(Math.abs(dy), VEL_OJOS * dt); }
-      const dx = paseo.x - cam.x, dz = paseo.z - cam.z, d = Math.hypot(dx, dz);
+      const tgt = paseo.pts[0];
+      const dx = tgt.x - cam.x, dz = tgt.z - cam.z, d = Math.hypot(dx, dz);
       if (d > 0.05) {
         const diff = angulo(Math.atan2(-dx, -dz) - mot.yaw);
         if (Math.abs(diff) > 0.05) mot.yaw += Math.sign(diff) * Math.min(Math.abs(diff), GIRO_VEL * dt);
         else { const m = Math.min(VEL * dt, d); cam.x += dx / d * m; cam.z += dz / d * m; }
+      } else if (paseo.pts.length > 1) {
+        paseo.pts.shift();   // siguiente tramo del recorrido
       } else {
         if (paseo.yFin !== undefined) paseo.y = paseo.yFin;   // ya llegó: sube o baja la vista al estante
         const diff = angulo(paseo.yaw - mot.yaw);
