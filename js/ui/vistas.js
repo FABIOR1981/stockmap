@@ -228,8 +228,9 @@ export function vistaStock() {
 
   const buscador = `<div class="panel">
     <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código o descripción" aria-label="Buscar objeto">
-    ${q ? resultadosBusqueda(q) : ''}
   </div>`;
+  // La búsqueda filtra la tabla: solo se muestran los objetos que coinciden.
+  const visibles = q ? d.objetos.filter(o => coincide(o, q)) : d.objetos;
 
   if (!d.objetos.length) {
     return `<h1>Stock</h1><p class="sub">Unidades que se identifican una por una y productos de los que hay varias.</p>
@@ -239,7 +240,7 @@ export function vistaStock() {
       ${msgHTML('obj')}`;
   }
 
-  const filas = d.objetos.map(o => {
+  const filas = visibles.map(o => {
     const ub = d.ubicacionesDe(o.id);
     const total = d.existenciaTotal(o.id);
     const alerta = d.bajoMinimo(o) ? `<span class="chip falta">Bajo mínimo (${o.minimo})</span>` : '';
@@ -250,6 +251,7 @@ export function vistaStock() {
       ? ub.map(l => {
           const c = d.cantidadEn(o.id, l.id);
           return `<span class="ubic">${esc(d.dir(l))}${o.tipo === 'producto' ? ` · <strong>${c}</strong>` : ''}
+            <button class="btn sm txt" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${l.id}" aria-label="Sacar ${esc(o.codigo_interno)} de ${esc(d.dir(l))}">Sacar</button>
             </span>`;
         }).join('')
       : `<span class="dim">Sin ubicación</span>`;
@@ -273,16 +275,24 @@ export function vistaStock() {
     </tr>`;
   }).join('');
 
+  const cuerpo = visibles.length
+    ? `<tbody>${filas}</tbody>`
+    : `<tbody><tr><td colspan="7"><p class="vacio" style="border:0;margin:0;padding:12px">No hay objetos que coincidan con "${esc(S.q)}".</p></td></tr></tbody>`;
   return `<h1>Stock</h1>
     <p class="sub">${d.objetos.length} ${d.objetos.length === 1 ? 'objeto' : 'objetos'} en ${esc(d.establecimientoActual()?.nombre || '')}.</p>
     ${buscador}
     <section class="panel" style="margin-top:16px;padding:0;overflow:auto">
       <table>
         <thead><tr><th>Interno</th><th>Tipo</th><th class="oc-celular">Propio</th><th>Descripción</th><th>Existencias</th><th>Ubicación</th><th>Acciones</th></tr></thead>
-        <tbody>${filas}</tbody>
+        ${cuerpo}
       </table>
     </section>
     ${msgHTML('obj')}`;
+}
+
+// Coincidencia de búsqueda: código interno, código propio o descripción (sin mayúsculas).
+function coincide(o, q) {
+  return [o.codigo_interno, o.codigo_propio, o.descripcion].some(x => x && x.toLowerCase().includes(q));
 }
 
 export function resultadosBusqueda(q) {
