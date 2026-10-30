@@ -395,7 +395,10 @@ function montarAerea(cont, edificio) {
     if (!arrastre) return;
     const { movido } = arrastre;
     arrastre = null;
-    if (movido) guardarDisposicion(disp);
+    if (movido) {
+      guardarDisposicion(disp);
+      ctx.sincronizar?.();   // el arrastre no pasa por un botón: hay que mandar el cambio al servidor
+    }
     ctx.render();   // redibuja (también marca la estantería elegida)
   };
   renderer.domElement.addEventListener('pointerdown', onDown);
