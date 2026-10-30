@@ -234,6 +234,13 @@ export const ACCIONES = {
     S.elegirNodo = null; S.elegirLugares = []; S.modal = 'elegirLugar'; S.msg = {};
   },
   elegirOrigen: el => { S.elegirOrigen = el.id || null; S.msg = {}; },
+  // Desde Stock: lleva a Por código con el objeto ya cargado; solo falta tocar el lugar.
+  asignarDesdeStock: el => {
+    const o = d().objetoPorId(el.oid);
+    S.f.codObjeto = o?.codigo_interno || '';
+    S.f.codLugar = '';
+    S.vista = 'codigo'; S.msg = {}; S.enfocar = 'codLugar';
+  },
   elegirIr: el => { S.elegirNodo = el.id || null; S.msg = {}; },
   // Una unidad va en un solo lugar: se asigna de una vez. Un producto puede ir en varios lugares
   // aledaños: el primero que se toca manda, y los siguientes tienen que estar cerca de él.

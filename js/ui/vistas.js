@@ -43,12 +43,12 @@ function contenidoAsignacion(l, destino) {
 function contenidoPendientes(l, destino) {
   const d = ctx.dep;
   const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
-  const pruebas = `<div class="acciones-fila" style="margin:6px 0 10px">
+  const pruebas = !d.puedeGestionar() ? '' : `<div class="acciones-fila" style="margin:6px 0 10px">
     <button class="btn sec sm" data-act="cargarPaquetesPrueba">Agregar 12 paquetes de prueba</button>
     <button class="btn sec sm" data-act="ubicarPaquetesPrueba">Ubicar paquetes de prueba en lugares al azar</button>
     <button class="btn sec sm" data-act="devolverPaquetesPrueba">Devolver paquetes de prueba a pendientes</button>
   </div>`;
-  if (!pendientes.length) return `${pruebas}<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
+  if (!pendientes.length) return `${pruebas}<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar. Para cargar uno nuevo, usá Stock → Nuevo objeto.</p>${msgHTML('objetos')}`;
   const error = d.lugarDestino(destino.id);
   const cabecera = `<p class="ayuda" style="margin:0 0 6px">Asignar a <strong>${esc(d.dir(destino))}</strong>${destino.id === l.id ? '' : ' (seleccionado)'}. Tocá un objeto para ponerlo ahí.</p>`;
   if (typeof error === 'string') {
@@ -204,6 +204,7 @@ export function vistaCodigo() {
       <div class="form">
         ${campo('Código del lugar', `<input data-f="codLugar" data-enter="enfocar" data-campo="codObjeto" value="${esc(S.f.codLugar)}" placeholder="Ej.: 1 · A · 2 (o escaneá)" autocomplete="off">`)}
         ${campo('Código del objeto', `<input data-f="codObjeto" data-enter="asignarPorCodigo" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC (o escaneá)" autocomplete="off">`)}
+        ${infoObjetoPorCodigo(S.f.codObjeto)}
         ${campo('Cantidad', `<input data-f="codCant" value="${esc(S.f.codCant)}" size="5" inputmode="numeric">`)}
       </div>
       <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="asignarPorCodigo">Asignar</button></div>
@@ -269,7 +270,7 @@ export function vistaStock() {
         ${cantidad}
         ${ub.length
           ? `<button class="btn sm sec" data-act="moverEnPlano" data-oid="${o.id}">Mover</button>`
-          : `<button class="btn sm sec" data-act="elegirEnPlano" data-oid="${o.id}">Asignar en el plano</button>`}
+          : `<button class="btn sm sec" data-act="asignarDesdeStock" data-oid="${o.id}">Asignar</button>`}
         <button class="btn sm peligro" data-act="borrarObjeto" data-oid="${o.id}">Borrar</button>
       </div></td>
     </tr>`;
@@ -288,6 +289,18 @@ export function vistaStock() {
       </table>
     </section>
     ${msgHTML('obj')}`;
+}
+
+// Debajo del código: qué objeto es, para confirmarlo antes de asignar. Vacío si no se escribió nada.
+function infoObjetoPorCodigo(texto) {
+  const d = ctx.dep;
+  const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const c = norm(texto);
+  if (!c) return '';
+  const o = d.objetos.find(x => norm(x.codigo_interno) === c || (x.codigo_propio && norm(x.codigo_propio) === c));
+  return o
+    ? `<p class="ayuda" style="margin:-4px 0 0">Objeto: <strong>${esc(o.descripcion || o.codigo_propio || o.codigo_interno)}</strong> (${o.tipo === 'producto' ? 'producto' : 'unidad'})</p>`
+    : `<p class="ayuda" style="margin:-4px 0 0;color:#b91c1c">No encuentro un objeto con ese código.</p>`;
 }
 
 // Coincidencia de búsqueda: código interno, código propio o descripción (sin mayúsculas).
