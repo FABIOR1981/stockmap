@@ -31,7 +31,10 @@ export const ACCIONES = {
   // Entre Asignación, Mover y Recorrido se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
   vista:   el => {
     const enPlano = v => ['plano', 'mover', 'recorrido3d'].includes(v);
-    if (!(enPlano(S.vista) && enPlano(el.v))) { S.nodo = null; S.elegido = null; }
+    if (!(enPlano(S.vista) && enPlano(el.v))) S.nodo = null;
+    // El lugar seleccionado es el destino de 'Por asignar': al cambiar de vista no se hereda uno de adentro
+    // (por ejemplo, un hueco encontrado en el recorrido). El destino vuelve a ser el edificio que se está mirando.
+    S.elegido = null;
     S.vista = el.v; S.msg = {};
   },
   // Entrar a un lugar se queda en la vista donde se está (Asignación o Mover).
