@@ -5,6 +5,8 @@ export const LARGO = 2.2;    // largo de cada estantería, a lo largo del pasill
 export const SEP = 3.4;      // distancia entre pares de estanterías (y entre estanterías del mismo lado)
 export const FONDO = 0.9;    // cuánto sobresale cada estante hacia el pasillo
 export const MITAD = 2.3;    // distancia desde el centro del pasillo hasta cada columna
+export const ALTO = 2.6;     // altura de los estantes, desde la base hacia arriba
+export const BASE = 0;      // altura de la tabla más baja (0 = desde el piso); los estantes se apilan hacia arriba
 
 // Medias dimensiones de una estantería en el piso, según su giro (0-3 cuartos de vuelta).
 export const huella = giro => (giro % 2 === 0 ? { ex: FONDO / 2, ez: LARGO / 2 } : { ex: LARGO / 2, ez: FONDO / 2 });
