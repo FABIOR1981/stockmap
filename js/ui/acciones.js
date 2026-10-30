@@ -283,6 +283,14 @@ export const ACCIONES = {
     cerrarElegir(`${d().objetoPorId(oid).codigo_interno} agregado en ${ids.length} ${ids.length > 1 ? 'lugares' : 'lugar'}.`);
   },
 
+  cargarPaquetesPrueba: () => {
+    const r = d().cargarPaquetesPrueba();
+    aviso('objetos', r.error, `Paquetes de prueba agregados: ${r.creados}.`);
+  },
+  devolverPaquetesPrueba: () => {
+    const r = d().devolverPaquetesPrueba();
+    aviso('objetos', r.error, `Paquetes de prueba devueltos a pendientes: ${r.sacados}.`);
+  },
   abrirNuevoObjeto: () => { S.modal = 'nuevoObjeto'; S.msg = {}; },
   crearObjeto: () => {
     const r = d().crearObjeto(S.f.codigoP, S.f.desc, S.f.tipoNuevo, S.f.minimoNuevo);

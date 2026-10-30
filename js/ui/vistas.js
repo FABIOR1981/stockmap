@@ -43,7 +43,11 @@ function contenidoAsignacion(l, destino) {
 function contenidoPendientes(l, destino) {
   const d = ctx.dep;
   const pendientes = d.objetos.filter(o => d.ubicacionesDe(o.id).length === 0);
-  if (!pendientes.length) return `<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
+  const pruebas = `<div class="acciones-fila" style="margin:6px 0 10px">
+    <button class="btn sec sm" data-act="cargarPaquetesPrueba">Agregar 12 paquetes de prueba</button>
+    <button class="btn sec sm" data-act="devolverPaquetesPrueba">Devolver paquetes de prueba a pendientes</button>
+  </div>`;
+  if (!pendientes.length) return `${pruebas}<p class="vacio" style="border:0;padding:12px">No quedan objetos por asignar.</p>${msgHTML('objetos')}`;
   const error = d.lugarDestino(destino.id);
   const cabecera = `<p class="ayuda" style="margin:0 0 6px">Asignar a <strong>${esc(d.dir(destino))}</strong>${destino.id === l.id ? '' : ' (seleccionado)'}. Tocá un objeto para ponerlo ahí.</p>`;
   if (typeof error === 'string') {
@@ -54,7 +58,7 @@ function contenidoPendientes(l, destino) {
       + (arriba.length ? ` Tiene objetos puestos más arriba: ${arriba.join(', ')}.` : '');
     return `${cabecera}<p class="dim" style="font-size:13px;margin:0">No puede recibir objetos. ${esc(error)}${esc(detalle)} Elegí otro lugar en el plano.</p>${msgHTML('objetos')}`;
   }
-  return `${cabecera}<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
+  return `${cabecera}${pruebas}<p class="ayuda" style="margin:0 0 6px">${pendientes.length} ${pendientes.length === 1 ? 'objeto' : 'objetos'} sin lugar.</p>
     <div class="dlg-lista compacta">${pendientes.map(o => `<div class="r obj-asignable" role="button" tabindex="0" data-act="ponerObjeto" data-oid="${o.id}" data-lugar="${destino.id}">
       <span>${etiquetaObj(o)}${detalleObj(o)}</span>
       <span class="acciones-fila"><button class="btn sm txt" data-act="etiquetaObjeto" data-oid="${o.id}" aria-label="Imprimir etiqueta de ${esc(o.codigo_interno)}" title="Imprimir etiqueta">${ic('qr', 14)}</button></span>

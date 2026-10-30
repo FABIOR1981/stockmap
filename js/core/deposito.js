@@ -452,6 +452,35 @@ export class Deposito {
     return this.asignaciones.filter(a => a.lid === lid && a.cantidad > 0)
       .map(a => this.objetoPorId(a.oid)).filter(Boolean);
   }
+  // Paquetes de prueba (código PEND-01 a PEND-12): quedan sin lugar, o sea pendientes de asignación.
+  static PAQUETES_PRUEBA = [
+    'Caja de tornillos M8', 'Rollo de cinta de embalar', 'Caja de guantes talle M', 'Bolsa de clavos 2"',
+    'Caja de filtros de aire', 'Bolsa de cemento 25 kg', 'Caja de lámparas LED', 'Juego de llaves Allen',
+    'Paquete de etiquetas térmicas', 'Caja de cable UTP', 'Bidón de aceite 5 L', 'Caja de pilas AA',
+  ];
+  cargarPaquetesPrueba() {
+    const err = this._exigir('editar'); if (err) return { error: err };
+    let creados = 0;
+    Deposito.PAQUETES_PRUEBA.forEach((desc, i) => {
+      const cp = `PEND-${String(i + 1).padStart(2, '0')}`;
+      if (this.objetos.some(o => o.codigo_propio === cp)) return;
+      if (!this.crearObjeto(cp, desc).error) creados++;
+    });
+    return { creados };
+  }
+  // Saca de sus lugares a los paquetes de prueba: vuelven a quedar pendientes de asignación.
+  devolverPaquetesPrueba() {
+    const err = this._exigir('editar'); if (err) return { error: err };
+    const de = this.objetos.filter(o => (o.codigo_propio || '').startsWith('PEND-')).map(o => o.id);
+    let sacados = 0;
+    for (const a of this.asignaciones.filter(a => de.includes(a.oid) && a.cantidad > 0)) {
+      const e = this.retirar(a.oid, a.lid, a.cantidad);
+      if (e) return { error: e, sacados };
+      sacados++;
+    }
+    return { sacados };
+  }
+
   ubicacionesDe(oid) {
     return this.asignaciones.filter(a => a.oid === oid && a.cantidad > 0)
       .map(a => this.porId(a.lid)).filter(Boolean);
