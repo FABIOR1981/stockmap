@@ -406,7 +406,7 @@ export function vistaAccesos() {
       ${campo('Nombre', `<input data-f="nuevoUsuario" value="${esc(S.f.nuevoUsuario)}" placeholder="Nombre">`)}
       ${campo('Email', `<input data-f="nuevoUsuarioEmail" type="email" value="${esc(S.f.nuevoUsuarioEmail)}" placeholder="correo@ejemplo.com">`)}
       ${campo('Contraseña inicial', `<input data-f="nuevoUsuarioClave" type="password" value="${esc(S.f.nuevoUsuarioClave)}" placeholder="Mínimo 8 caracteres" autocomplete="new-password">`)}
-      <label class="campo"><span>&nbsp;</span><span><input type="checkbox" data-f="nuevoUsuarioAdmin" ${S.f.nuevoUsuarioAdmin ? 'checked' : ''}> Administrador general</span></label>
+      <label class="check"><input type="checkbox" data-f="nuevoUsuarioAdmin" ${S.f.nuevoUsuarioAdmin ? 'checked' : ''}> Administrador general</label>
       <button class="btn sm" data-act="crearUsuario">Crear usuario</button>
     </div>
     ${msgHTML('usuario')}

@@ -277,13 +277,16 @@ function panelMedidas(edificio) {
 
 export function vistaRecorrido3D() {
   const dep = ctx.dep;
-  if (!dep.eid) return `<h1>Recorrido</h1><p class="vacio">Elegí un cliente en el menú de cuenta para ver su depósito.</p>`;
+  if (!dep.eid) return `<h1>Recorrido</h1><div class="vacio"><p>Elegí un cliente para ver su depósito.</p><small>Está en el menú de cuenta, abajo a la izquierda.</small></div>`;
   const edificio = S.nodo ? dep.porId(S.nodo) : null;
   if (!edificio || dep.prof(edificio) !== 0) {
     const edificios = dep.hijos(null);
+    if (!edificios.length) return `<h1>Recorrido</h1><div class="vacio"><p>Todavía no hay edificios para recorrer.</p><small>Creá uno en Asignación y cargá sus medidas para verlo en 3D.</small></div>`;
     return `<h1>Recorrido</h1>
       <p class="sub">Elegí un edificio para caminar por sus pasillos.</p>
-      <div class="rec-edificios">${edificios.map(e => `<button class="btn sec" data-act="recIr" data-id="${e.id}">${esc(e.codigo)}${e.nombre ? ` ${esc(e.nombre)}` : ''}</button>`).join('')}</div>`;
+      <div class="rec-edificios">${edificios.map(e => `<button class="rec-ed" data-act="recIr" data-id="${e.id}">
+          <strong>${esc(e.codigo)}${e.nombre ? ` · ${esc(e.nombre)}` : ''}</strong>
+          <small>Recorrer pasillos →</small></button>`).join('')}</div>`;
   }
   const filas = pasillosDe(edificio);
   const f = Math.min(S.rec.fila || 0, filas.length - 1);
