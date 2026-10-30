@@ -141,8 +141,8 @@ function bloqueContenido(l, estilo) {
   const d = ctx.dep;
   const objs = d.objetosDe(l.id);
   const n = objs.length;
-  // Siempre gris: el contador ya dice cuántos hay, y así no se confunde con los lugares de colores.
-  const cls = 'sub';
+  // Mismos colores que la leyenda: libre (verde) o con objetos (azul). El contador dice cuántos hay.
+  const cls = n ? 'obj' : 'libre';
   const seleccion = S.elegido === l.id ? ' elegido' : '';
   return `<div class="bloque ${cls}${seleccion}" data-act="planoSeleccionar" data-contenido="1" data-id="${l.id}" role="button" tabindex="0" style="${estilo}">
     <span class="nivel">Contenido</span>
