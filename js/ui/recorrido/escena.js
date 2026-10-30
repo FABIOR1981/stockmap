@@ -1,6 +1,7 @@
 // Escena del recorrido 3D: piso, paredes, estanterías, etiquetas y objetos (Three.js como global THREE).
 // Sin estado de la pantalla: solo construye los objetos a partir de la disposición.
 
+import { RADIO_CUERPO } from './ruta.js';
 import { ctx } from '../estado.js';
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella } from './disposicion.js';
 
@@ -273,7 +274,7 @@ export function construirEscena(fila, disp, g = null) {
     colocar(l, d.lado, d, M, grupo, hits);
     if (!g) xLim = Math.max(xLim, Math.abs(d.x) + 1.3);
   });
-  if (g) xLim = Math.max(0.2, g.A / 2 - 0.5);   // el paso no se sale por las paredes del galpón
+  if (g) xLim = Math.max(0.2, g.A / 2 - RADIO_CUERPO);   // el paso llega hasta la pared, con el margen del cuerpo
   escena.add(grupo);
   escena.userData.hits = hits;
   // La niebla se aleja con el tamaño del depósito, para que una estantería lejos no se pinte del color del fondo.

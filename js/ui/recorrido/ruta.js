@@ -3,13 +3,26 @@
 // Ruta por el piso entre dos puntos sin atravesar estanterías (cuenta un margen para el cuerpo).
 // A* sobre una grilla; después se acorta: se va en línea recta siempre que el tramo quede libre.
 const CELDA = 0.2;          // tamaño de cada celda de la grilla, en metros
-const RADIO_CUERPO = 0.3;   // margen alrededor de cada estantería
-export function calcularRuta(disp, desde, hasta, medidas) {
+export const RADIO_CUERPO = 0.3;   // margen alrededor de cada estantería y de las paredes
+
+// Regla de "se puede pisar" para la caminata: dentro del piso (si hay límites) y fuera de las estanterías con su margen.
+// Es la misma para la ruta de Pasear y para caminar a mano, así no se cruza nada que la ruta esquive.
+export function pisoLibre(disp, medidas, limites = null) {
   const cajas = [...disp.values()].map(d => {
     const h = medidas(d.giro);
     return { x: d.x, z: d.z, ex: h.ex + RADIO_CUERPO, ez: h.ez + RADIO_CUERPO };
   });
-  const libre = (x, z) => !cajas.some(c => Math.abs(x - c.x) < c.ex && Math.abs(z - c.z) < c.ez);
+  return (x, z) => (!limites || (x >= limites.x0 && x <= limites.x1 && z >= limites.z0 && z <= limites.z1))
+    && !cajas.some(c => Math.abs(x - c.x) < c.ex && Math.abs(z - c.z) < c.ez);
+}
+
+// limites (opcional): { x0, x1, z0, z1 } del piso del galpón; la ruta no sale de ahí.
+export function calcularRuta(disp, desde, hasta, medidas, limites = null) {
+  const cajas = [...disp.values()].map(d => {
+    const h = medidas(d.giro);
+    return { x: d.x, z: d.z, ex: h.ex + RADIO_CUERPO, ez: h.ez + RADIO_CUERPO };
+  });
+  const libre = pisoLibre(disp, medidas, limites);
   const x0 = Math.min(desde.x, hasta.x, ...cajas.map(c => c.x - c.ex)) - 1;
   const x1 = Math.max(desde.x, hasta.x, ...cajas.map(c => c.x + c.ex)) + 1;
   const z0 = Math.min(desde.z, hasta.z, ...cajas.map(c => c.z - c.ez)) - 1;

@@ -4,7 +4,7 @@
 
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
-import { calcularRuta, limitesDentroDelGalpon, dentroDe, acomodarEnGalpon } from './recorrido/ruta.js';
+import { calcularRuta, limitesDentroDelGalpon, dentroDe, acomodarEnGalpon, pisoLibre, RADIO_CUERPO } from './recorrido/ruta.js';
 import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
 import { caja, construirEscena } from './recorrido/escena.js';
 import { metrosACm } from '../core/medidas.js';
@@ -93,7 +93,11 @@ export function montarRecorrido3D() {
   const clave = `${edificio.id}|${fi}`;
 
   const { disp } = disposicionFila(edificio, fi);
-  const { escena, zMin, xLim } = construirEscena(fila, disp, galponDe(edificio));
+  const g = galponDe(edificio);
+  const { escena, zMin, xLim } = construirEscena(fila, disp, g);
+  // Dónde se puede pisar: con medidas, dentro de las paredes del galpón; siempre, fuera de las estanterías.
+  const piso = g ? { x0: -g.A / 2 + RADIO_CUERPO, x1: g.A / 2 - RADIO_CUERPO, z0: zMin + 0.05, z1: 1 } : null;
+  const libre = pisoLibre(disp, huella, piso);
   const ancho = cont.clientWidth || 800, alto = 520;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -118,7 +122,7 @@ export function montarRecorrido3D() {
         if (R.pos.clave !== clave) R.pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
         // Camina con la vista a la altura normal; al llegar ajusta la vista al estante (si hace falta).
         R.paseo = { x: f.x, z: f.z, yaw: f.yaw, y: OJOS, yFin: ojo,
-          planear: (x, z) => calcularRuta(disp, { x, z }, { x: f.x, z: f.z }, huella) };
+          planear: (x, z) => calcularRuta(disp, { x, z }, { x: f.x, z: f.z }, huella, piso) };
       } else {
         R.pos = { clave, z: f.z, x: f.x, y: ojo, yaw: f.yaw, pitch: 0 };
         R.paseo = null;
@@ -139,7 +143,7 @@ export function montarRecorrido3D() {
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
 
-  R.mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: R.pos.yaw, pitch: R.pos.pitch || 0, w: ancho, h: alto, xLim };
+  R.mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: R.pos.yaw, pitch: R.pos.pitch || 0, w: ancho, h: alto, xLim, libre };
 
   // Tocar un hueco selecciona su lugar; la lista de abajo muestra lo que tiene.
   const rayo = new THREE.Raycaster();
@@ -228,6 +232,19 @@ export function montarRecorrido3D() {
         else R.paseo = null;
       }
     }
+    // No entrar en una estantería ni en una pared: si el paso choca, se desliza por el lado que queda libre.
+    const cam = R.mot.camara.position;
+    if (R.mot.px !== undefined && R.mot.libre(R.mot.px, R.mot.pz) && !R.mot.libre(cam.x, cam.z)) {
+      if (R.mot.libre(cam.x, R.mot.pz)) cam.z = R.mot.pz;
+      else if (R.mot.libre(R.mot.px, cam.z)) cam.x = R.mot.px;
+      else { cam.x = R.mot.px; cam.z = R.mot.pz; }
+    }
+    // Si la caminata automática no avanza (una pared o estantería no esperada), se corta en vez de quedar trabada.
+    if (R.paseo && R.mot.px !== undefined) {
+      const movio = Math.hypot(cam.x - R.mot.px, cam.z - R.mot.pz) > 1e-4 || Math.abs(R.mot.yaw - R.mot.yawPrev) > 1e-3;
+      R.paseo.quieto = movio ? 0 : (R.paseo.quieto || 0) + dt;
+      if (R.paseo.quieto > 3) R.paseo = null;
+    }
     // Quedarse dentro del pasillo.
     R.mot.camara.position.x = Math.max(-R.mot.xLim, Math.min(R.mot.xLim, R.mot.camara.position.x));
     // Llegar al final del pasillo y seguir caminando cruza al pasillo transversal.
@@ -235,6 +252,7 @@ export function montarRecorrido3D() {
     if (avance > 0 && zAct <= zMin + 0.05 && cruzar(1)) return;
     if (avance < 0 && zAct >= 0.55 && cruzar(-1)) return;
     R.mot.camara.position.z = Math.max(zMin, Math.min(0.6, zAct));
+    R.mot.px = R.mot.camara.position.x; R.mot.pz = R.mot.camara.position.z; R.mot.yawPrev = R.mot.yaw;
     R.mot.camara.rotation.set(R.mot.pitch, R.mot.yaw, 0, 'YXZ');
     R.mot.renderer.render(escena, R.mot.camara);
     R.mot.raf = requestAnimationFrame(frame);
