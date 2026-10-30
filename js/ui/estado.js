@@ -19,6 +19,7 @@ export const S = {
   editar: null, clon: null, verObj: null,
   f: {
     codigo: '', nombre: '', desde: '', hasta: '', cantClon: '1',
+    ancho: '', largo: '', alto: '',       // medidas del edificio nuevo, en metros
     codigoP: '', desc: '', tipoNuevo: 'producto', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)

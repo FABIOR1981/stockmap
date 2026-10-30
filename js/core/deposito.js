@@ -160,8 +160,18 @@ export class Deposito {
     return this.lugares.some(l => l.padre_id && this.edificioDe(l).id === edId && this.prof(l) === profundidad);
   }
 
-  crearLugar(padreId, codigo, nombre) {
+  crearLugar(padreId, codigo, nombre, medidas = null) {
     const err = this._exigir('editar'); if (err) return { error: err };
+    // Medidas del edificio (cm): solo para edificios (raíz), todas o ninguna.
+    const dims = {};
+    if (medidas) {
+      if (padreId) return { error: 'Las medidas se indican solo al crear un edificio.' };
+      const vals = ['ancho', 'largo', 'alto'].map(k => medidas[k]);
+      if (vals.some(v => v != null)) {
+        if (vals.some(v => !Number.isInteger(v) || v < 1 || v > 100000)) return { error: 'Las medidas deben ser de 1 cm o más.' };
+        Object.assign(dims, { dim_ancho: vals[0], dim_largo: vals[1], dim_alto: vals[2] });
+      }
+    }
     const { def, ed } = this.nivelParaHijo(padreId);
     if (!def) return { error: `Este edificio no tiene nivel para esta profundidad. Agregalo en "Niveles de ${ed.codigo}".` };
     const F = FORMATOS[def.formato];
@@ -176,7 +186,7 @@ export class Deposito {
     this.almacen.insertar('lugares', {
       id, eid: this.eid, padre_id: padreId || null, codigo: cod,
       nombre: (def.nombreOpcional && nombre) ? nombre.trim() : '',
-      niveles: []
+      niveles: [], ...dims
     });
     return { id };
   }
@@ -205,10 +215,10 @@ export class Deposito {
   }
 
   // Crea un lugar y, si hay cuentas, sus hijos y nietos según la estructura del edificio.
-  crearArbol(padreId, codigo, nombre, cuentas = []) {
+  crearArbol(padreId, codigo, nombre, cuentas = [], medidas = null) {
     const err = this.validarCuentas(padreId, cuentas);
     if (err) return { error: err };
-    const r = this.crearLugar(padreId, codigo, nombre);
+    const r = this.crearLugar(padreId, codigo, nombre, medidas);
     if (r.error) return r;
     let creados = 1;
     const hijos = (padre, k) => {

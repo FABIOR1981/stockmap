@@ -441,6 +441,12 @@ export function ventana() {
             ${campo('Código', `<input data-f="codigo" value="${esc(S.f.codigo)}" placeholder="Ej.: ${FORMATOS[def.formato].ej}">`)}
             ${def.nombreOpcional ? campo('Nombre (opcional)', `<input data-f="nombre" value="${esc(S.f.nombre)}">`) : ''}
           </div>
+          ${nodo ? '' : `<p class="dim" style="font-size:13px;margin:12px 0 4px">Medidas del edificio, en metros (opcional):</p>
+          <div class="form">
+            ${campo('Ancho (m)', `<input data-f="ancho" inputmode="decimal" value="${esc(S.f.ancho)}" placeholder="Ej.: 20">`)}
+            ${campo('Largo (m)', `<input data-f="largo" inputmode="decimal" value="${esc(S.f.largo)}" placeholder="Ej.: 40">`)}
+            ${campo('Alto (m)', `<input data-f="alto" inputmode="decimal" value="${esc(S.f.alto)}" placeholder="Ej.: 8">`)}
+          </div>`}
           <p class="dim" style="font-size:13px;margin:8px 0 0">Formato: ${FORMATOS[def.formato].txt}.</p>
           ${bloqueEstructura(nodo, def)}
           ${msgHTML('crear')}

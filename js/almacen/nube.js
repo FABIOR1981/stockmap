@@ -22,7 +22,8 @@ export function aFilasDb(almacen) {
   d.membresias.forEach(m => poner('membresias', { usuario_id: m.uid, establecimiento_id: m.eid, rol: m.rol }));
   d.lugares.forEach(l => {
     poner('lugares', { id: l.id, establecimiento_id: l.eid, padre_id: l.padre_id ?? null, codigo: l.codigo, nombre: l.nombre ?? '',
-      pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null, vista_x: l.vista_x ?? null, vista_z: l.vista_z ?? null, vista_giro: l.vista_giro ?? null });
+      pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null, vista_x: l.vista_x ?? null, vista_z: l.vista_z ?? null, vista_giro: l.vista_giro ?? null,
+      dim_ancho: l.dim_ancho ?? null, dim_largo: l.dim_largo ?? null, dim_alto: l.dim_alto ?? null });
     if (!l.padre_id) {
       (l.niveles || []).forEach((n, i) => poner('niveles_edificio', {
         edificio_id: l.id, orden: i + 1, nombre: n.nombre, formato: n.formato, nombre_opcional: !!n.nombreOpcional
@@ -58,6 +59,7 @@ export function aEstadoModelo(datos) {
       lugares: (datos.lugares || []).map(l => ({
         id: l.id, eid: l.establecimiento_id, padre_id: l.padre_id, codigo: l.codigo, nombre: l.nombre ?? '',
         pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null, vista_x: l.vista_x ?? null, vista_z: l.vista_z ?? null, vista_giro: l.vista_giro ?? null,
+        dim_ancho: l.dim_ancho ?? null, dim_largo: l.dim_largo ?? null, dim_alto: l.dim_alto ?? null,
         niveles: l.padre_id ? [] : (niveles[l.id] || []).map(({ nombre, formato, nombreOpcional }) => ({ nombre, formato, nombreOpcional }))
       })),
       objetos: (datos.objetos || []).map(o => ({

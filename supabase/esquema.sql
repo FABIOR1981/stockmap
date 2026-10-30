@@ -67,6 +67,9 @@ create table if not exists lugares (
   vista_x             integer,   -- centro en el piso del recorrido 3D, en cm (null = por defecto)
   vista_z             integer,
   vista_giro          smallint,  -- cuartos de vuelta: 0 a 3
+  dim_ancho           integer,   -- solo edificios: ancho, en cm (null = sin medir)
+  dim_largo           integer,   -- largo, en cm
+  dim_alto            integer,   -- altura, en cm
   creado_en           timestamptz not null default now()
 );
 
