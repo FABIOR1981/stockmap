@@ -61,7 +61,8 @@ const NOMBRES_VISTA = { plano: 'Asignación', codigo: 'Por código', mover: 'Mov
 
 export function migasHTML() {
   const d = ctx.dep;
-  if (!['plano', 'mover'].includes(S.vista)) return `<b>${NOMBRES_VISTA[S.vista] || ''}</b>`;
+  // Las vistas de primer nivel ya se nombran en el título de la página: no se repite en la barra.
+  if (!['plano', 'mover'].includes(S.vista)) return '';
   const raiz = NOMBRES_VISTA[S.vista];
   const nodo = S.nodo ? d.porId(S.nodo) : null;
   const ruta = nodo ? d.ruta(nodo) : [];

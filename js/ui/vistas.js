@@ -198,7 +198,7 @@ export function vistaPlano() {
 export function vistaCodigo() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Por código</h1>${sinCliente()}`;
-  return `<h1>Asignar por código</h1>
+  return `<h1>Por código</h1>
     <p class="sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
     <section class="panel" style="max-width:560px">
       <div class="form">
