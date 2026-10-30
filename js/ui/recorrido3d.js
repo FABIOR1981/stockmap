@@ -72,8 +72,29 @@ function etiqueta(texto) {
   g.textBaseline = 'middle';
   g.fillText(String(texto), 256, 66);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
-  sp.scale.set(1.5, 0.375, 1);
+  sp.scale.set(2.2, 0.55, 1);
   return sp;
+}
+
+// Tapete plano en el piso con el código de la estantería.
+function tapete(texto, ancho, largo) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = Math.round(512 * largo / ancho);
+  const g = c.getContext('2d');
+  g.fillStyle = 'rgba(15, 23, 42, 0.85)';
+  g.fillRect(0, 0, c.width, c.height);
+  g.strokeStyle = '#f8fafc';
+  g.lineWidth = 10;
+  g.strokeRect(14, 14, c.width - 28, c.height - 28);
+  g.fillStyle = '#f8fafc';
+  g.font = `bold ${Math.round(c.height * 0.5)}px sans-serif`;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(String(texto), c.width / 2, c.height / 2);
+  const mat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, side: THREE.DoubleSide });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), mat);
+  m.rotation.x = -Math.PI / 2;
+  return m;
 }
 
 // Placa plana pegada a una superficie (no gira con la cámara): letras y números de los estantes.
@@ -114,8 +135,12 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, top, 0.05, M.poste, xFrente, top / 2, z)));
   // Código de la estantería, arriba de la columna.
   const rotulo = etiqueta(l.codigo);
-  rotulo.position.set(xPared, top + 0.35, zc);
+  rotulo.position.set(xPared, top + 0.5, zc);
   grupo.add(rotulo);
+  // Tapete en el piso, frente a la estantería: se lee desde el pasillo.
+  const tap = tapete(l.codigo, 1.0, 0.5);
+  tap.position.set(xFrente + dir * 0.5, 0.01, zc);
+  grupo.add(tap);
 
   // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
   const bandH = alto / n;
