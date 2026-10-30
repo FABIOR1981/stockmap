@@ -76,7 +76,7 @@ function etiqueta(texto) {
   return sp;
 }
 
-// Tapete plano en el piso con el código de la estantería.
+// Placa con el código de la estantería (se coloca de pie, frente al pasillo).
 function tapete(texto, ancho, largo) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = Math.round(512 * largo / ancho);
@@ -92,9 +92,7 @@ function tapete(texto, ancho, largo) {
   g.textBaseline = 'middle';
   g.fillText(String(texto), c.width / 2, c.height / 2);
   const mat = new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, side: THREE.DoubleSide });
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), mat);
-  m.rotation.x = -Math.PI / 2;
-  return m;
+  return new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), mat);
 }
 
 // Placa plana pegada a una superficie (no gira con la cámara): letras y números de los estantes.
@@ -137,9 +135,9 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   const rotulo = etiqueta(l.codigo);
   rotulo.position.set(xPared, top + 0.5, zc);
   grupo.add(rotulo);
-  // Tapete en el piso, frente a la estantería: se lee desde el pasillo.
-  const tap = tapete(l.codigo, 1.0, 0.5);
-  tap.position.set(xFrente + dir * 0.5, 0.01, zc);
+  // Placa de pie al inicio de la estantería, mirando hacia el pasillo de entrada: se lee de frente al caminar.
+  const tap = tapete(l.codigo, 0.7, 0.35);
+  tap.position.set(xFrente + dir * 0.3, 0.3, zFrente + 0.25);
   grupo.add(tap);
 
   // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
