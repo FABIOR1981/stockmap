@@ -59,6 +59,7 @@ export function materiales() {
   return {
     estante: new THREE.MeshStandardMaterial({ color: 0xea580c, roughness: 0.6 }),   // tablas naranjas
     poste: new THREE.MeshStandardMaterial({ color: 0x1e3a8a, roughness: 0.5, metalness: 0.2 }),   // columnas azules
+    destacado: new THREE.MeshBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.6, depthWrite: false }),
     obj: new THREE.MeshStandardMaterial({ map: T.carton, roughness: 0.9 }),
     piso: new THREE.MeshStandardMaterial({ map: T.piso, roughness: 0.95 }),
     pared: new THREE.MeshStandardMaterial({ map: T.pared, roughness: 0.6, metalness: 0.3, side: THREE.DoubleSide }),
@@ -203,6 +204,13 @@ export function estanteria(l, lado, zFrente, M, grupo, hits) {
       const zCentro = zFrente - cl * (posicionEnEstante(ci, celdas.length, dir) + 0.5);
       // Hueco libre: una marca verde sobre la tabla. Los ocupados muestran sus cajas.
       if (objs.length === 0) grupo.add(caja(FONDO * 0.8, 0.01, cl * 0.8, M.libre, xMed, yTabla + 0.06, zCentro));
+      // Hueco buscado: un destello amarillo que la cámara enciende al llegar (oculto hasta entonces).
+      if (c.id === M.destacadoId) {
+        const destello = caja(FONDO * 0.9, 0.02, cl * 0.9, M.destacado, xMed, yTabla + 0.09, zCentro);
+        destello.visible = false;
+        grupo.add(destello);
+        M.destacadoMesh = destello;
+      }
       for (let j = 0; j < m; j++) {
         const z = zCentro - (cl * 0.6) / 2 + (cl * 0.6) * (j + 0.5) / m;
         grupo.add(caja(0.4, cajaH, 0.35, M.obj, xMed, yTabla + 0.05 + cajaH / 2, z));
@@ -240,10 +248,11 @@ export function colocar(l, lado, d, M, grupo, hits) {
 
 // Escena del pasillo: piso, luces y las estanterías de la fila en sus posiciones.
 // g = { A, L } con el galpón en metros (o null): con medidas, el depósito es el galpón; sin medidas, se ajusta a las estanterías.
-export function construirEscena(fila, disp, g = null) {
+export function construirEscena(fila, disp, g = null, destacadoId = null) {
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(0x1e293b);
   const M = materiales();
+  M.destacadoId = destacadoId;   // el hueco buscado: se marca con un destello
   escena.add(new THREE.AmbientLight(0xffffff, 0.6));
   const sol = new THREE.DirectionalLight(0xffffff, 0.8);
   sol.position.set(2, 6, 3);
@@ -293,6 +302,6 @@ export function construirEscena(fila, disp, g = null) {
   escena.userData.hits = hits;
   // La niebla se aleja con el tamaño del depósito, para que una estantería lejos no se pinte del color del fondo.
   escena.fog = new THREE.Fog(0x1e293b, 5, Math.max(24, -zMin * 1.5));
-  return { escena, zMin, xLim };
+  return { escena, zMin, xLim, destacado: M.destacadoMesh || null };
 }
 

@@ -109,7 +109,7 @@ export function montarRecorrido3D() {
     return [{ x: d.x, z: d.z, ex: h.ex, ez: h.ez }, { x: f.x, z: f.z, ex: 0.8, ez: 0.8 }];
   }).flat();
   evitar.push({ x: 0, z: 0.5, ex: 1.2, ez: 1 });
-  const { escena, zMin, xLim } = construirEscena(fila, disp, g);
+  const { escena, zMin, xLim, destacado } = construirEscena(fila, disp, g, S.destaque?.id || null);
   const zona = g
     ? { x0: -g.A / 2 + 0.6, x1: g.A / 2 - 0.6, z0: zMin + 0.6, z1: -1.5 }
     : { x0: -xLim + 0.5, x1: xLim - 0.5, z0: zMin + 0.6, z1: -1.5 };
@@ -165,7 +165,12 @@ export function montarRecorrido3D() {
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
 
-  R.mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: R.pos.yaw, pitch: R.pos.pitch || 0, w: ancho, h: alto, xLim, libre };
+  // Destello del hueco buscado: empieza al abrir la vista (Ir) o al llegar caminando (Pasear), y dura 5 segundos.
+  const ahora = performance.now();
+  let destelloDesde = null;
+  if (destacado && S.destaque?.pendiente && !R.paseo) { destelloDesde = ahora; S.destaque.pendiente = false; }
+  R.mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: ahora, yaw: R.pos.yaw, pitch: R.pos.pitch || 0, w: ancho, h: alto, xLim, libre,
+    destacado: destacado ? { mesh: destacado, desde: destelloDesde } : null, enMarcha: !!R.paseo };
 
   // Tocar un hueco selecciona su lugar; la lista de abajo muestra lo que tiene.
   const rayo = new THREE.Raycaster();
@@ -274,6 +279,15 @@ export function montarRecorrido3D() {
     if (avance > 0 && zAct <= zMin + 0.05 && cruzar(1)) return;
     if (avance < 0 && zAct >= 0.55 && cruzar(-1)) return;
     R.mot.camara.position.z = Math.max(zMin, Math.min(0.6, zAct));
+    // Al llegar caminando (Pasear), el destello del hueco buscado empieza a titilar.
+    const dh = R.mot.destacado;
+    if (dh && dh.desde === null && R.mot.enMarcha && !R.paseo) { dh.desde = t; if (S.destaque) S.destaque.pendiente = false; }
+    R.mot.enMarcha = !!R.paseo;
+    if (dh && dh.desde !== null) {
+      const e = t - dh.desde;
+      dh.mesh.visible = e < 5000;
+      if (dh.mesh.visible) dh.mesh.material.opacity = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(e / 150));
+    }
     R.mot.px = R.mot.camara.position.x; R.mot.pz = R.mot.camara.position.z; R.mot.yawPrev = R.mot.yaw;
     R.mot.camara.rotation.set(R.mot.pitch, R.mot.yaw, 0, 'YXZ');
     R.mot.renderer.render(escena, R.mot.camara);
@@ -464,6 +478,7 @@ export const accionesRecorrido3d = {
       S.rec.i = Math.floor(idx / 2);
     }
     S.elegido = ruta.length > 1 ? lugar.id : null;
+    S.destaque = { id: lugar.id, pendiente: true };
     S.f.recBusca = raw;
     // Para el recorrido 3D: la cámara va frente a la estantería encontrada.
     S.rec.irA = true;
