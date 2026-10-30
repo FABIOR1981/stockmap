@@ -2,8 +2,8 @@
 // Cada estante es una tabla que sale de la columna hacia el pasillo; los objetos son cajas apoyadas sobre el estante.
 // Usa Three.js, cargado en index.html como global THREE (js/vendor/three.min.js).
 
-import { ctx, S, esc, msgHTML } from './estado.js';
-import { pasillosDe } from './recorrido.js';
+import { ctx, S, esc, msgHTML, aviso } from './estado.js';
+import { posEnPlano } from './plano.js';
 
 const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
 const SEP = 3.4;         // distancia entre pares de estanterías (y entre estanterías del mismo lado)
@@ -362,11 +362,11 @@ export function montarRecorrido3D() {
 
 export function vistaRecorrido3D() {
   const dep = ctx.dep;
-  if (!dep.eid) return `<h1>Recorrido 3D</h1><p class="vacio">Elegí un cliente en el menú de cuenta para ver su depósito.</p>`;
+  if (!dep.eid) return `<h1>Recorrido</h1><p class="vacio">Elegí un cliente en el menú de cuenta para ver su depósito.</p>`;
   const edificio = S.nodo ? dep.porId(S.nodo) : null;
   if (!edificio || dep.prof(edificio) !== 0) {
     const edificios = dep.hijos(null);
-    return `<h1>Recorrido 3D</h1>
+    return `<h1>Recorrido</h1>
       <p class="sub">Elegí un edificio para caminar por sus pasillos.</p>
       <div class="rec-edificios">${edificios.map(e => `<button class="btn sec" data-act="recIr" data-id="${e.id}">${esc(e.codigo)}${e.nombre ? ` ${esc(e.nombre)}` : ''}</button>`).join('')}</div>`;
   }
@@ -407,3 +407,82 @@ function detalleLugar3D() {
     ? `<ul class="rec-lista">${objs.map(o => `<li><b>${esc(o.codigo_interno)}</b> ${esc(o.descripcion || '')}</li>`).join('')}</ul>`
     : '<p class="vacio" style="border:0;margin:0">Libre.</p>'}</section>`;
 }
+
+// Acciones de la vista (se suman a ACCIONES en acciones.js).
+const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Agrupa las estanterías del edificio por fila en el plano: cada fila es un pasillo longitudinal.
+// El espacio entre filas es el pasillo transversal. Dentro de cada fila, de izquierda a derecha.
+export function pasillosDe(edificio) {
+  const filas = new Map();
+  ctx.dep.hijos(edificio.id).forEach(k => {
+    const p = posEnPlano(k);
+    const clave = Math.round(p.y / 100);
+    if (!filas.has(clave)) filas.set(clave, []);
+    filas.get(clave).push({ k, x: p.x });
+  });
+  return [...filas.keys()].sort((a, b) => a - b).map(c => filas.get(c).sort((a, b) => a.x - b.x).map(e => e.k));
+}
+
+export const accionesRecorrido3d = {
+  // Elige el edificio cuyo pasillo se recorre (sin id: vuelve a la lista de edificios).
+  recIr: el => { S.nodo = el.id || null; S.rec = { i: 0, resaltado: null }; S.elegido = null; S.msg = {}; },
+  // Sube un nivel dentro del recorrido.
+  recSubir: () => {
+    const l = ctx.dep.porId(S.nodo);
+    S.nodo = l?.padre_id || null;
+    S.rec = { i: 0, resaltado: null }; S.elegido = null; S.msg = {};
+  },
+  // Cruza al pasillo transversal anterior (-1) o siguiente (1): pasa a otra fila de estanterías del edificio.
+  recCruzar: el => {
+    const edificio = ctx.dep.porId(S.nodo);
+    if (!edificio || ctx.dep.prof(edificio) !== 0) return;
+    const filas = pasillosDe(edificio);
+    S.rec.fila = Math.min(Math.max((S.rec.fila || 0) + Number(el.dir), 0), filas.length - 1);
+    S.rec.i = 0; S.rec.resaltado = null; S.elegido = null;
+  },
+  // Pantalla completa para ver el pasillo más grande (con las flechas se sigue caminando; Esc sale).
+  recAmpliar: () => {
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else document.documentElement.requestFullscreen?.().catch(() => {});
+  },
+  // Busca un código de lugar u objeto y lleva la vista a su módulo.
+  recBuscar: el => {
+    const dep = ctx.dep;
+    const raw = String(S.f.recBusca || '').trim();
+    const q = norm(raw);
+    if (!q) return aviso('recorrido', 'Escribí un código de lugar u objeto.');
+
+    // Mismas reglas que "Por código": id del lugar o dirección normalizada; objeto por código interno o propio.
+    let lugar = dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q) || null;
+    let obj = null;
+    if (!lugar) {
+      obj = dep.objetos.find(o => norm(o.codigo_interno) === q || (o.codigo_propio && norm(o.codigo_propio) === q)) || null;
+      if (!obj) return aviso('recorrido', `No encuentro un lugar ni un objeto con el código "${raw}".`);
+      const ubicaciones = dep.ubicacionesDe(obj.id);
+      if (!ubicaciones.length) return aviso('recorrido', `${obj.codigo_interno} no está puesto en ningún lugar.`);
+      lugar = ubicaciones[0];
+    }
+
+    // El pasillo es el edificio: así se ven sus estanterías con los estantes adentro.
+    // Se resalta la estantería que contiene el lugar y se selecciona el lugar buscado.
+    const ruta = dep.ruta(lugar);
+    const edificio = ruta[0], estanteria = ruta[1] || null;
+    S.nodo = edificio.id;
+    S.rec = { i: 0, resaltado: estanteria ? estanteria.id : null };
+    if (estanteria) {
+      // Va a la fila de estanterías (pasillo) que contiene la estantería, y a su tramo dentro de esa fila.
+      const filasEd = pasillosDe(edificio);
+      const fi = Math.max(0, filasEd.findIndex(fila => fila.some(k => k.id === estanteria.id)));
+      const idx = Math.max(0, filasEd[fi].findIndex(k => k.id === estanteria.id));
+      S.rec.fila = fi;
+      S.rec.i = Math.floor(idx / 2);
+    }
+    S.elegido = ruta.length > 1 ? lugar.id : null;
+    S.f.recBusca = raw;
+    // Para el recorrido 3D: la cámara va frente a la estantería encontrada.
+    S.rec.irA = true;
+    S.rec.pasear = el?.pasear === '1';
+    aviso('recorrido', null, obj ? `${obj.codigo_interno} está en ${dep.dir(lugar)}.` : `Lugar encontrado: ${dep.dir(lugar)}.`);
+  },
+};

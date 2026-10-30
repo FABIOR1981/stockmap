@@ -9,7 +9,6 @@ import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
 import { vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
-import { vistaRecorrido } from './ui/recorrido.js';
 import { vistaRecorrido3D, montarRecorrido3D, desmontarRecorrido3D } from './ui/recorrido3d.js';
 import { ACCIONES } from './ui/acciones.js';
 
@@ -25,8 +24,7 @@ const NAV = [
   ['plano', 'Asignación', 'plano'],
   ['codigo', 'Por código', 'buscar'],
   ['mover', 'Mover', 'mover'],
-  ['recorrido', 'Recorrido', 'pasillo'],   // prototipo: solo en PC (en celular se oculta, ver css .solo-pc)
-  ['recorrido3d', 'Recorrido 3D', 'edificio'],   // prototipo 3D: solo en PC
+  ['recorrido3d', 'Recorrido', 'edificio'],   // solo en PC (en celular se oculta, ver css .solo-pc)
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
   ['accesos', 'Accesos', 'mas']
@@ -55,7 +53,7 @@ function render() {
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido: vistaRecorrido, recorrido3d: vistaRecorrido3D, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
+  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido3d: vistaRecorrido3D, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
   const cuerpo = (vistas[S.vista] || vistaPlano)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
   // El recorrido 3D dibuja en un canvas dentro de #contenido: se arma después de cada dibujo.
@@ -185,16 +183,6 @@ document.addEventListener('keydown', async e => {
   if (fn) await fn({ ...e.target.dataset });
   render();
   if (!SIN_SYNC.has(act) && ctx.sesion) sincronizarAhora();
-});
-
-// Recorrido: las flechas izquierda y derecha avanzan y retroceden (fuera de los campos de texto).
-document.addEventListener('keydown', e => {
-  if (S.vista !== 'recorrido' || S.modal || e.target.matches?.('input, select, textarea')) return;
-  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-  e.preventDefault();
-  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') ACCIONES.recCruzar({ dir: e.key === 'ArrowDown' ? '1' : '-1' });
-  else ACCIONES.recPaso({ dir: e.key === 'ArrowRight' ? '1' : '-1' });
-  render();
 });
 
 // Tarjetas que actúan como botón (role="button"): Enter o Espacio sobre la tarjeta misma equivalen a un clic.

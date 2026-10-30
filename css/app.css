@@ -333,33 +333,10 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .obj-asignable:hover { background: var(--hov); }
 .obj-asignable:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
 
-/* ---------- Recorrido (prototipo, solo PC) ---------- */
+/* ---------- Recorrido 3D (solo PC) ---------- */
 .rec-cab { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .rec-barra { display: flex; gap: 8px; margin: 0 0 12px; max-width: 520px; }
 .rec-barra input { flex: 1; min-width: 0; }
-.rec-escena { background: var(--sub-f); border: 1px solid var(--lin); border-radius: var(--r); overflow: hidden; }
-.rec-escena svg { display: block; width: 100%; height: auto; }
-.rec-fondo { fill: var(--sub-s); }
-.rec-pared { fill: var(--sub-l); }
-.rec-piso { fill: var(--sub-l); opacity: .7; }
-.rec-techo { fill: var(--sub-s); }
-.rec-mod, .rec-celda { cursor: pointer; }
-.rec-marco-mod { stroke-width: 3; }
-.rec-mod.libre > .rec-marco-mod { fill: var(--ok-f); stroke: var(--ok-l); }
-.rec-mod.obj > .rec-marco-mod   { fill: var(--obj-f); stroke: var(--obj-l); }
-.rec-mod.lleno > .rec-marco-mod { fill: color-mix(in srgb, var(--peligro) 9%, var(--sur)); stroke: color-mix(in srgb, var(--peligro) 35%, transparent); }
-.rec-mod.sub > .rec-marco-mod   { fill: var(--sub-f); stroke: var(--sub-l); }
-.rec-mod.elegido > .rec-marco-mod { stroke: var(--acc); stroke-width: 5; }
-.rec-mod.buscado > .rec-marco-mod { stroke: var(--acc); stroke-width: 6; }
-.rec-mod:hover > .rec-marco-mod { stroke: var(--acc); }
-.rec-hueco { fill: var(--sub-f); stroke: var(--sub-l); stroke-width: 1.5; }
-.rec-celda:hover > .rec-hueco { stroke: var(--acc); }
-.rec-celda.elegido > .rec-hueco { stroke: var(--acc); stroke-width: 3; }
-.rec-celda.buscado > .rec-hueco { stroke: var(--acc); stroke-width: 4; }
-.rec-caja { fill: var(--obj); }
-.rec-caja-tapa { fill: color-mix(in srgb, var(--obj) 55%, #fff); }
-.rec-tabla { stroke: var(--sub); stroke-linecap: square; }
-.rec-tablon { fill: var(--sub); }
 /* Recorrido 3D: el canvas de Three.js ocupa todo el marco. */
 .r3d-marco { max-width: 960px; position: relative; }
 .r3d-ampliar { position: absolute; top: 10px; right: 10px; z-index: 2; }
@@ -367,28 +344,11 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 .r3d canvas { display: block; width: 100% !important; height: 100% !important; }
 html:fullscreen .r3d-marco { position: fixed; inset: 0; z-index: 50; max-width: none; margin: 0; padding: 12px; background: var(--sur); display: flex; flex-direction: column; }
 html:fullscreen .r3d { flex: 1; min-height: 0; height: auto; }
-/* En el pasillo: los estantes son tablas sólidas y cada hueco es solo una zona para hacer clic. */
-.rec-tablon-p { fill: var(--sub); }
-.rec-zona { fill: transparent; stroke: none; }
-.rec-celda:hover > .rec-zona { fill: color-mix(in srgb, var(--acc) 10%, transparent); }
-.rec-celda.elegido > .rec-zona { fill: color-mix(in srgb, var(--acc) 18%, transparent); stroke: var(--acc); stroke-width: 2; }
-.rec-celda.buscado > .rec-zona { fill: color-mix(in srgb, var(--acc) 28%, transparent); stroke: var(--acc); stroke-width: 3; }
-.rec-marco-frente { fill: var(--sub-s); stroke: var(--sub); stroke-width: 3; }
-.rec-etiqueta-fila { font-weight: 700; fill: var(--ink); }
-.rec-cod { font-weight: 700; fill: var(--ink); text-anchor: middle; pointer-events: none; }
-.rec-chip { fill: var(--mut); text-anchor: middle; pointer-events: none; }
 .rec-controles { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
 .rec-tramo { color: var(--mut); font-size: 14px; }
 .rec-edificios { display: flex; gap: 10px; flex-wrap: wrap; }
 .rec-lista { margin: 8px 0 14px; padding-left: 18px; }
-.rec-marco { flex: 1 1 640px; }
-/* Pantalla completa: el pasillo ocupa toda la pantalla. */
 html:fullscreen { background: var(--sur); }
-html:fullscreen .rec-marco { position: fixed; inset: 0; z-index: 50; max-width: none; margin: 0; padding: 12px; background: var(--sur); display: flex; flex-direction: column; }
-html:fullscreen .rec-escena { flex: 1; min-height: 0; border: 0; display: flex; align-items: center; }
-html:fullscreen .rec-escena svg { height: 100%; width: 100%; }
-html:fullscreen .rec-marco > .leyenda { position: absolute; }
-.plano-y-panel > .rec-panel { flex: 0 0 260px; }
 @media (max-width: 860px) { .nav .solo-pc { display: none; } }
 
 /* En celular, un toque se registra al instante (sin zoom de doble toque que retrase el segundo toque). */
