@@ -137,9 +137,11 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   const rotulo = etiqueta(l.codigo);
   rotulo.position.set(xPared, top + 0.5, zc);
   grupo.add(rotulo);
-  // Tapete en el piso, frente a la estantería: se lee de frente al acercarse desde la entrada del pasillo.
-  const tap = tapete(l.codigo, 0.7, 0.35);
-  tap.position.set(xFrente + dir * 0.3, 0.01, zFrente + 0.25);
+  // Tapete en el piso, frente a la estantería, girado 90° para ocupar todo su ancho (a lo largo del pasillo).
+  const tap = new THREE.Group();
+  tap.add(tapete(l.codigo, LARGO * 0.95, 0.7));
+  tap.rotation.y = Math.PI / 2;
+  tap.position.set(xFrente + dir * 0.4, 0.01, zc);
   grupo.add(tap);
 
   // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
