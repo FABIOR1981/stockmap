@@ -52,7 +52,7 @@ function etiqueta(texto, grande, tipo) {
   g.textBaseline = 'middle';
   g.fillText(String(texto), 128, 34);
   const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
-  const ancho = grande ? 0.9 : tipo === 'estante' ? 0.36 : 0.26;
+  const ancho = grande ? 0.9 : tipo === 'estante' ? 0.4 : 0.32;
   sp.scale.set(ancho, ancho / 4, 1);
   return sp;
 }
@@ -92,10 +92,10 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
     const cl = LARGO / celdas.length;
     // Espacio libre sobre la tabla hasta el estante de arriba: las cajas no pueden pasarlo.
     const cajaH = Math.max(0.08, Math.min(0.3, bandH - 0.12));
-    // Número del estante: en el borde izquierdo de su tabla (visto de frente), arriba de la franja.
+    // Número del estante: en el borde frontal de su tabla, en el extremo izquierdo (visto de frente).
     if (subs.length) {
       const rot = etiqueta(f.codigo, false, 'estante');
-      rot.position.set(xFrente + dir * 0.03, yTabla + bandH - 0.14, zFrente - 0.14);
+      rot.position.set(xFrente + dir * 0.01, yTabla + 0.025, zFrente + 0.1);
       grupo.add(rot);
     }
     celdas.forEach((c, ci) => {
@@ -108,9 +108,9 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
         const z = zCentro - (cl * 0.6) / 2 + (cl * 0.6) * (j + 0.5) / m;
         grupo.add(caja(0.4, cajaH, 0.35, M.obj, xMed, yTabla + 0.05 + cajaH / 2, z));
       }
-      // Letra del hueco: al frente de su división, a la altura del borde de la tabla.
+      // Letra del hueco: sobre el borde frontal de la tabla de su división.
       const rot = etiqueta(c.codigo, false, 'hueco');
-      rot.position.set(xFrente + dir * 0.03, yTabla + 0.16, zCentro);
+      rot.position.set(xFrente + dir * 0.01, yTabla + 0.025, zCentro);
       grupo.add(rot);
       // Zona invisible sobre el hueco: sirve para tocarlo y saber qué lugar es.
       const zona = new THREE.Mesh(new THREE.BoxGeometry(FONDO, bandH, cl), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }));
