@@ -92,3 +92,15 @@ export function calcularRuta(disp, desde, hasta, medidas) {
   return salida.slice(1);
 }
 
+
+// Límites del centro de una estantería para que toda su huella quede dentro del galpón.
+// Sistema: x centrado (−ancho/2 a ancho/2), z desde el frente (0) hacia el fondo (−largo). Medidas en metros.
+// h = { ex, ez }: medias dimensiones de la estantería en el piso.
+export function limitesDentroDelGalpon(ancho, largo, h) {
+  return { x0: -ancho / 2 + h.ex, x1: ancho / 2 - h.ex, z0: -largo + h.ez, z1: -h.ez };
+}
+
+// Acerca v al intervalo [a, b]; si el intervalo no entra (estantería más grande que el galpón), queda al centro.
+export function dentroDe(v, a, b) {
+  return a > b ? (a + b) / 2 : Math.max(a, Math.min(b, v));
+}

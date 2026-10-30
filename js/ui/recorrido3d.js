@@ -4,7 +4,7 @@
 
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
-import { calcularRuta } from './ruta.js';
+import { calcularRuta, limitesDentroDelGalpon, dentroDe } from './ruta.js';
 
 const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
 const SEP = 3.4;         // distancia entre pares de estanterías (y entre estanterías del mismo lado)
@@ -401,8 +401,26 @@ function montarAerea(cont, edificio) {
   piso.rotation.x = -Math.PI / 2;
   escena.add(piso);
 
-  // Encuadre: desde arriba, a una altura que deje ver todo el edificio.
+  // Galpón con medidas: se dibuja su piso y su contorno, y las estanterías no pueden salirse de él.
+  // Origen: centro del frente (x = 0, z = 0); el galpón va hacia el fondo (z negativo). Medidas en metros.
+  const g = edificio.dim_ancho && edificio.dim_largo ? { A: edificio.dim_ancho / 100, L: edificio.dim_largo / 100 } : null;
+  if (g) {
+    // Las que todavía están en la distribución por defecto se acomodan dentro del galpón (no se guarda hasta moverlas).
+    for (const d of disp.values()) {
+      const lim = limitesDentroDelGalpon(g.A, g.L, huella(d.giro));
+      d.x = dentroDe(d.x, lim.x0, lim.x1); d.z = dentroDe(d.z, lim.z0, lim.z1);
+    }
+    const suelo = new THREE.Mesh(new THREE.PlaneGeometry(g.A, g.L), new THREE.MeshStandardMaterial({ color: 0x64748b, roughness: 0.9 }));
+    suelo.rotation.x = -Math.PI / 2; suelo.position.set(0, 0.01, -g.L / 2);
+    escena.add(suelo);
+    const contorno = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(g.A, g.L)), new THREE.LineBasicMaterial({ color: 0xfacc15 }));
+    contorno.rotation.x = -Math.PI / 2; contorno.position.set(0, 0.03, -g.L / 2);
+    escena.add(contorno);
+  }
+
+  // Encuadre: desde arriba, a una altura que deje ver todo el edificio (y el galpón, si tiene medidas).
   const xs = [...disp.values()].map(d => d.x), zs = [...disp.values()].map(d => d.z);
+  if (g) xs.push(-g.A / 2, g.A / 2), zs.push(-g.L, 0);
   const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
   const extension = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 4) + 4;
   const camara = new THREE.PerspectiveCamera(45, ancho / alto, 0.1, 400);
@@ -456,7 +474,11 @@ function montarAerea(cont, edificio) {
     if (!arrastre) return;
     const p = enRejilla(e); if (!p) return;
     const d = disp.get(arrastre.id);
-    const nx = ajustar(p.x - arrastre.dx), nz = ajustar(p.z - arrastre.dz);
+    let nx = ajustar(p.x - arrastre.dx), nz = ajustar(p.z - arrastre.dz);
+    if (g) {   // que la estantería quede dentro del galpón
+      const lim = limitesDentroDelGalpon(g.A, g.L, huella(d.giro));
+      nx = dentroDe(nx, lim.x0, lim.x1); nz = dentroDe(nz, lim.z0, lim.z1);
+    }
     if (nx === d.x && nz === d.z) return;
     d.x = nx; d.z = nz; arrastre.movido = true;
     const malla = mallas.get(arrastre.id);
