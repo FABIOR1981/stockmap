@@ -66,6 +66,9 @@ function etiqueta(texto) {
   const g = c.getContext('2d');
   g.fillStyle = 'rgba(15, 23, 42, 0.9)';
   g.fillRect(0, 0, 512, 128);
+  g.strokeStyle = '#f8fafc';
+  g.lineWidth = 10;
+  g.strokeRect(14, 14, 484, 100);
   g.fillStyle = '#f8fafc';
   g.font = 'bold 78px sans-serif';
   g.textAlign = 'center';
