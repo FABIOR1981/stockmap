@@ -5,7 +5,7 @@
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
 import { calcularRuta, limitesDentroDelGalpon, dentroDe, acomodarEnGalpon, pisoLibre, RADIO_CUERPO } from './recorrido/ruta.js';
-import { LARGO, SEP, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
+import { LARGO, FONDO, MITAD, ALTO, BASE, huella, frenteDe, agruparPasillos, calcularDisposicion } from './recorrido/disposicion.js';
 import { caja, construirEscena, agregarCajasSueltas } from './recorrido/escena.js';
 import { metrosACm, desdeEsquinaCm } from '../core/medidas.js';
 import { generarCajas, semillaDe } from './recorrido/obstaculos.js';
@@ -26,7 +26,6 @@ const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
 const R = {
   mot: null,                    // motor activo (renderer, cámara, teclas)
   fsListo: false,               // evita registrar dos veces el aviso de pantalla completa
-  salto: null,                  // posición a usar al cruzar a otro pasillo (se aplica al redibujar)
   paseo: null,                  // caminata automática hasta frente a un lugar (botón Pasear)
   pos: { clave: null, z: 0.6, yaw: 0, pitch: 0 },   // posición recordada entre re-dibujos de la pantalla
 };
@@ -55,7 +54,6 @@ export function desmontarRecorrido3D() {
   window.removeEventListener('keydown', R.mot.onDown);
   window.removeEventListener('keyup', R.mot.onUp);
   R.pos = { clave: R.mot.clave, z: R.mot.camara.position.z, x: R.mot.camara.position.x, y: R.mot.camara.position.y, yaw: R.mot.yaw, pitch: R.mot.pitch };
-  if (R.salto) { R.pos = R.salto; R.salto = null; }
   R.mot.renderer.dispose();
   R.mot.renderer.forceContextLoss?.();
   R.mot = null;
@@ -75,18 +73,6 @@ function disposicionEdificio(edificio) { return calcularDisposicion(filasDe(edif
 function galponDe(edificio) {
   return edificio.dim_ancho && edificio.dim_largo ? { A: edificio.dim_ancho / 100, L: edificio.dim_largo / 100 } : null;
 }
-// Pasillo fi con las mismas posiciones que la vista aérea si hay medidas; sin medidas, se centra el pasillo como antes.
-function disposicionFila(edificio, fi) {
-  const g = galponDe(edificio);
-  if (!g) return calcularFila(filasDe(edificio), fi);
-  const filas = filasDe(edificio);
-  const todas = acomodarEnGalpon(disposicionEdificio(edificio), g, huella);
-  const fila = filas[fi] || [];
-  const disp = new Map(fila.map(l => [l.id, { ...todas.get(l.id) }]));
-  disp.forEach(d => { d.lado = d.x < 0 ? 'izq' : 'der'; });
-  return { fila, disp };
-}
-
 // Arma la escena en el contenedor #r3d de la pantalla actual (se llama después de cada dibujo).
 export function montarRecorrido3D() {
   const cont = document.getElementById('r3d');
@@ -95,16 +81,15 @@ export function montarRecorrido3D() {
   const edificio = ctx.dep.porId(S.nodo);
   if (!edificio) return;
   if (S.rec.aerea) return montarAerea(cont, edificio, { R, disp: disposicionEdificio(edificio), desmontar: desmontarRecorrido3D });
-  const filas = pasillosDe(edificio);
-  const fi = Math.min(S.rec.fila || 0, filas.length - 1);
-  const fila = filas[fi] || [];
-  const clave = `${edificio.id}|${fi}`;
-
-  const { disp } = disposicionFila(edificio, fi);
+  // Todas las estanterías del edificio, en las mismas posiciones que la vista aérea.
+  const fila = pasillosDe(edificio).flat();
+  const clave = edificio.id;
   const g = galponDe(edificio);
-  // Cajas sueltas: se evitan las estanterías (todas), sus frentes (los pasos) y la entrada. Misma semilla = misma distribución.
-  const todas = disposicionEdificio(edificio);
-  const evitar = [...todas.values()].map(d => {
+  const base = disposicionEdificio(edificio);
+  const disp = new Map([...(g ? acomodarEnGalpon(base, g, huella) : base)]
+    .map(([id, d]) => [id, { ...d, lado: d.x < 0 ? 'izq' : 'der' }]));
+  // Cajas sueltas: se evitan las estanterías, sus frentes (los pasos) y la entrada. Misma semilla = misma distribución.
+  const evitar = [...disp.values()].map(d => {
     const h = huella(d.giro), f = frenteDe({ ...d, lado: d.x < 0 ? 'izq' : 'der' });
     return [{ x: d.x, z: d.z, ex: h.ex, ez: h.ez }, { x: f.x, z: f.z, ex: 0.8, ez: 0.8 }];
   }).flat();
@@ -113,7 +98,7 @@ export function montarRecorrido3D() {
   const zona = g
     ? { x0: -g.A / 2 + 0.6, x1: g.A / 2 - 0.6, z0: zMin + 0.6, z1: -1.5 }
     : { x0: -xLim + 0.5, x1: xLim - 0.5, z0: zMin + 0.6, z1: -1.5 };
-  const cajas = generarCajas({ semilla: semillaDe(edificio.id, fi * 7 + (S.cajas?.[edificio.id] || 0) * 101), zona, evitar, cantidad: 10 });
+  const cajas = generarCajas({ semilla: semillaDe(edificio.id, (S.cajas?.[edificio.id] || 0) * 101), zona, evitar, cantidad: 10 });
   agregarCajasSueltas(escena, cajas);
   // Dónde se puede pisar: con medidas, dentro de las paredes del galpón; siempre, fuera de las estanterías y cajas.
   const piso = g ? { x0: -g.A / 2 + RADIO_CUERPO, x1: g.A / 2 - RADIO_CUERPO, z0: zMin + 0.05, z1: 1 } : null;
@@ -197,20 +182,6 @@ export function montarRecorrido3D() {
     S.msg = {};
     ctx.render();
   });
-  // Cruza al pasillo transversal siguiente (dir 1) o anterior (dir -1), entrando por su inicio.
-  const cruzar = dir => {
-    const [eid, f] = R.mot.clave.split('|');
-    const edif = ctx.dep.porId(eid);
-    const filas = edif ? pasillosDe(edif) : [];
-    const nf = +f + dir;
-    if (nf < 0 || nf >= filas.length) return false;
-    const pares = Math.ceil(filas[nf].length / 2);
-    R.salto = { clave: `${eid}|${nf}`, z: dir > 0 ? 0.6 : -(pares * SEP) - 1.5, yaw: R.mot.yaw };
-    S.rec.fila = nf; S.rec.i = 0; S.rec.resaltado = null; S.elegido = null;
-    ctx.render();
-    return true;
-  };
-
   const frame = t => {
     if (!cont.isConnected) return desmontarRecorrido3D();
     const dt = Math.min((t - R.mot.ultimo) / 1000, 0.05);
@@ -274,11 +245,7 @@ export function montarRecorrido3D() {
     }
     // Quedarse dentro del pasillo.
     R.mot.camara.position.x = Math.max(-R.mot.xLim, Math.min(R.mot.xLim, R.mot.camara.position.x));
-    // Llegar al final del pasillo y seguir caminando cruza al pasillo transversal.
-    const zAct = R.mot.camara.position.z;
-    if (avance > 0 && zAct <= zMin + 0.05 && cruzar(1)) return;
-    if (avance < 0 && zAct >= 0.55 && cruzar(-1)) return;
-    R.mot.camara.position.z = Math.max(zMin, Math.min(0.6, zAct));
+    R.mot.camara.position.z = Math.max(zMin, Math.min(0.6, R.mot.camara.position.z));
     // Al llegar caminando (Pasear), el destello del hueco buscado empieza a titilar.
     const dh = R.mot.destacado;
     if (dh && dh.desde === null && R.mot.enMarcha && !R.paseo) { dh.desde = t; if (S.destaque) S.destaque.pendiente = false; }
@@ -324,13 +291,6 @@ export function vistaRecorrido3D() {
           <strong>${esc(e.codigo)}${e.nombre ? ` · ${esc(e.nombre)}` : ''}</strong>
           <small>Recorrer pasillos →</small></button>`).join('')}</div>`;
   }
-  const filas = pasillosDe(edificio);
-  const f = Math.min(S.rec.fila || 0, filas.length - 1);
-  const cruce = !S.rec.aerea && filas.length > 1 ? `<div class="rec-controles">
-      <button class="btn sec sm" data-act="recCruzar" data-dir="-1" ${f <= 0 ? 'disabled' : ''}>↑ Pasillo anterior</button>
-      <span class="rec-tramo">Pasillo ${f + 1} de ${filas.length}</span>
-      <button class="btn sec sm" data-act="recCruzar" data-dir="1" ${f >= filas.length - 1 ? 'disabled' : ''}>Pasillo siguiente ↓</button>
-    </div>` : '';
   const aerea = !!S.rec.aerea;
   const herramientas = aerea
     ? `<div class="r3d-buscar">
@@ -361,7 +321,6 @@ export function vistaRecorrido3D() {
       ${herramientas}
       <button class="btn sec sm r3d-ampliar" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
     </div>
-    ${cruce}
     ${detalleLugar3D()}`;
 }
 
@@ -402,14 +361,6 @@ export const accionesRecorrido3d = {
     const l = ctx.dep.porId(S.nodo);
     S.nodo = l?.padre_id || null;
     S.rec = { i: 0, resaltado: null }; S.elegido = null; S.msg = {};
-  },
-  // Cruza al pasillo transversal anterior (-1) o siguiente (1): pasa a otra fila de estanterías del edificio.
-  recCruzar: el => {
-    const edificio = ctx.dep.porId(S.nodo);
-    if (!edificio || ctx.dep.prof(edificio) !== 0) return;
-    const filas = pasillosDe(edificio);
-    S.rec.fila = Math.min(Math.max((S.rec.fila || 0) + Number(el.dir), 0), filas.length - 1);
-    S.rec.i = 0; S.rec.resaltado = null; S.elegido = null;
   },
   // Pantalla completa para ver el pasillo más grande (con las flechas se sigue caminando; Esc sale).
   recAmpliar: () => {
@@ -469,14 +420,6 @@ export const accionesRecorrido3d = {
     const edificio = ruta[0], estanteria = ruta[1] || null;
     S.nodo = edificio.id;
     S.rec = { i: 0, resaltado: estanteria ? estanteria.id : null };
-    if (estanteria) {
-      // Va a la fila de estanterías (pasillo) que contiene la estantería, y a su tramo dentro de esa fila.
-      const filasEd = pasillosDe(edificio);
-      const fi = Math.max(0, filasEd.findIndex(fila => fila.some(k => k.id === estanteria.id)));
-      const idx = Math.max(0, filasEd[fi].findIndex(k => k.id === estanteria.id));
-      S.rec.fila = fi;
-      S.rec.i = Math.floor(idx / 2);
-    }
     S.elegido = ruta.length > 1 ? lugar.id : null;
     S.destaque = { id: lugar.id, pendiente: true };
     S.f.recBusca = raw;
