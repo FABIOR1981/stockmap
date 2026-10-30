@@ -9,7 +9,8 @@ const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
 const SEP = 3.4;         // distancia entre pares de estanterías (y entre estanterías del mismo lado)
 const FONDO = 0.9;       // cuánto sobresale cada estante hacia el pasillo
 const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada columna
-const ALTO = 2.6;        // altura de las estanterías
+const ALTO = 2.6;        // altura de los estantes, desde la base hacia arriba
+const BASE = 0.65;       // altura de la tabla más baja: las estanterías se construyen desde aquí hacia arriba
 const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
 const VEL_MIRAR = 1.2;    // velocidad al mirar arriba/abajo (radianes por segundo)
@@ -91,19 +92,20 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   const filas = estantes.length ? estantes : [l];
   const n = filas.length;
   const alto = ALTO;
+  const top = BASE + alto;                             // altura total de la columna
 
   // Columna trasera y postes en el frente.
-  grupo.add(caja(0.05, alto, LARGO, M.poste, xPared, alto / 2, zc));
-  [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, alto, 0.05, M.poste, xFrente, alto / 2, z)));
+  grupo.add(caja(0.05, top, LARGO, M.poste, xPared, top / 2, zc));
+  [zFrente - 0.02, zFrente - LARGO + 0.02].forEach(z => grupo.add(caja(0.05, top, 0.05, M.poste, xFrente, top / 2, z)));
   // Código de la estantería, arriba de la columna.
   const rotulo = etiqueta(l.codigo);
-  rotulo.position.set(xPared, alto + 0.35, zc);
+  rotulo.position.set(xPared, top + 0.35, zc);
   grupo.add(rotulo);
 
   // Estantes: cada franja de la estantería tiene una tabla en su borde inferior.
   const bandH = alto / n;
   filas.forEach((f, fi) => {
-    const yTabla = alto * (1 - (fi + 1) / n);
+    const yTabla = BASE + bandH * (n - 1 - fi);
     grupo.add(caja(FONDO, 0.05, LARGO, M.estante, xMed, yTabla + 0.025, zc));
     // Cada hueco del estante reparte sus objetos a lo largo de la tabla.
     const subs = estantes.length ? dep.hijos(f.id) : [];
