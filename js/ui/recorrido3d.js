@@ -4,12 +4,9 @@
 
 import { ctx, S, esc, msgHTML, aviso } from './estado.js';
 import { posEnPlano } from './plano.js';
-import { calcularRuta, limitesDentroDelGalpon, dentroDe } from './ruta.js';
+import { calcularRuta, limitesDentroDelGalpon, dentroDe } from './recorrido/ruta.js';
+import { LARGO, SEP, FONDO, MITAD, huella, frenteDe, agruparPasillos, calcularDisposicion, calcularFila } from './recorrido/disposicion.js';
 
-const LARGO = 2.2;       // largo de cada estantería, a lo largo del pasillo
-const SEP = 3.4;         // distancia entre pares de estanterías (y entre estanterías del mismo lado)
-const FONDO = 0.9;       // cuánto sobresale cada estante hacia el pasillo
-const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada columna
 const ALTO = 2.6;        // altura de los estantes, desde la base hacia arriba
 const BASE = 0;          // altura de la tabla más baja (0 = desde el piso); los estantes se apilan hacia arriba
 const OJOS = 1.55;       // altura de la cámara
@@ -248,8 +245,6 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
 }
 
 // Escena del pasillo: piso, luces y las estanterías de la fila a ambos lados.
-// Footprint de una estantería en el piso (medios anchos), según su giro.
-const huella = giro => (giro % 2 === 0 ? { ex: FONDO / 2, ez: LARGO / 2 } : { ex: LARGO / 2, ez: FONDO / 2 });
 
 // Coloca una estantería con su centro en (d.x, d.z) y girada d.giro cuartos de vuelta.
 // La estantería se arma centrada en el origen y después se mueve y se gira el grupo entero.
@@ -263,15 +258,6 @@ function colocar(l, lado, d, M, grupo, hits) {
   exterior.rotation.y = d.giro * Math.PI / 2;
   exterior.add(interior);
   grupo.add(exterior);
-}
-
-// Punto frente a la cara de una estantería (la de los estantes), a 1,2 m, mirándola.
-function frenteDe(d) {
-  // Hacia dónde salen los estantes en el piso, según el lado y el giro.
-  const sal = d.lado === 'izq' ? 1 : -1;
-  const t = d.giro * Math.PI / 2;
-  const n = { x: sal * Math.cos(t), z: -sal * Math.sin(t) };
-  return { x: d.x + n.x * 1.2, z: d.z + n.z * 1.2, yaw: Math.atan2(n.x, n.z) };
 }
 
 // Escena del pasillo: piso, luces y las estanterías de la fila en sus posiciones.
@@ -336,40 +322,10 @@ export function desmontarRecorrido3D() {
   mot = null;
 }
 
-// Posición de cada estantería del edificio, en metros. Si tiene posición guardada se usa esa;
-// si no, la que sale del plano (cada pasillo del plano es una fila, separada de la siguiente).
-function disposicionEdificio(edificio) {
-  const filas = pasillosDe(edificio);
-  const pares = Math.max(1, ...filas.map(f => Math.ceil(f.length / 2)));
-  const salto = pares * SEP + 6;
-  const disp = new Map();
-  filas.forEach((fila, fi) => fila.forEach((l, idx) => {
-    const p = Math.floor(idx / 2);
-    const porDefecto = { x: idx % 2 === 0 ? -MITAD + FONDO / 2 : MITAD - FONDO / 2, z: -fi * salto - 1.2 - p * SEP - LARGO / 2, giro: 0 };
-    const guardada = l.vista_x != null && l.vista_z != null;
-    disp.set(l.id, guardada ? { x: l.vista_x / 100, z: l.vista_z / 100, giro: l.vista_giro || 0 } : porDefecto);
-  }));
-  return disp;
-}
-
-// Fila de estanterías del recorrido: sus posiciones, corridas para empezar al inicio del pasillo y centradas en x.
-function disposicionFila(edificio, fi) {
-  const filas = pasillosDe(edificio);
-  const fila = filas[fi] || [];
-  const todas = disposicionEdificio(edificio);
-  const disp = new Map(fila.map(l => [l.id, { ...todas.get(l.id) }]));
-  const ds = [...disp.values()];
-  if (ds.length) {
-    const minX = Math.min(...ds.map(d => d.x - huella(d.giro).ex));
-    const maxX = Math.max(...ds.map(d => d.x + huella(d.giro).ex));
-    const maxZ = Math.max(...ds.map(d => d.z + huella(d.giro).ez));
-    const dx = -(minX + maxX) / 2, dz = -1.2 - maxZ;
-    ds.forEach(d => { d.x += dx; d.z += dz; });
-  }
-  // Los estantes miran hacia el centro del pasillo: si la estantería está a la izquierda, a la izquierda del pasillo.
-  ds.forEach(d => { d.lado = d.x < 0 ? 'izq' : 'der'; });
-  return { fila, disp };
-}
+// Disposición de las estanterías: funciones puras en recorrido/disposicion.js.
+const filasDe = edificio => agruparPasillos(ctx.dep.hijos(edificio.id), posEnPlano);
+function disposicionEdificio(edificio) { return calcularDisposicion(filasDe(edificio)); }
+function disposicionFila(edificio, fi) { return calcularFila(filasDe(edificio), fi); }
 
 // Guarda la posición y el giro de todas las estanterías del edificio.
 function guardarDisposicion(disp) {
@@ -745,14 +701,7 @@ const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
 // Agrupa las estanterías del edificio por fila en el plano: cada fila es un pasillo longitudinal.
 // El espacio entre filas es el pasillo transversal. Dentro de cada fila, de izquierda a derecha.
 export function pasillosDe(edificio) {
-  const filas = new Map();
-  ctx.dep.hijos(edificio.id).forEach(k => {
-    const p = posEnPlano(k);
-    const clave = Math.round(p.y / 100);
-    if (!filas.has(clave)) filas.set(clave, []);
-    filas.get(clave).push({ k, x: p.x });
-  });
-  return [...filas.keys()].sort((a, b) => a - b).map(c => filas.get(c).sort((a, b) => a.x - b.x).map(e => e.k));
+  return filasDe(edificio);
 }
 
 export const accionesRecorrido3d = {

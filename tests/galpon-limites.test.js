@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { limitesDentroDelGalpon, dentroDe } from '../js/ui/ruta.js';
+import { limitesDentroDelGalpon, dentroDe } from '../js/ui/recorrido/ruta.js';
 
 const h0 = { ex: 0.45, ez: 1.1 };   // estantería mirando al frente
 test('el centro de la estantería queda a media huella de cada pared', () => {

@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calcularRuta } from '../js/ui/ruta.js';
+import { calcularRuta } from '../js/ui/recorrido/ruta.js';
 
 const medidas = giro => (giro % 2 === 0 ? { ex: 0.45, ez: 1.1 } : { ex: 1.1, ez: 0.45 });
 
