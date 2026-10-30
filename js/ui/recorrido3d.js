@@ -191,7 +191,25 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
 }
 
 // Escena del pasillo: piso, luces y las estanterías de la fila a ambos lados.
-function construirEscena(fila) {
+// Footprint de una estantería en el piso (medios anchos), según su giro.
+const huella = giro => (giro % 2 === 0 ? { ex: FONDO / 2, ez: LARGO / 2 } : { ex: LARGO / 2, ez: FONDO / 2 });
+
+// Coloca una estantería con su centro en (d.x, d.z) y girada d.giro cuartos de vuelta.
+// La estantería se arma centrada en el origen y después se mueve y se gira el grupo entero.
+function colocar(l, lado, d, M, grupo, hits) {
+  const xMed = lado === 'izq' ? -MITAD + FONDO / 2 : MITAD - FONDO / 2;
+  const interior = new THREE.Group();
+  interior.position.x = -xMed;
+  estanteria(l, lado, LARGO / 2, M, interior, hits);
+  const exterior = new THREE.Group();
+  exterior.position.set(d.x, 0, d.z);
+  exterior.rotation.y = d.giro * Math.PI / 2;
+  exterior.add(interior);
+  grupo.add(exterior);
+}
+
+// Escena del pasillo: piso, luces y las estanterías de la fila en sus posiciones.
+function construirEscena(fila, disp) {
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(0x1e293b);
   escena.fog = new THREE.Fog(0x1e293b, 5, 24);
@@ -207,23 +225,24 @@ function construirEscena(fila) {
   piso.position.set(0, 0, -largo / 2 + 4);
   escena.add(piso);
 
-  // Pares de estanterías: los de índice par a la izquierda, los impares a la derecha.
+  // Las de índice par van a la izquierda y las impares a la derecha (como en el plano).
   const grupo = new THREE.Group();
   const hits = [];
-  const pares = Math.ceil(fila.length / 2);
-  for (let p = 0; p < pares; p++) {
-    const zF = -1.2 - p * SEP;
-    if (fila[2 * p]) estanteria(fila[2 * p], 'izq', zF, M, grupo, hits);
-    if (fila[2 * p + 1]) estanteria(fila[2 * p + 1], 'der', zF, M, grupo, hits);
-  }
+  let zMin = -2;
+  fila.forEach((l, idx) => {
+    const d = disp.get(l.id);
+    colocar(l, idx % 2 === 0 ? 'izq' : 'der', d, M, grupo, hits);
+    zMin = Math.min(zMin, d.z - huella(d.giro).ez - 2);
+  });
   escena.add(grupo);
   escena.userData.hits = hits;
-  return { escena, zMin: -(pares * SEP) - 2 };
+  return { escena, zMin };
 }
 
 // Guarda dónde quedó la cámara y libera el motor.
 export function desmontarRecorrido3D() {
   if (!mot) return;
+  mot.limpiar?.();
   cancelAnimationFrame(mot.raf);
   window.removeEventListener('keydown', mot.onDown);
   window.removeEventListener('keyup', mot.onUp);
@@ -234,6 +253,158 @@ export function desmontarRecorrido3D() {
   mot = null;
 }
 
+// Posición de cada estantería del edificio, en metros. Si tiene posición guardada se usa esa;
+// si no, la que sale del plano (cada pasillo del plano es una fila, separada de la siguiente).
+function disposicionEdificio(edificio) {
+  const filas = pasillosDe(edificio);
+  const pares = Math.max(1, ...filas.map(f => Math.ceil(f.length / 2)));
+  const salto = pares * SEP + 6;
+  const disp = new Map();
+  filas.forEach((fila, fi) => fila.forEach((l, idx) => {
+    const p = Math.floor(idx / 2);
+    const porDefecto = { x: idx % 2 === 0 ? -MITAD + FONDO / 2 : MITAD - FONDO / 2, z: -fi * salto - 1.2 - p * SEP - LARGO / 2, giro: 0 };
+    const guardada = l.vista_x != null && l.vista_z != null;
+    disp.set(l.id, guardada ? { x: l.vista_x / 100, z: l.vista_z / 100, giro: l.vista_giro || 0 } : porDefecto);
+  }));
+  return disp;
+}
+
+// Fila de estanterías del recorrido: sus posiciones, corridas para empezar al inicio del pasillo y centradas en x.
+function disposicionFila(edificio, fi) {
+  const filas = pasillosDe(edificio);
+  const fila = filas[fi] || [];
+  const todas = disposicionEdificio(edificio);
+  const disp = new Map(fila.map(l => [l.id, { ...todas.get(l.id) }]));
+  const ds = [...disp.values()];
+  if (ds.length) {
+    const minX = Math.min(...ds.map(d => d.x - huella(d.giro).ex));
+    const maxX = Math.max(...ds.map(d => d.x + huella(d.giro).ex));
+    const maxZ = Math.max(...ds.map(d => d.z + huella(d.giro).ez));
+    const dx = -(minX + maxX) / 2, dz = -1.2 - maxZ;
+    ds.forEach(d => { d.x += dx; d.z += dz; });
+  }
+  return { fila, disp };
+}
+
+// Guarda la posición y el giro de todas las estanterías del edificio.
+function guardarDisposicion(disp) {
+  for (const [id, d] of disp) {
+    const err = ctx.dep.posicionarVista(id, Math.round(d.x * 100), Math.round(d.z * 100), d.giro);
+    if (err) return aviso('recorrido', err);
+  }
+}
+
+// Vista aérea del edificio: las estanterías se arrastran sobre el piso y se giran de a 90°.
+function montarAerea(cont, edificio) {
+  S.rec.irA = false;
+  const disp = disposicionEdificio(edificio);
+  const ancho = cont.clientWidth || 800, alto = 520;
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(ancho, alto);
+  cont.innerHTML = '';
+  cont.appendChild(renderer.domElement);
+
+  const escena = new THREE.Scene();
+  escena.background = new THREE.Color(0x1e293b);
+  const M = materiales();
+  escena.add(new THREE.AmbientLight(0xffffff, 0.7));
+  const sol = new THREE.DirectionalLight(0xffffff, 0.7);
+  sol.position.set(2, 10, 3);
+  escena.add(sol);
+  const piso = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), M.piso);
+  piso.rotation.x = -Math.PI / 2;
+  escena.add(piso);
+
+  // Encuadre: desde arriba, a una altura que deje ver todo el edificio.
+  const xs = [...disp.values()].map(d => d.x), zs = [...disp.values()].map(d => d.z);
+  const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cz = (Math.min(...zs) + Math.max(...zs)) / 2;
+  const extension = Math.max(Math.max(...xs) - Math.min(...xs), Math.max(...zs) - Math.min(...zs), 4) + 4;
+  const camara = new THREE.PerspectiveCamera(45, ancho / alto, 0.1, 400);
+  camara.position.set(cx, extension / (2 * Math.tan(Math.PI / 8)), cz + 0.001);
+  camara.lookAt(cx, 0, cz);
+
+  const grupo = new THREE.Group();
+  escena.add(grupo);
+  const mallas = new Map(), hits = [];
+  for (const [id, d] of disp) {
+    const l = ctx.dep.porId(id);
+    const elegida = id === S.rec.aereaSel;
+    const malla = new THREE.Mesh(new THREE.BoxGeometry(FONDO, 0.25, LARGO),
+      new THREE.MeshStandardMaterial({ color: elegida ? 0x2563eb : 0x9aa4b5, roughness: 0.7 }));
+    malla.position.set(d.x, 0.125, d.z);
+    malla.rotation.y = d.giro * Math.PI / 2;
+    malla.userData.rack = id;
+    grupo.add(malla);
+    mallas.set(id, malla);
+    hits.push(malla);
+    if (l) {
+      const rot = etiqueta(l.codigo);
+      rot.scale.multiplyScalar(0.6);
+      rot.position.set(d.x, 1.2, d.z);
+      grupo.add(rot);
+    }
+  }
+
+  // Arrastrar una estantería la mueve sobre el piso (ajustada a una grilla de 25 cm).
+  const rayo = new THREE.Raycaster();
+  const piso0 = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+  const enRejilla = e => {
+    const r = renderer.domElement.getBoundingClientRect();
+    rayo.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camara);
+    const p = new THREE.Vector3();
+    return rayo.ray.intersectPlane(piso0, p) ? p : null;
+  };
+  const ajustar = v => Math.round(v / 0.25) * 0.25;
+  let arrastre = null;
+  const onDown = e => {
+    const r = renderer.domElement.getBoundingClientRect();
+    rayo.setFromCamera(new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1), camara);
+    const golpe = rayo.intersectObjects(hits, false)[0];
+    if (!golpe) return;
+    const id = golpe.object.userData.rack;
+    S.rec.aereaSel = id;
+    const p = enRejilla(e), d = disp.get(id);
+    if (p) arrastre = { id, dx: p.x - d.x, dz: p.z - d.z, movido: false };
+  };
+  const onMove = e => {
+    if (!arrastre) return;
+    const p = enRejilla(e); if (!p) return;
+    const d = disp.get(arrastre.id);
+    const nx = ajustar(p.x - arrastre.dx), nz = ajustar(p.z - arrastre.dz);
+    if (nx === d.x && nz === d.z) return;
+    d.x = nx; d.z = nz; arrastre.movido = true;
+    const malla = mallas.get(arrastre.id);
+    malla.position.x = nx; malla.position.z = nz;
+  };
+  const onUp = () => {
+    if (!arrastre) return;
+    const { movido } = arrastre;
+    arrastre = null;
+    if (movido) guardarDisposicion(disp);
+    ctx.render();   // redibuja (también marca la estantería elegida)
+  };
+  renderer.domElement.addEventListener('pointerdown', onDown);
+  window.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+
+  mot = { renderer, camara, cont, aerea: true, clave: `${edificio.id}|aerea`, raf: 0, w: ancho, h: alto, yaw: 0, pitch: 0,
+    limpiar: () => { window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerup', onUp); } };
+  const frame = () => {
+    if (!cont.isConnected) return desmontarRecorrido3D();
+    const w = cont.clientWidth, h = cont.clientHeight;
+    if (w && h && (w !== mot.w || h !== mot.h)) {
+      mot.w = w; mot.h = h;
+      renderer.setSize(w, h);
+      camara.aspect = w / h;
+      camara.updateProjectionMatrix();
+    }
+    renderer.render(escena, camara);
+    mot.raf = requestAnimationFrame(frame);
+  };
+  mot.raf = requestAnimationFrame(frame);
+}
+
 // Arma la escena en el contenedor #r3d de la pantalla actual (se llama después de cada dibujo).
 export function montarRecorrido3D() {
   const cont = document.getElementById('r3d');
@@ -241,12 +412,14 @@ export function montarRecorrido3D() {
   if (!cont || !S.nodo) return;
   const edificio = ctx.dep.porId(S.nodo);
   if (!edificio) return;
+  if (S.rec.aerea) return montarAerea(cont, edificio);
   const filas = pasillosDe(edificio);
   const fi = Math.min(S.rec.fila || 0, filas.length - 1);
   const fila = filas[fi] || [];
   const clave = `${edificio.id}|${fi}`;
 
-  const { escena, zMin } = construirEscena(fila);
+  const { disp } = disposicionFila(edificio, fi);
+  const { escena, zMin } = construirEscena(fila, disp);
   const ancho = cont.clientWidth || 800, alto = 520;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -264,7 +437,7 @@ export function montarRecorrido3D() {
     const idx = est ? fila.findIndex(k => k.id === est.id) : -1;
     // La cámara queda frente al centro de la estantería (mirando hacia la pared donde está).
     if (idx >= 0) {
-      const z = -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2;
+      const z = disp.get(est.id).z;
       const yaw = idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
       const ojo = altoOjos(sel, est);
       if (pasear) {
@@ -402,25 +575,36 @@ export function vistaRecorrido3D() {
   }
   const filas = pasillosDe(edificio);
   const f = Math.min(S.rec.fila || 0, filas.length - 1);
-  const cruce = filas.length > 1 ? `<div class="rec-controles">
+  const cruce = !S.rec.aerea && filas.length > 1 ? `<div class="rec-controles">
       <button class="btn sec sm" data-act="recCruzar" data-dir="-1" ${f <= 0 ? 'disabled' : ''}>↑ Pasillo anterior</button>
       <span class="rec-tramo">Pasillo ${f + 1} de ${filas.length}</span>
       <button class="btn sec sm" data-act="recCruzar" data-dir="1" ${f >= filas.length - 1 ? 'disabled' : ''}>Pasillo siguiente ↓</button>
     </div>` : '';
-  return `<div class="rec-cab">
-      <button class="btn sec sm" data-act="recSubir">← Subir</button>
-      <button class="btn sec sm" data-act="recIr">Edificios</button>
-    </div>
-    <h1>${esc(dep.dir(edificio))}</h1>
-    <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Subí o bajá la vista con E y Q. Tocá un hueco para ver qué tiene.</p>
-    ${msgHTML('recorrido')}
-    <div class="r3d-marco">
-      <div id="r3d" class="r3d" aria-label="Recorrido 3D del pasillo"></div>
-      <div class="r3d-buscar">
+  const aerea = !!S.rec.aerea;
+  const herramientas = aerea
+    ? `<div class="r3d-buscar">
+        <button class="btn sec sm" data-act="recGirar">Girar 90°</button>
+        <span class="rec-tramo">${S.rec.aereaSel ? 'Estantería elegida' : 'Tocá una estantería'}</span>
+      </div>`
+    : `<div class="r3d-buscar">
         <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
         <button class="btn sec sm" data-act="recBuscar">Ir</button>
         <button class="btn sec sm" data-act="recBuscar" data-pasear="1">Pasear</button>
-      </div>
+      </div>`;
+  const ayuda = aerea
+    ? 'Arrastrá una estantería para moverla. Tocala para elegirla y girala de a 90°. Se guarda para todos los que usan este cliente.'
+    : 'Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Subí o bajá la vista con E y Q. Tocá un hueco para ver qué tiene.';
+  return `<div class="rec-cab">
+      <button class="btn sec sm" data-act="recSubir">← Subir</button>
+      <button class="btn sec sm" data-act="recIr">Edificios</button>
+      <button class="btn sec sm" data-act="recAerea">${aerea ? 'Volver al recorrido' : 'Vista aérea'}</button>
+    </div>
+    <h1>${esc(dep.dir(edificio))}</h1>
+    <p class="sub">${ayuda}</p>
+    ${msgHTML('recorrido')}
+    <div class="r3d-marco">
+      <div id="r3d" class="r3d" aria-label="${aerea ? 'Vista aérea del edificio' : 'Recorrido 3D del pasillo'}"></div>
+      ${herramientas}
       <button class="btn sec sm r3d-ampliar" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
     </div>
     ${cruce}
@@ -475,6 +659,19 @@ export const accionesRecorrido3d = {
   recAmpliar: () => {
     if (document.fullscreenElement) document.exitFullscreen?.();
     else document.documentElement.requestFullscreen?.().catch(() => {});
+  },
+  // Alterna entre el recorrido y la vista aérea del edificio.
+  recAerea: () => { S.rec.aerea = !S.rec.aerea; S.rec.irA = false; S.elegido = null; S.msg = {}; },
+  // Gira 90° la estantería elegida en la vista aérea y guarda la disposición del edificio.
+  recGirar: () => {
+    const id = S.rec.aereaSel;
+    const edificio = ctx.dep.porId(S.nodo);
+    if (!id || !edificio) return aviso('recorrido', 'Tocá una estantería en la vista aérea para elegirla.');
+    const disp = disposicionEdificio(edificio);
+    const d = disp.get(id);
+    if (!d) return;
+    d.giro = (d.giro + 1) % 4;
+    guardarDisposicion(disp);
   },
   // Busca un código de lugar u objeto y lleva la vista a su módulo.
   recBuscar: el => {

@@ -21,13 +21,16 @@ begin
     on conflict (usuario_id, establecimiento_id) do update set rol = excluded.rol;
 
   when 'lugares' then
-    insert into lugares (id, establecimiento_id, padre_id, codigo, nombre, pos_x, pos_y)
+    insert into lugares (id, establecimiento_id, padre_id, codigo, nombre, pos_x, pos_y, vista_x, vista_z, vista_giro)
     values ((f->>'id')::uuid, (f->>'establecimiento_id')::uuid, nullif(f->>'padre_id', '')::uuid,
             f->>'codigo', coalesce(f->>'nombre', ''),
-            nullif(f->>'pos_x', '')::integer, nullif(f->>'pos_y', '')::integer)
+            nullif(f->>'pos_x', '')::integer, nullif(f->>'pos_y', '')::integer,
+            nullif(f->>'vista_x', '')::integer, nullif(f->>'vista_z', '')::integer, nullif(f->>'vista_giro', '')::smallint)
     on conflict (id) do update set establecimiento_id = excluded.establecimiento_id,
       padre_id = excluded.padre_id, codigo = excluded.codigo, nombre = excluded.nombre,
-      pos_x = coalesce(excluded.pos_x, lugares.pos_x), pos_y = coalesce(excluded.pos_y, lugares.pos_y);
+      pos_x = coalesce(excluded.pos_x, lugares.pos_x), pos_y = coalesce(excluded.pos_y, lugares.pos_y),
+      vista_x = coalesce(excluded.vista_x, lugares.vista_x), vista_z = coalesce(excluded.vista_z, lugares.vista_z),
+      vista_giro = coalesce(excluded.vista_giro, lugares.vista_giro);
 
   when 'niveles_edificio' then
     insert into niveles_edificio (edificio_id, orden, nombre, formato, nombre_opcional)

@@ -291,6 +291,15 @@ export class Deposito {
     return null;
   }
 
+  // Posición y giro de una estantería en la vista aérea del recorrido 3D (x, z en centímetros; giro en cuartos de vuelta).
+  posicionarVista(id, x, z, giro) {
+    const err = this._exigir('editar'); if (err) return err;
+    if (!this.porId(id)) return 'Lugar inexistente.';
+    if (!Number.isInteger(x) || !Number.isInteger(z) || !Number.isInteger(giro) || giro < 0 || giro > 3) return 'Posición inválida.';
+    this.almacen.actualizar('lugares', id, { vista_x: x, vista_z: z, vista_giro: giro });
+    return null;
+  }
+
   // Posición libre de un lugar dentro del plano de su padre. Se guarda con el resto de los cambios.
   posicionar(id, x, y) {
     const err = this._exigir('editar'); if (err) return err;

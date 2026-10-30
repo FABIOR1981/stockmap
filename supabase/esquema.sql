@@ -64,6 +64,9 @@ create table if not exists lugares (
   nombre              text not null default '',
   pos_x               integer,   -- posición libre en el plano (null = sin mover)
   pos_y               integer,
+  vista_x             integer,   -- centro en el piso del recorrido 3D, en cm (null = por defecto)
+  vista_z             integer,
+  vista_giro          smallint,  -- cuartos de vuelta: 0 a 3
   creado_en           timestamptz not null default now()
 );
 
