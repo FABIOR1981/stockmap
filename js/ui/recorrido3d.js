@@ -142,7 +142,9 @@ export function montarRecorrido3D() {
 
   const teclas = new Set();
   const onDown = e => {
-    if (e.target.matches?.('input, select, textarea')) return;
+    // Las flechas siempre caminan (aunque el foco esté en un selector o un botón); las letras se escriben en los campos de texto.
+    const campoTexto = e.target.matches?.('input:not([type=checkbox]):not([type=radio]), textarea, [contenteditable]');
+    if (campoTexto && !e.key.startsWith('Arrow')) return;
     if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key]) R.paseo = null;   // tocar una tecla de movimiento corta la caminata
     if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key] || TECLAS_MIRAR[e.key] || TECLAS_OJOS[e.key]) { e.preventDefault(); teclas.add(e.key); }
   };
