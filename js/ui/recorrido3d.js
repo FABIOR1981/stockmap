@@ -12,14 +12,16 @@ const MITAD = 2.3;       // distancia desde el centro del pasillo hasta cada col
 const ALTO = 2.6;        // altura de las estanterías
 const OJOS = 1.55;       // altura de la cámara
 const VEL = 1.1;         // velocidad al caminar (unidades por segundo): suave, para no pasarse de largo
-const BANDA_MIN = 0.62;   // alto mínimo de cada estante (para que quepan cajas y etiquetas)
+const VEL_MIRAR = 1.2;    // velocidad al mirar arriba/abajo (radianes por segundo)
+const TECLAS_MIRAR = { PageUp: 1, r: 1, PageDown: -1, f: -1 };
 const GIRO_VEL = 1.1;     // velocidad al girar (radianes por segundo): igual que caminar, mientras se mantiene la tecla
 const TECLAS_CAMINAR = { ArrowUp: 1, w: 1, ArrowDown: -1, s: -1 };
 const TECLAS_GIRAR = { ArrowLeft: 1, a: 1, ArrowRight: -1, d: -1 };
 
 let mot = null;                              // motor activo
+let fsListo = false;                         // evita registrar dos veces el aviso de pantalla completa
 let salto = null;                            // posición a usar al cruzar a otro pasillo (se aplica al redibujar)
-let pos = { clave: null, z: 0.6, yaw: 0 };   // posición recordada entre re-dibujos de la pantalla
+let pos = { clave: null, z: 0.6, yaw: 0, pitch: 0 };   // posición recordada entre re-dibujos de la pantalla
 
 function caja(w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -57,7 +59,7 @@ function etiqueta(texto, grande, tipo) {
 
 // Una estantería: columna contra la pared y sus estantes saliendo hacia el pasillo.
 // zFrente es el borde más cercano al pasillo de inicio; la estantería se extiende hacia -z.
-// La altura crece con la cantidad de estantes para que cada uno tenga lugar holgado.
+// La altura es fija: con muchos estantes, cada franja es más baja.
 function estanteria(l, lado, zFrente, M, grupo, hits) {
   const dep = ctx.dep;
   const dir = lado === 'izq' ? 1 : -1;                 // hacia dónde salen los estantes (el pasillo)
@@ -69,7 +71,7 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
   const estantes = dep.hijos(l.id);
   const filas = estantes.length ? estantes : [l];
   const n = filas.length;
-  const alto = Math.max(ALTO, n * BANDA_MIN + 0.3);    // altura de esta estantería
+  const alto = ALTO;
 
   // Columna trasera y postes en el frente.
   grupo.add(caja(0.05, alto, LARGO, M.poste, xPared, alto / 2, zc));
@@ -89,7 +91,7 @@ function estanteria(l, lado, zFrente, M, grupo, hits) {
     const celdas = subs.length ? subs : [f];
     const cl = LARGO / celdas.length;
     // Espacio libre sobre la tabla hasta el estante de arriba: las cajas no pueden pasarlo.
-    const cajaH = Math.max(0.05, Math.min(0.3, bandH - 0.2));
+    const cajaH = Math.max(0.08, Math.min(0.3, bandH - 0.12));
     // Número del estante: en el borde izquierdo de su tabla (visto de frente), arriba de la franja.
     if (subs.length) {
       const rot = etiqueta(f.codigo, false, 'estante');
@@ -157,7 +159,7 @@ export function desmontarRecorrido3D() {
   cancelAnimationFrame(mot.raf);
   window.removeEventListener('keydown', mot.onDown);
   window.removeEventListener('keyup', mot.onUp);
-  pos = { clave: mot.clave, z: mot.camara.position.z, yaw: mot.yaw };
+  pos = { clave: mot.clave, z: mot.camara.position.z, yaw: mot.yaw, pitch: mot.pitch };
   if (salto) { pos = salto; salto = null; }
   mot.renderer.dispose();
   mot.renderer.forceContextLoss?.();
@@ -191,26 +193,39 @@ export function montarRecorrido3D() {
     const est = sel ? ctx.dep.ruta(sel)[1] : null;
     const idx = est ? fila.findIndex(k => k.id === est.id) : -1;
     // La cámara queda frente al centro de la estantería (mirando hacia la pared donde está).
-    if (idx >= 0) pos = { clave, z: -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2, yaw: idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2 };
+    if (idx >= 0) pos = { clave, z: -1.2 - Math.floor(idx / 2) * SEP - LARGO / 2, yaw: idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2, pitch: 0 };
   }
-  if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0 };
+  if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0, pitch: 0 };
   const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 60);
   camara.position.set(0, OJOS, pos.z);
 
   const teclas = new Set();
   const onDown = e => {
     if (e.target.matches?.('input, select, textarea')) return;
-    if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key]) { e.preventDefault(); teclas.add(e.key); }
+    if (TECLAS_GIRAR[e.key] || TECLAS_CAMINAR[e.key] || TECLAS_MIRAR[e.key]) { e.preventDefault(); teclas.add(e.key); }
   };
   const onUp = e => teclas.delete(e.key);
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
 
-  mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw };
+  mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw, pitch: pos.pitch || 0, w: ancho, h: alto };
 
   // Tocar un hueco selecciona su lugar; la lista de abajo muestra lo que tiene.
   const rayo = new THREE.Raycaster();
+  // Arrastrar con el mouse mira alrededor (horizontal y vertical); un toque simple selecciona.
+  let arrastre = null, movido = false;
+  renderer.domElement.addEventListener('pointerdown', e => { arrastre = { x: e.clientX, y: e.clientY }; movido = false; });
+  window.addEventListener('pointerup', () => { arrastre = null; });
+  renderer.domElement.addEventListener('pointermove', e => {
+    if (!arrastre || !mot) return;
+    const dx = e.clientX - arrastre.x, dy = e.clientY - arrastre.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) movido = true;
+    arrastre = { x: e.clientX, y: e.clientY };
+    mot.yaw -= dx * 0.005;
+    mot.pitch = Math.max(-1.25, Math.min(1.25, mot.pitch + dy * 0.005));
+  });
   renderer.domElement.addEventListener('click', e => {
+    if (movido) return;
     const r = renderer.domElement.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     rayo.setFromCamera(ndc, camara);
@@ -244,6 +259,17 @@ export function montarRecorrido3D() {
     let giro = 0;
     for (const k of mot.teclas) { giro += TECLAS_GIRAR[k] || 0; }
     mot.yaw += Math.max(-1, Math.min(1, giro)) * GIRO_VEL * dt;
+    let mirar = 0;
+    for (const k of mot.teclas) { mirar += TECLAS_MIRAR[k] || 0; }
+    mot.pitch = Math.max(-1.25, Math.min(1.25, mot.pitch + Math.max(-1, Math.min(1, mirar)) * VEL_MIRAR * dt));
+    // Si cambia el tamaño (pantalla completa), la escena se ajusta al nuevo recuadro.
+    const w = cont.clientWidth, h = cont.clientHeight;
+    if (w && h && (w !== mot.w || h !== mot.h)) {
+      mot.w = w; mot.h = h;
+      mot.renderer.setSize(w, h);
+      mot.camara.aspect = w / h;
+      mot.camara.updateProjectionMatrix();
+    }
     const v = Math.max(-1, Math.min(1, avance)) * VEL * dt;
     mot.camara.position.x -= Math.sin(mot.yaw) * v;
     mot.camara.position.z -= Math.cos(mot.yaw) * v;
@@ -254,11 +280,13 @@ export function montarRecorrido3D() {
     if (avance > 0 && zAct <= zMin + 0.05 && cruzar(1)) return;
     if (avance < 0 && zAct >= 0.55 && cruzar(-1)) return;
     mot.camara.position.z = Math.max(zMin, Math.min(0.6, zAct));
-    mot.camara.rotation.set(0, mot.yaw, 0, 'YXZ');
+    mot.camara.rotation.set(mot.pitch, mot.yaw, 0, 'YXZ');
     mot.renderer.render(escena, mot.camara);
     mot.raf = requestAnimationFrame(frame);
   };
   mot.raf = requestAnimationFrame(frame);
+  // Al entrar o salir de pantalla completa se redibuja el botón (y la escena se ajusta en el próximo cuadro).
+  if (!fsListo) { fsListo = true; document.addEventListener('fullscreenchange', () => ctx.render()); }
 }
 
 export function vistaRecorrido3D() {
@@ -281,6 +309,7 @@ export function vistaRecorrido3D() {
   return `<div class="rec-cab">
       <button class="btn sec sm" data-act="recSubir">← Subir</button>
       <button class="btn sec sm" data-act="recIr">Edificios</button>
+      <button class="btn sec sm" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
     </div>
     <h1>${esc(dep.dir(edificio))}</h1>
     <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Tocá un hueco para ver qué tiene.</p>
