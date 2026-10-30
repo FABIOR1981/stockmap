@@ -38,6 +38,8 @@ export const ACCIONES = {
   planoIr: el => {
     S.vista = S.vista === 'mover' ? 'mover' : 'plano';
     S.nodo = el.id || null; S.elegido = null; S.rec = { i: 0, resaltado: null }; S.msg = {};
+    // Al cambiar de nivel se corta cualquier selección pendiente (por ejemplo, elegir un lugar para un objeto).
+    S.elegirPara = null; S.elegirOrigen = null; S.elegirNodo = null; S.elegirLugares = [];
   },
   // Doble clic en la tarjeta Contenido: muestra en un modal los objetos puestos en ese lugar.
   verContenido: el => { S.verObj = el.id; S.modal = 'contenido'; S.msg = {}; },

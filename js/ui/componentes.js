@@ -75,7 +75,14 @@ export function migasHTML() {
   return partes.join('<span class="sep">›</span>');
 }
 
+// Dentro de un edificio o un lugar, un botón lleva de vuelta al nivel de arriba (sin tener que recargar la página).
 export function accionPrincipal() {
+  const base = accionPrincipalBase();
+  if (!ctx.dep.eid || !['plano', 'mover'].includes(S.vista) || !S.nodo) return base;
+  return `<button class="btn sec" data-act="planoIr" data-id="">Volver al inicio</button>${base}`;
+}
+
+function accionPrincipalBase() {
   if (!ctx.dep.eid) return '';
   if (S.vista === 'stock') return `<button class="btn" data-act="abrirNuevoObjeto">${ic('mas', 14)} Nuevo objeto</button>`;
   if (!['plano', 'mover'].includes(S.vista)) return '';
