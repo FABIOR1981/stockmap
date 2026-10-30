@@ -208,11 +208,19 @@ function colocar(l, lado, d, M, grupo, hits) {
   grupo.add(exterior);
 }
 
+// Punto frente a la cara de una estantería (la de los estantes), a 1,2 m, mirándola.
+function frenteDe(d) {
+  // Hacia dónde salen los estantes en el piso, según el lado y el giro.
+  const sal = d.lado === 'izq' ? 1 : -1;
+  const t = d.giro * Math.PI / 2;
+  const n = { x: sal * Math.cos(t), z: -sal * Math.sin(t) };
+  return { x: d.x + n.x * 1.2, z: d.z + n.z * 1.2, yaw: Math.atan2(n.x, n.z) };
+}
+
 // Escena del pasillo: piso, luces y las estanterías de la fila en sus posiciones.
 function construirEscena(fila, disp) {
   const escena = new THREE.Scene();
   escena.background = new THREE.Color(0x1e293b);
-  escena.fog = new THREE.Fog(0x1e293b, 5, 24);
   const M = materiales();
   escena.add(new THREE.AmbientLight(0xffffff, 0.6));
   const sol = new THREE.DirectionalLight(0xffffff, 0.8);
@@ -229,14 +237,18 @@ function construirEscena(fila, disp) {
   const grupo = new THREE.Group();
   const hits = [];
   let zMin = -2;
-  fila.forEach((l, idx) => {
+  let xLim = MITAD - 0.5;
+  fila.forEach(l => {
     const d = disp.get(l.id);
-    colocar(l, idx % 2 === 0 ? 'izq' : 'der', d, M, grupo, hits);
+    colocar(l, d.lado, d, M, grupo, hits);
     zMin = Math.min(zMin, d.z - huella(d.giro).ez - 2);
+    xLim = Math.max(xLim, Math.abs(d.x) + 1.3);
   });
   escena.add(grupo);
   escena.userData.hits = hits;
-  return { escena, zMin };
+  // La niebla se aleja con el tamaño del depósito, para que una estantería lejos no se pinte del color del fondo.
+  escena.fog = new THREE.Fog(0x1e293b, 5, Math.max(24, -zMin * 1.5));
+  return { escena, zMin, xLim };
 }
 
 // Guarda dónde quedó la cámara y libera el motor.
@@ -283,6 +295,8 @@ function disposicionFila(edificio, fi) {
     const dx = -(minX + maxX) / 2, dz = -1.2 - maxZ;
     ds.forEach(d => { d.x += dx; d.z += dz; });
   }
+  // Los estantes miran hacia el centro del pasillo: si la estantería está a la izquierda, a la izquierda del pasillo.
+  ds.forEach(d => { d.lado = d.x < 0 ? 'izq' : 'der'; });
   return { fila, disp };
 }
 
@@ -419,7 +433,7 @@ export function montarRecorrido3D() {
   const clave = `${edificio.id}|${fi}`;
 
   const { disp } = disposicionFila(edificio, fi);
-  const { escena, zMin } = construirEscena(fila, disp);
+  const { escena, zMin, xLim } = construirEscena(fila, disp);
   const ancho = cont.clientWidth || 800, alto = 520;
   const renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -437,21 +451,20 @@ export function montarRecorrido3D() {
     const idx = est ? fila.findIndex(k => k.id === est.id) : -1;
     // La cámara queda frente al centro de la estantería (mirando hacia la pared donde está).
     if (idx >= 0) {
-      const z = disp.get(est.id).z;
-      const yaw = idx % 2 === 0 ? Math.PI / 2 : -Math.PI / 2;
+      const f = frenteDe(disp.get(est.id));
       const ojo = altoOjos(sel, est);
       if (pasear) {
         // Pasear: camina desde donde está hasta frente al lugar (si está en otro pasillo, arranca desde su inicio).
         if (pos.clave !== clave) pos = { clave, z: 0.6, x: 0, yaw: 0, pitch: 0 };
-        paseo = { x: 0, z, yaw, y: ojo };
+        paseo = { x: f.x, z: f.z, yaw: f.yaw, y: ojo };
       } else {
-        pos = { clave, z, x: 0, y: ojo, yaw, pitch: 0 };
+        pos = { clave, z: f.z, x: f.x, y: ojo, yaw: f.yaw, pitch: 0 };
         paseo = null;
       }
     }
   }
   if (pos.clave !== clave) pos = { clave, z: 0.6, yaw: 0, pitch: 0 };
-  const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 60);
+  const camara = new THREE.PerspectiveCamera(70, ancho / alto, 0.05, 400);
   camara.position.set(pos.x || 0, pos.y ?? OJOS, pos.z);
 
   const teclas = new Set();
@@ -464,7 +477,7 @@ export function montarRecorrido3D() {
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
 
-  mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw, pitch: pos.pitch || 0, w: ancho, h: alto };
+  mot = { renderer, camara, teclas, cont, clave, onDown, onUp, raf: 0, ultimo: performance.now(), yaw: pos.yaw, pitch: pos.pitch || 0, w: ancho, h: alto, xLim };
 
   // Tocar un hueco selecciona su lugar; la lista de abajo muestra lo que tiene.
   const rayo = new THREE.Raycaster();
@@ -548,7 +561,7 @@ export function montarRecorrido3D() {
       }
     }
     // Quedarse dentro del pasillo.
-    mot.camara.position.x = Math.max(-MITAD + 0.5, Math.min(MITAD - 0.5, mot.camara.position.x));
+    mot.camara.position.x = Math.max(-mot.xLim, Math.min(mot.xLim, mot.camara.position.x));
     // Llegar al final del pasillo y seguir caminando cruza al pasillo transversal.
     const zAct = mot.camara.position.z;
     if (avance > 0 && zAct <= zMin + 0.05 && cruzar(1)) return;
