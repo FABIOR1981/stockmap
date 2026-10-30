@@ -233,9 +233,16 @@ export function construirEscena(fila, disp) {
   sol.position.set(2, 6, 3);
   escena.add(sol);
 
-  const largo = Math.ceil(fila.length / 2) * SEP + 10;
-  const ancho = MITAD * 2 + 8, alto = 5;
-  const zc = -largo / 2 + 4;
+  // Tamaño del depósito según dónde están las estanterías (no según cuántas hay): ninguna queda afuera del piso.
+  let zMin = -2, xMax = MITAD + 4;
+  fila.forEach(l => {
+    const d = disp.get(l.id), h = huella(d.giro);
+    zMin = Math.min(zMin, d.z - h.ez - 2);
+    xMax = Math.max(xMax, Math.abs(d.x) + h.ex + 2);
+  });
+  const zTope = 4, zFondo = zMin - 2;   // el piso llega 4 m delante de la entrada y 2 m detrás de la última estantería
+  const largo = zTope - zFondo, zc = (zTope + zFondo) / 2;
+  const ancho = 2 * xMax, alto = 5;
   const T = texturasDeposito();
   const piso = new THREE.Mesh(new THREE.PlaneGeometry(ancho, largo), conTextura(M.piso, T.piso, ancho, largo, 2.5));
   piso.rotation.x = -Math.PI / 2;
@@ -251,17 +258,15 @@ export function construirEscena(fila, disp) {
   };
   muro(largo, Math.PI / 2, -ancho / 2, zc);
   muro(largo, -Math.PI / 2, ancho / 2, zc);
-  muro(ancho, 0, 0, zc - largo / 2);
+  muro(ancho, 0, 0, zFondo);
 
   // Las de índice par van a la izquierda y las impares a la derecha (como en el plano).
   const grupo = new THREE.Group();
   const hits = [];
-  let zMin = -2;
   let xLim = MITAD - 0.5;
   fila.forEach(l => {
     const d = disp.get(l.id);
     colocar(l, d.lado, d, M, grupo, hits);
-    zMin = Math.min(zMin, d.z - huella(d.giro).ez - 2);
     xLim = Math.max(xLim, Math.abs(d.x) + 1.3);
   });
   escena.add(grupo);
