@@ -137,6 +137,12 @@ export function placa(texto, ancho, alto) {
 // Una estantería: columna contra la pared y sus estantes saliendo hacia el pasillo.
 // zFrente es el borde más cercano al pasillo de inicio; la estantería se extiende hacia -z.
 // La altura es fija: con muchos estantes, cada franja es más baja.
+// Posición de un hueco dentro de su estante, de izquierda a derecha vista desde el pasillo.
+// Las estanterías del lado derecho se miran desde el otro lado, así que el orden se invierte.
+export function posicionEnEstante(indice, cantidad, dir) {
+  return dir > 0 ? indice : cantidad - 1 - indice;
+}
+
 export function estanteria(l, lado, zFrente, M, grupo, hits) {
   const dep = ctx.dep;
   const dir = lado === 'izq' ? 1 : -1;                 // hacia dónde salen los estantes (el pasillo)
@@ -179,14 +185,16 @@ export function estanteria(l, lado, zFrente, M, grupo, hits) {
     // Número del estante: en el borde frontal de su tabla, en el extremo izquierdo (visto de frente).
     if (subs.length) {
       const rot = placa(f.codigo, 0.4, 0.09);
-      rot.position.set(xFrente + dir * 0.006, yTabla + 0.025, zFrente + 0.1);
+      // Del lado del extremo izquierdo visto desde el pasillo.
+      const zNum = dir > 0 ? zFrente + 0.1 : zFrente - LARGO - 0.1;
+      rot.position.set(xFrente + dir * 0.006, yTabla + 0.025, zNum);
       rot.rotation.y = dir * Math.PI / 2;
       grupo.add(rot);
     }
     celdas.forEach((c, ci) => {
       const objs = dep.objetosDe(c.id);
       const m = Math.min(objs.length, 4);
-      const zCentro = zFrente - cl * (ci + 0.5);
+      const zCentro = zFrente - cl * (posicionEnEstante(ci, celdas.length, dir) + 0.5);
       // Hueco libre: una marca verde sobre la tabla. Los ocupados muestran sus cajas.
       if (objs.length === 0) grupo.add(caja(FONDO * 0.8, 0.01, cl * 0.8, M.libre, xMed, yTabla + 0.06, zCentro));
       for (let j = 0; j < m; j++) {
