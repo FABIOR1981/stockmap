@@ -413,14 +413,14 @@ export function vistaRecorrido3D() {
     </div>
     <h1>${esc(dep.dir(edificio))}</h1>
     <p class="sub">Caminá con ↑ y ↓ (o W y S). Girá con ← y → (o A y D). Subí o bajá la vista con E y Q. Tocá un hueco para ver qué tiene.</p>
-    <div class="rec-barra">
-      <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
-      <button class="btn sec" data-act="recBuscar">Ir</button>
-      <button class="btn sec" data-act="recBuscar" data-pasear="1">Pasear</button>
-    </div>
     ${msgHTML('recorrido')}
     <div class="r3d-marco">
       <div id="r3d" class="r3d" aria-label="Recorrido 3D del pasillo"></div>
+      <div class="r3d-buscar">
+        <input data-f="recBusca" data-enter="recBuscar" value="${esc(S.f.recBusca || '')}" placeholder="Código de lugar u objeto" aria-label="Código de lugar u objeto">
+        <button class="btn sec sm" data-act="recBuscar">Ir</button>
+        <button class="btn sec sm" data-act="recBuscar" data-pasear="1">Pasear</button>
+      </div>
       <button class="btn sec sm r3d-ampliar" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
     </div>
     ${cruce}
