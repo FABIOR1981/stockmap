@@ -606,6 +606,41 @@ export class Deposito {
     return null;
   }
 
+  // Conteo de un lugar: iguala lo que hay en el sistema con lo contado (cuentas: { oid: cantidad }).
+  // Lo que está en el lugar y no se contó cuenta como 0. Cada diferencia deja una entrada o salida con nota "Conteo".
+  contar(lid, cuentas) {
+    const err = this._exigir('editar'); if (err) return err;
+    const l = this.porId(lid);
+    if (!l) return 'Lugar inexistente.';
+    const pedidos = new Map();
+    for (const [oid, valor] of Object.entries(cuentas)) {
+      const o = this.objetoPorId(oid);
+      if (!o) return 'Objeto inexistente.';
+      if (valor === '' || valor === null || valor === undefined) return `Falta la cantidad de ${o.codigo_interno}.`;
+      const n = Number(valor);
+      if (!Number.isInteger(n) || n < 0) return `La cantidad de ${o.codigo_interno} tiene que ser un número entero, 0 o más.`;
+      if (o.tipo === 'unidad' && n > 1) return `${o.codigo_interno} es una unidad: se cuenta como 1 (está) o 0 (no está).`;
+      if (o.tipo === 'unidad' && n === 1 && this.ubicacionesDe(oid).some(x => x.id !== lid)) {
+        return `${o.codigo_interno} está en otro lugar: movelo antes de contarlo acá.`;
+      }
+      pedidos.set(oid, n);
+    }
+    for (const a of this.asignaciones.filter(x => x.lid === lid && x.cantidad > 0)) {
+      if (!pedidos.has(a.oid)) pedidos.set(a.oid, 0);
+    }
+    for (const [oid, n] of pedidos) {
+      const hay = this.cantidadEn(oid, lid);
+      if (n > hay) {
+        this._sumar(oid, lid, n - hay);
+        this._registrar('entrada', oid, null, lid, n - hay, 'Conteo');
+      } else if (n < hay) {
+        this._restar(oid, lid, hay - n);
+        this._registrar('salida', oid, lid, null, hay - n, 'Conteo');
+      }
+    }
+    return null;
+  }
+
   // ---------- Datos de ejemplo ----------
   cargarEjemplo() {
     this.almacen.vaciar();

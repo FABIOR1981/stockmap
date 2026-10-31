@@ -178,7 +178,9 @@ export const ACCIONES = {
     const error = escanearCamara({
       alDetectar: texto => {
         S.f[campo] = texto;
-        if (campo === 'codDonde') {
+        if (campo === 'codContar') {
+          ACCIONES.contarLugar();
+        } else if (campo === 'codDonde') {
           ACCIONES.dondeEsta();
         } else if (campo === 'codLugar') {
           S.enfocar = 'codObjeto';
@@ -206,6 +208,31 @@ export const ACCIONES = {
     const ubicaciones = dep.ubicacionesDe(obj.id);
     if (!ubicaciones.length) return aviso('donde', `${obj.codigo_interno} no está puesto en ningún lugar.`);
     aviso('donde', null, `${obj.codigo_interno} está en ${dep.dir(ubicaciones[0])}.`);
+  },
+  // Conteo: abre el lugar y carga lo que el sistema tiene como punto de partida.
+  contarLugar: () => {
+    const dep = d();
+    const raw = String(S.f.codContar || '').trim();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(raw);
+    const lugar = q ? dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q) : null;
+    if (!lugar) return aviso('conteo', raw ? `No encuentro un lugar con el código "${raw}".` : 'Escribí o escaneá el código del lugar.');
+    if (!dep.esHoja(lugar)) return aviso('conteo', 'Para contar, elegí un lugar del último nivel (donde se guardan los objetos).');
+    S.conteo = lugar.id;
+    dep.objetosDe(lugar.id).forEach(o => { S.f['conteo_' + o.id] = String(dep.cantidadEn(o.id, lugar.id)); });
+  },
+  cancelarConteo: () => { S.conteo = null; },
+  // Guarda lo contado: el sistema queda igual a lo que hay de verdad, con un movimiento por cada diferencia.
+  guardarConteo: () => {
+    const dep = d();
+    const lid = S.conteo;
+    if (!lid) return;
+    const cuentas = {};
+    dep.objetosDe(lid).forEach(o => { cuentas[o.id] = S.f['conteo_' + o.id] ?? String(dep.cantidadEn(o.id, lid)); });
+    const err = dep.contar(lid, cuentas);
+    if (err) return aviso('conteo', err);
+    S.conteo = null;
+    aviso('conteo', null, 'Conteo guardado. Las diferencias quedaron en Movimientos.');
   },
   // Tocar un objeto de la lista "Bajo mínimo": dice dónde está.
   ubicarObjeto: el => {

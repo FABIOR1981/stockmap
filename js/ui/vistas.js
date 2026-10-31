@@ -195,6 +195,29 @@ export function vistaPlano() {
 
 // ---------- Stock (unidades y productos) ----------
 // Por código: se escribe el código de un lugar y el de un objeto, y se asigna.
+// Conteo de un lugar: se escribe lo que hay de verdad y al guardar se ajusta el sistema (cada diferencia queda registrada).
+function seccionConteo(d) {
+  const lugar = S.conteo ? d.porId(S.conteo) : null;
+  if (!lugar) {
+    return `<section class="panel" style="max-width:560px">
+      <div class="form">
+        ${campo('Contar un lugar (código)', `<input data-f="codContar" data-enter="contarLugar" value="${esc(S.f.codContar || '')}" placeholder="Ej.: 1 · A · 2 (o escaneá)" autocomplete="off">`)}
+      </div>
+      <div class="acciones-fila donde-acciones" style="margin-top:10px"><button class="btn sec" data-act="contarLugar">Contar</button><button class="btn sec" data-act="escanear" data-campo="codContar">${ic('qr', 16)} Escanear</button></div>
+      ${msgHTML('conteo')}
+    </section>`;
+  }
+  const objs = d.objetosDe(lugar.id);
+  const filas = objs.map(o => `<li class="conteo-fila"><span>${esc(o.descripcion || o.codigo_interno)} <span class="dim">${esc(o.codigo_interno)}</span></span>
+      <input data-f="conteo_${o.id}" inputmode="numeric" value="${esc(S.f['conteo_' + o.id] ?? '')}" size="5" aria-label="Cantidad contada de ${esc(o.codigo_interno)}"></li>`).join('');
+  return `<section class="panel" style="max-width:560px">
+    <p style="margin:0 0 8px"><strong>Contando ${esc(d.dir(lugar))}</strong></p>
+    ${objs.length ? `<ul class="lista-conteo">${filas}</ul>` : '<p class="ayuda">Acá no hay objetos registrados. Para agregar alguno, usá Asignar.</p>'}
+    <div class="acciones-fila donde-acciones" style="margin-top:10px"><button class="btn" data-act="guardarConteo">Guardar conteo</button><button class="btn sec" data-act="cancelarConteo">Cancelar</button></div>
+    ${msgHTML('conteo')}
+  </section>`;
+}
+
 export function vistaCodigo() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Por código</h1>${sinCliente()}`;
@@ -215,6 +238,7 @@ export function vistaCodigo() {
       <div class="acciones-fila donde-acciones" style="margin-top:10px"><button class="btn" data-act="dondeEsta">Buscar</button><button class="btn sec" data-act="escanear" data-campo="codDonde">${ic('qr', 16)} Escanear</button></div>
       ${msgHTML('donde')}
     </section>
+    ${d.puedeEditar() ? seccionConteo(d) : ''}
     <section class="panel" style="max-width:560px">
       <div class="form">
         ${campo('Código del lugar', `<input data-f="codLugar" data-enter="enfocar" data-campo="codObjeto" value="${esc(S.f.codLugar)}" placeholder="Ej.: 1 · A · 2 (o escaneá)" autocomplete="off">`)}
