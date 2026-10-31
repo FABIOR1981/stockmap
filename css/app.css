@@ -423,3 +423,10 @@ html:fullscreen { background: var(--sur); }
 /* Ficha: el recorrido 3D solo en PC; la estructura solo para quien administra. */
 @media (max-width: 860px) { .solo-pc-accion { display: none !important; } }
 .sin-gestion [data-act="verEnEstructura"], .sin-gestion .solo-gestion { display: none !important; }
+
+/* Estructura en celular: las tarjetas van en dos columnas (sin las posiciones del plano, que se encimaban). */
+@media (max-width: 860px) {
+  .plano-lienzo { width: auto !important; height: auto !important; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .plano-lienzo > .bloque { position: relative !important; left: auto !important; top: auto !important; }
+  .plano-lienzo > .bloque[data-contenido] { display: none; }
+}

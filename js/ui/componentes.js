@@ -54,6 +54,7 @@ export function bloquePlano(l, estilo = '', atributos = '') {
       ${objs && !hijos
         ? `<button class="chip ${claseChip} chip-btn" data-act="verObjetos" data-id="${l.id}" title="Ver objetos">${esc(st.chip)}</button>`
         : `<span class="chip ${claseChip}">${esc(st.chip)}</span>`}
+      ${hijos ? `<button class="btn sm sec entrar" data-act="planoIr" data-id="${l.id}" aria-label="Entrar a ${esc(l.codigo)}">Entrar →</button>` : ''}
     </div>
   </div>`;
 }
