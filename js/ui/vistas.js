@@ -198,13 +198,22 @@ export function vistaPlano() {
 export function vistaCodigo() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Por código</h1>${sinCliente()}`;
+  const bajos = d.objetos.filter(o => d.bajoMinimo(o));
+  const listaBajos = bajos.length ? `<section class="panel" style="max-width:560px">
+      <p style="margin:0 0 8px"><strong>Bajo mínimo</strong> · ${bajos.length} ${bajos.length === 1 ? 'objeto' : 'objetos'}</p>
+      <ul class="lista-minimo">${bajos.slice(0, 8).map(o => `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
+        <span class="dim">${d.existenciaTotal(o.id)} de ${o.minimo}</span></li>`).join('')}</ul>
+      ${bajos.length > 8 ? `<p class="ayuda">Y ${bajos.length - 8} más en Stock.</p>` : ''}
+    </section>` : '';
   return `<h1>Por código</h1>
+    ${listaBajos}
     <p class="sub codigo-sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
     <section class="panel" style="max-width:560px">
       <div class="form">
         ${campo('¿Dónde está? (lugar u objeto)', `<input data-f="codDonde" data-enter="dondeEsta" value="${esc(S.f.codDonde || '')}" placeholder="Escribí o escaneá" autocomplete="off">`)}
       </div>
       <div class="acciones-fila donde-acciones" style="margin-top:10px"><button class="btn" data-act="dondeEsta">Buscar</button><button class="btn sec" data-act="escanear" data-campo="codDonde">${ic('qr', 16)} Escanear</button></div>
+      ${msgHTML('donde')}
     </section>
     <section class="panel" style="max-width:560px">
       <div class="form">

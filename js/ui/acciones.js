@@ -198,14 +198,19 @@ export const ACCIONES = {
     const raw = String(S.f.codDonde || '').trim();
     const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
     const q = norm(raw);
-    if (!q) return aviso('codigo', 'Escribí o escaneá un código de lugar u objeto.');
+    if (!q) return aviso('donde', 'Escribí o escaneá un código de lugar u objeto.');
     const lugar = dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q);
-    if (lugar) return aviso('codigo', null, `Lugar: ${dep.dir(lugar)}.`);
+    if (lugar) return aviso('donde', null, `Lugar: ${dep.dir(lugar)}.`);
     const obj = dep.objetos.find(o => norm(o.codigo_interno) === q || (o.codigo_propio && norm(o.codigo_propio) === q));
-    if (!obj) return aviso('codigo', `No encuentro un lugar ni un objeto con el código "${raw}".`);
+    if (!obj) return aviso('donde', `No encuentro un lugar ni un objeto con el código "${raw}".`);
     const ubicaciones = dep.ubicacionesDe(obj.id);
-    if (!ubicaciones.length) return aviso('codigo', `${obj.codigo_interno} no está puesto en ningún lugar.`);
-    aviso('codigo', null, `${obj.codigo_interno} está en ${dep.dir(ubicaciones[0])}.`);
+    if (!ubicaciones.length) return aviso('donde', `${obj.codigo_interno} no está puesto en ningún lugar.`);
+    aviso('donde', null, `${obj.codigo_interno} está en ${dep.dir(ubicaciones[0])}.`);
+  },
+  // Tocar un objeto de la lista "Bajo mínimo": dice dónde está.
+  ubicarObjeto: el => {
+    S.f.codDonde = el.codigo || '';
+    ACCIONES.dondeEsta();
   },
   // Etiqueta de un solo lugar (QR = su identificador) o de un solo objeto (QR = su código interno).
   etiquetaLugar: el => {
