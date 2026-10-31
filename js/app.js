@@ -4,6 +4,7 @@ import {
   buscarPorCodigo, lugarDe, ocupanteDe, rutaDe, hijosDe, ErrorDeposito,
 } from './dominio/depositos.js';
 import { crearRepositorioNube, crearRepositorioMemoria, ConflictoVersion } from './datos/repositorio.js';
+import { escanearCamara, camaraDisponible } from './escaner.js';
 import { crearDemo } from './datos/demo.js';
 
 const $ = (s) => document.querySelector(s);
@@ -24,6 +25,7 @@ const S = {
   objetoId: null,
   modo: null, // 'ubicar' | 'mover' al elegir lugar
   aviso: null, // { tipo: 'ok' | 'error', texto }
+  codigoConteo: '',
 };
 
 function leerUsuario() {
@@ -99,7 +101,8 @@ function vistaBuscar() {
       <label for="q">Código o descripción</label>
       <input id="q" name="q" value="${esc(S.q)}" autocomplete="off" inputmode="search" placeholder="Escaneá o escribí">
       <button class="btn btn-bloque sec" type="submit">Buscar</button>
-    </form>`;
+    </form>
+    ${camaraDisponible() ? '<button class="btn btn-bloque sec" data-act="escanearBuscar">Escanear con la cámara</button>' : ''}`;
   if (q) {
     const exacto = buscarPorCodigo(S.estado, q);
     const ids = exacto
@@ -234,7 +237,8 @@ function vistaConteo() {
         ${finales.map((l) => `<option value="${esc(l.id)}">${esc(nombreLugar(l.id))}</option>`).join('')}
       </select>
       <label for="cf">Código del objeto encontrado (vacío = lugar vacío)</label>
-      <input id="cf" name="codigo" autocomplete="off">
+      <input id="cf" name="codigo" autocomplete="off" value="${esc(S.codigoConteo)}">
+      ${camaraDisponible() ? '<button class="btn sec btn-bloque" type="button" data-act="escanearConteo">Escanear con la cámara</button>' : ''}
       <button class="btn btn-bloque" type="submit">Registrar conteo</button>
     </form>`;
 }
@@ -339,6 +343,9 @@ const acciones = {
     if (r) { S.objetoId = r.id; ir('objeto'); } else render();
     // Si falla, se muestra el aviso en la misma vista del formulario.
   },
+  escanearBuscar: () => escanear((valor) => { S.q = valor; S.aviso = null; ir('buscar'); }),
+  escanearConteo: () => escanear((valor) => { S.codigoConteo = valor; S.aviso = null; render(); }),
+  cerrarEscaner: () => cerrarEscaner(),
   contar: async ({ lugarId, codigo }) => {
     let fisico = null;
     if (String(codigo || '').trim()) {
@@ -352,6 +359,7 @@ const acciones = {
       (e, c) => contarLugar(e, lugarId, fisico, c),
       '',
     );
+    S.codigoConteo = '';
     if (r) {
       S.aviso = r.resultado.coincide
         ? { tipo: 'ok', texto: 'Conteo sin diferencias.' }
@@ -360,6 +368,25 @@ const acciones = {
     render();
   },
 };
+
+// ----- Cámara -----
+
+let pararEscaner = null;
+
+function cerrarEscaner() {
+  if (pararEscaner) pararEscaner();
+  pararEscaner = null;
+  $('#escaner').hidden = true;
+}
+
+async function escanear(alDetectar) {
+  $('#escaner').hidden = false;
+  pararEscaner = await escanearCamara({
+    video: $('#video'),
+    alDetectar: (valor) => { cerrarEscaner(); alDetectar(valor); },
+    alError: (e) => { cerrarEscaner(); S.aviso = { tipo: 'error', texto: e.message }; render(); },
+  });
+}
 
 // ----- Eventos -----
 
