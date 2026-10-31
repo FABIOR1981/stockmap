@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>stockmap</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="top">
+    <strong id="titulo">stockmap</strong>
+    <span id="usuario" class="sub"></span>
+  </header>
+  <main id="app" class="contenido" aria-live="polite"></main>
+  <nav class="nav" id="nav">
+    <button data-vista="buscar">Buscar</button>
+    <button data-vista="estructura">Estructura</button>
+    <button data-vista="conteo">Conteo</button>
+    <button data-vista="auditoria">Historial</button>
+  </nav>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
