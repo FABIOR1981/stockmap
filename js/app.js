@@ -3,7 +3,7 @@ import {
   crearLugar, eliminarLugar, crearObjeto, ubicar, mover, sacar, contarLugar,
   buscarPorCodigo, lugarDe, ocupanteDe, rutaDe, hijosDe, ErrorDeposito,
 } from './dominio/depositos.js';
-import { crearRepositorioNube, crearRepositorioMemoria, ConflictoVersion } from './datos/repositorio.js';
+import { crearRepositorioNube, crearRepositorioMemoria, ConflictoVersion, SesionVencida } from './datos/repositorio.js';
 import { escanearCamara, camaraDisponible } from './escaner.js';
 import { crearDemo } from './datos/demo.js';
 
@@ -13,11 +13,13 @@ const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '
 const params = new URLSearchParams(location.search);
 const ID = params.get('deposito') || 'demo';
 const repo = params.get('deposito')
-  ? crearRepositorioNube()
+  ? crearRepositorioNube({ sesion: () => S.sesion })
   : crearRepositorioMemoria({ demo: await crearDemo() });
 
 const S = {
-  usuario: leerUsuario(),
+  sesion: params.get('deposito') ? leerSesion(ID) : null, // { token, nombre, rol }
+  usuario: params.get('deposito') ? (leerSesion(ID)?.nombre || '') : leerUsuario(),
+  rol: params.get('deposito') ? (leerSesion(ID)?.rol || '') : 'administrador',
   vista: 'buscar',
   estado: null,
   version: null,
@@ -27,6 +29,25 @@ const S = {
   aviso: null, // { tipo: 'ok' | 'error', texto }
   codigoConteo: '',
 };
+
+function leerSesion(id) {
+  try { return JSON.parse(localStorage.getItem(`stockmap.sesion.${id}`) || 'null'); } catch { return null; }
+}
+function guardarSesion(id, sesion) {
+  try {
+    if (sesion) localStorage.setItem(`stockmap.sesion.${id}`, JSON.stringify(sesion));
+    else localStorage.removeItem(`stockmap.sesion.${id}`);
+  } catch { /* sin almacenamiento: hay que volver a ingresar al recargar */ }
+}
+function cerrarSesion() {
+  S.sesion = null;
+  S.usuario = '';
+  S.rol = '';
+  S.estado = null;
+  guardarSesion(ID, null);
+  S.vista = 'buscar';
+  render();
+}
 
 function leerUsuario() {
   try { return localStorage.getItem('stockmap.usuario') || ''; } catch { return ''; }
@@ -57,6 +78,11 @@ async function escribir(fn, mensajeOk) {
     S.aviso = { tipo: 'ok', texto: mensajeOk };
     return r;
   } catch (e) {
+    if (e instanceof SesionVencida) {
+      cerrarSesion();
+      S.aviso = { tipo: 'error', texto: 'Tu sesión venció. Volvé a ingresar.' };
+      return null;
+    }
     if (e instanceof ConflictoVersion) {
       await recargar();
       S.aviso = { tipo: 'error', texto: 'Otra persona cambió el depósito. Se recargó; revisá y volvé a intentar.' };
@@ -80,6 +106,19 @@ const objetoDe = (id) => S.estado.objetos[id];
 function avisoHTML() {
   if (!S.aviso) return '';
   return `<div class="aviso ${S.aviso.tipo}">${esc(S.aviso.texto)}</div>`;
+}
+
+function vistaIngreso() {
+  return `
+    <h2>Ingresar</h2>
+    <p class="sub">Usá tu nombre y tu PIN.</p>
+    <form data-form="ingreso">
+      <label for="ni">Nombre</label>
+      <input id="ni" name="nombre" required autocomplete="username">
+      <label for="pi">PIN</label>
+      <input id="pi" name="pin" required type="password" inputmode="numeric" autocomplete="current-password">
+      <button class="btn btn-bloque" type="submit">Entrar</button>
+    </form>`;
 }
 
 function vistaUsuario() {
@@ -268,12 +307,18 @@ const TITULOS = {
 function render() {
   const app = $('#app');
   const nav = $('#nav');
-  $('#usuario').textContent = S.usuario ? `Usuario: ${S.usuario}` : '';
+  const cabecera = $('#usuario');
+  cabecera.innerHTML = S.usuario
+    ? `${esc(S.usuario)} <button class="btn sec" data-act="salir">Salir</button>`
+    : '';
   $('#titulo').textContent = S.estado ? S.estado.cliente.nombre : 'stockmap';
   nav.hidden = !S.usuario;
+  // Un operario no ve la estructura (el control real está en el servidor: ver requisitos).
+  nav.querySelector('[data-vista="estructura"]').hidden = S.rol === 'operario';
 
   const vistas = {
     usuario: vistaUsuario,
+    ingreso: vistaIngreso,
     buscar: vistaBuscar,
     objeto: vistaObjeto,
     elegirLugar: vistaElegirLugar,
@@ -282,7 +327,8 @@ function render() {
     conteo: vistaConteo,
     auditoria: vistaAuditoria,
   };
-  const vista = S.usuario ? S.vista : 'usuario';
+  const modoNube = Boolean(params.get('deposito'));
+  const vista = S.usuario ? S.vista : (modoNube ? 'ingreso' : 'usuario');
   app.innerHTML = avisoHTML() + (vistas[vista] ? vistas[vista]() : vistaBuscar());
 
   nav.querySelectorAll('button').forEach((b) => {
@@ -301,6 +347,21 @@ function ir(vista) {
 // ----- Acciones -----
 
 const acciones = {
+  ingreso: async ({ nombre, pin }) => {
+    try {
+      const sesion = await repo.ingresar(ID, String(nombre || '').trim(), String(pin || ''));
+      S.sesion = sesion;
+      S.usuario = sesion.nombre;
+      S.rol = sesion.rol;
+      guardarSesion(ID, sesion);
+      await recargar();
+      ir('buscar');
+    } catch (e) {
+      S.aviso = { tipo: 'error', texto: e.message };
+      render();
+    }
+  },
+  salir: () => cerrarSesion(),
   usuario: async ({ nombre }) => {
     S.usuario = String(nombre || '').trim();
     if (!S.usuario) return;
@@ -413,8 +474,17 @@ document.addEventListener('submit', (ev) => {
 // ----- Arranque -----
 
 try {
-  await recargar();
+  // En modo nube sin sesión no se carga nada: primero hay que ingresar.
+  if (!params.get('deposito') || S.sesion) await recargar();
 } catch (e) {
-  S.aviso = { tipo: 'error', texto: `No se pudo cargar el depósito: ${e.message}` };
+  if (e instanceof SesionVencida) {
+    guardarSesion(ID, null);
+    S.sesion = null;
+    S.usuario = '';
+    S.rol = '';
+    S.aviso = { tipo: 'error', texto: 'Tu sesión venció. Volvé a ingresar.' };
+  } else {
+    S.aviso = { tipo: 'error', texto: `No se pudo cargar el depósito: ${e.message}` };
+  }
 }
 render();

@@ -1,13 +1,35 @@
 // Acceso a los datos de un depósito. Misma interfaz para la nube y para pruebas.
 //   cargar(id)              -> { estado, version }
 //   guardar(id, estado, v)  -> nueva versión. Lanza ConflictoVersion si cambió desde que se leyó.
+//   Errores: SesionVencida (hay que volver a ingresar), ConflictoVersion.
 
 export class ConflictoVersion extends Error {}
+export class SesionVencida extends Error {}
 
-export function crearRepositorioNube({ base = '/api/depositos', fetchFn = fetch } = {}) {
+// sesion: { token, nombre, rol } o null. Se pasa una función para leer la sesión actual.
+export function crearRepositorioNube({ base = '/api/depositos', fetchFn = fetch, sesion = () => null } = {}) {
+  const cabeceras = (extra = {}) => {
+    const s = sesion();
+    return { ...extra, ...(s?.token ? { authorization: `Bearer ${s.token}` } : {}) };
+  };
+  const revisar = (r) => {
+    if (r.status === 401) throw new SesionVencida('Tu sesión venció. Volvé a ingresar.');
+  };
+
   return {
+    async ingresar(id, nombre, pin) {
+      const r = await fetchFn(`${base}/${id}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ nombre, pin }),
+      });
+      const cuerpo = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(cuerpo.error || `No se pudo ingresar (${r.status})`);
+      return { token: cuerpo.token, nombre: cuerpo.usuario.nombre, rol: cuerpo.usuario.rol };
+    },
     async cargar(id) {
-      const r = await fetchFn(`${base}/${id}`);
+      const r = await fetchFn(`${base}/${id}`, { headers: cabeceras() });
+      revisar(r);
       if (!r.ok) throw new Error(`No se pudo cargar el depósito (${r.status})`);
       const fila = await r.json();
       return { estado: fila.estado, version: fila.version };
@@ -15,9 +37,10 @@ export function crearRepositorioNube({ base = '/api/depositos', fetchFn = fetch 
     async guardar(id, estado, version) {
       const r = await fetchFn(`${base}/${id}`, {
         method: 'PUT',
-        headers: { 'content-type': 'application/json' },
+        headers: cabeceras({ 'content-type': 'application/json' }),
         body: JSON.stringify({ estado, version }),
       });
+      revisar(r);
       if (r.status === 409) {
         const cuerpo = await r.json().catch(() => ({}));
         throw new ConflictoVersion(cuerpo.error || 'El depósito cambió');

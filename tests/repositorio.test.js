@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { crearRepositorioNube, crearRepositorioMemoria, ConflictoVersion } from '../js/datos/repositorio.js';
+import { crearRepositorioNube, crearRepositorioMemoria, ConflictoVersion, SesionVencida } from '../js/datos/repositorio.js';
 
 const estado = { cliente: { nombre: 'X', niveles: [] }, lugares: {}, objetos: {}, codigos: {}, ubicaciones: {}, auditoria: [] };
 
@@ -13,23 +13,31 @@ test('memoria: guarda y rechaza versión vieja', async () => {
   assert.deepEqual(leido.estado.codigos, { a: 'x' });
 });
 
-test('nube: carga y guarda con la versión', async () => {
+test('nube: ingreso, carga y guardado envían el token', async () => {
   const llamadas = [];
   const fetchFn = async (url, init = {}) => {
-    llamadas.push({ url, method: init.method || 'GET', body: init.body });
+    llamadas.push({ url, method: init.method || 'GET', headers: init.headers || {}, body: init.body });
+    if (init.method === 'POST') {
+      return new Response(JSON.stringify({ token: 'T1', usuario: { nombre: 'Ana', rol: 'supervisor' } }), { status: 200 });
+    }
     if (init.method === 'PUT') return new Response(JSON.stringify({ id: 'd1', version: 4 }), { status: 200 });
     return new Response(JSON.stringify({ id: 'd1', nombre: 'X', estado, version: 3 }), { status: 200 });
   };
-  const repo = crearRepositorioNube({ fetchFn });
+  let sesion = null;
+  const repo = crearRepositorioNube({ fetchFn, sesion: () => sesion });
+  const ing = await repo.ingresar('d1', 'Ana', '482913');
+  assert.deepEqual(ing, { token: 'T1', nombre: 'Ana', rol: 'supervisor' });
+  sesion = ing;
   const { version } = await repo.cargar('d1');
   assert.equal(version, 3);
-  const nueva = await repo.guardar('d1', estado, version);
-  assert.equal(nueva, 4);
-  assert.deepEqual(JSON.parse(llamadas[1].body), { estado, version: 3 });
+  assert.equal(llamadas[1].headers.authorization, 'Bearer T1');
+  assert.equal(await repo.guardar('d1', estado, version), 4);
+  assert.deepEqual(JSON.parse(llamadas[2].body), { estado, version: 3 });
 });
 
-test('nube: un 409 se informa como conflicto', async () => {
-  const fetchFn = async () => new Response(JSON.stringify({ error: 'Conflicto' }), { status: 409 });
-  const repo = crearRepositorioNube({ fetchFn });
-  await assert.rejects(repo.guardar('d1', estado, 3), ConflictoVersion);
+test('nube: un 409 es conflicto y un 401 es sesión vencida', async () => {
+  const conflicto = crearRepositorioNube({ fetchFn: async () => new Response('{"error":"x"}', { status: 409 }) });
+  await assert.rejects(conflicto.guardar('d1', estado, 3), ConflictoVersion);
+  const vencida = crearRepositorioNube({ fetchFn: async () => new Response('{}', { status: 401 }) });
+  await assert.rejects(vencida.cargar('d1'), SesionVencida);
 });
