@@ -379,3 +379,14 @@ html:fullscreen { background: var(--sur); }
 .rec-medidas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .rec-medidas label { display: flex; gap: 4px; align-items: center; font-size: 14px; color: var(--mut); }
 .rec-medidas input { width: 72px; padding: 4px 6px; font-size: 14px; }
+
+/* Botones para caminar en el recorrido 3D: solo en pantallas táctiles. */
+.r3d canvas { touch-action: none; }
+.r3d-pad { position: absolute; left: 10px; bottom: 10px; z-index: 2; display: none; grid-template-areas: ". up ." "izq . der" ". down ."; gap: 6px; }
+.r3d-pad button { width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--lin); background: color-mix(in srgb, var(--sur) 88%, transparent); color: var(--ink); font-size: 18px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.r3d-pad button:active { background: var(--acc-s); }
+.r3d-pad [data-tecla="ArrowUp"] { grid-area: up; }
+.r3d-pad [data-tecla="ArrowLeft"] { grid-area: izq; }
+.r3d-pad [data-tecla="ArrowRight"] { grid-area: der; }
+.r3d-pad [data-tecla="ArrowDown"] { grid-area: down; }
+@media (hover: none) and (pointer: coarse) { .r3d-pad { display: grid; } }

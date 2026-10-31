@@ -149,6 +149,16 @@ export function montarRecorrido3D() {
   const onUp = e => teclas.delete(e.key);
   window.addEventListener('keydown', onDown);
   window.addEventListener('keyup', onUp);
+  // Botones táctiles: se mantienen apretados para caminar o girar, igual que las flechas.
+  cont.parentElement?.querySelectorAll('.r3d-pad [data-tecla]').forEach(b => {
+    const k = b.dataset.tecla;
+    const abajo = e => { e.preventDefault(); R.paseo = null; teclas.add(k); };
+    const arriba = () => teclas.delete(k);
+    b.addEventListener('pointerdown', abajo);
+    b.addEventListener('pointerup', arriba);
+    b.addEventListener('pointerleave', arriba);
+    b.addEventListener('pointercancel', arriba);
+  });
 
   // Destello del hueco buscado: empieza al abrir la vista (Ir) o al llegar caminando (Pasear), y dura 5 segundos.
   const ahora = performance.now();
@@ -319,6 +329,12 @@ export function vistaRecorrido3D() {
     <div class="r3d-marco">
       <div id="r3d" class="r3d" aria-label="${aerea ? 'Vista aérea del edificio' : 'Recorrido 3D del pasillo'}"></div>
       ${herramientas}
+      ${aerea ? '' : `<div class="r3d-pad" aria-label="Caminar con los botones">
+        <button data-tecla="ArrowUp" aria-label="Avanzar">▲</button>
+        <button data-tecla="ArrowLeft" aria-label="Girar a la izquierda">◀</button>
+        <button data-tecla="ArrowRight" aria-label="Girar a la derecha">▶</button>
+        <button data-tecla="ArrowDown" aria-label="Retroceder">▼</button>
+      </div>`}
       <button class="btn sec sm r3d-ampliar" data-act="recAmpliar">${document.fullscreenElement ? 'Salir de pantalla completa' : 'Ampliar'}</button>
     </div>
     ${detalleLugar3D()}`;
