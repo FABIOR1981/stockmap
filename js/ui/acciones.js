@@ -178,7 +178,9 @@ export const ACCIONES = {
     const error = escanearCamara({
       alDetectar: texto => {
         S.f[campo] = texto;
-        if (campo === 'codContar') {
+        if (campo === 'buscar') {
+          ACCIONES.buscarFicha();
+        } else if (campo === 'codContar') {
           ACCIONES.contarLugar();
         } else if (campo === 'codDonde') {
           ACCIONES.dondeEsta();
@@ -214,6 +216,54 @@ export const ACCIONES = {
     const marcado = !!document.querySelector('input[data-f="vencimientosCliente"]')?.checked;
     const err = d().fijarVencimientos(marcado);
     aviso('cliente', err, marcado ? 'Vencimientos activados para este cliente.' : 'Vencimientos desactivados para este cliente.');
+  },
+  // Inicio: busca un lugar o un objeto (código exacto, o descripción si es única) y abre su ficha.
+  buscarFicha: () => {
+    const dep = d();
+    const raw = String(S.f.buscar || '').trim();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(raw);
+    if (!q) return aviso('inicio', 'Escribí o escaneá un código o descripción.');
+    const lugar = dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q);
+    let obj = lugar ? null : dep.objetos.find(o => norm(o.codigo_interno) === q || (o.codigo_propio && norm(o.codigo_propio) === q));
+    if (!lugar && !obj) {
+      const parecidos = dep.objetos.filter(o => norm(o.descripcion).includes(q) || norm(o.codigo_interno).includes(q));
+      if (parecidos.length === 1) obj = parecidos[0];
+      else if (parecidos.length > 1) return aviso('inicio', `Hay ${parecidos.length} objetos con "${raw}". Escribí el código para elegir uno.`);
+      else return aviso('inicio', `No encuentro un lugar ni un objeto con "${raw}".`);
+    }
+    S.ficha = lugar ? { tipo: 'lugar', id: lugar.id } : { tipo: 'objeto', id: obj.id };
+    S.vista = 'ficha'; S.msg = {};
+    S.f.buscar = '';
+  },
+  abrirFicha: el => { S.ficha = { tipo: el.tipo, id: el.id }; S.vista = 'ficha'; S.msg = {}; },
+  // Desde la ficha: saca la cantidad escrita (productos) o la unidad, del lugar indicado.
+  sacarDeFicha: el => {
+    const o = d().objetoPorId(el.oid);
+    const cant = o?.tipo === 'producto' ? (S.f.cantFicha || '1') : '1';
+    aviso('obj', d().retirar(el.oid, el.lid, cant), 'Sacado del depósito.');
+  },
+  // Desde la ficha: lleva a Ingresar con el lugar (o el objeto) ya escrito.
+  ingresarEn: el => {
+    const dep = d();
+    if (el.tipo === 'objeto') {
+      const o = dep.objetoPorId(el.id);
+      if (!o) return;
+      S.f.codObjeto = o.codigo_interno;
+    } else {
+      const l = dep.porId(el.id);
+      if (!l) return;
+      S.f.codLugar = dep.dir(l);
+    }
+    S.vista = 'codigo'; S.msg = {};
+  },
+  // Desde la ficha de un lugar: lo cuenta ahora.
+  contarEn: el => {
+    const l = d().porId(el.id);
+    if (!l) return;
+    S.f.codContar = d().dir(l);
+    ACCIONES.contarLugar();
+    S.vista = 'codigo';
   },
   // Conteo: abre el lugar y carga lo que el sistema tiene como punto de partida.
   contarLugar: () => {

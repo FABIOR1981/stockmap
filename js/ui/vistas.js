@@ -195,6 +195,28 @@ export function vistaPlano() {
 
 // ---------- Stock (unidades y productos) ----------
 // Por código: se escribe el código de un lugar y el de un objeto, y se asigna.
+// Alertas del depósito: productos bajo mínimo y lo que vence pronto (solo si el cliente tiene vencimientos).
+function alertasHTML(d) {
+  const bajos = d.objetos.filter(o => d.bajoMinimo(o));
+  const vencen = d.porVencer(7);
+  const listaVencen = vencen.length ? `<section class="panel" style="max-width:560px">
+      <p style="margin:0 0 8px"><strong>Por vencer</strong> · ${vencen.length} ${vencen.length === 1 ? 'lugar' : 'lugares'}</p>
+      <ul class="lista-minimo">${vencen.slice(0, 8).map(x => {
+        const o = d.objetoPorId(x.oid);
+        return `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
+        <span class="${x.vencido ? 'falta' : 'dim'}">${x.vencido ? 'Vencido' : 'vence'} ${x.fecha.toLocaleDateString('es-UY')} · ${esc(d.dir(d.porId(x.lid)))}</span></li>`;
+      }).join('')}</ul>
+      ${vencen.length > 8 ? `<p class="ayuda">Y ${vencen.length - 8} más en Stock.</p>` : ''}
+    </section>` : '';
+  const listaBajos = bajos.length ? `<section class="panel" style="max-width:560px">
+      <p style="margin:0 0 8px"><strong>Bajo mínimo</strong> · ${bajos.length} ${bajos.length === 1 ? 'objeto' : 'objetos'}</p>
+      <ul class="lista-minimo">${bajos.slice(0, 8).map(o => `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
+        <span class="dim">${d.existenciaTotal(o.id)} de ${o.minimo}</span></li>`).join('')}</ul>
+      ${bajos.length > 8 ? `<p class="ayuda">Y ${bajos.length - 8} más en Stock.</p>` : ''}
+    </section>` : '';
+  return `${listaBajos}${listaVencen}`;
+}
+
 // Conteo de un lugar: se escribe lo que hay de verdad y al guardar se ajusta el sistema (cada diferencia queda registrada).
 function seccionConteo(d) {
   const lugar = S.conteo ? d.porId(S.conteo) : null;
@@ -218,29 +240,90 @@ function seccionConteo(d) {
   </section>`;
 }
 
+// Inicio: buscar lo que se necesita, las acciones del día y las alertas.
+export function vistaInicio() {
+  const d = ctx.dep;
+  if (!d.eid) return `<h1>Inicio</h1>${sinCliente()}`;
+  return `<h1>Inicio</h1>
+    <p class="sub">${esc(d.establecimientoActual()?.nombre || '')}</p>
+    <div class="inicio-grid">
+      <div class="inicio-col">
+        <section class="panel">
+          <div class="form">
+            ${campo('¿Qué buscás? (lugar u objeto)', `<input data-f="buscar" data-enter="buscarFicha" value="${esc(S.f.buscar || '')}" placeholder="Código o descripción (o escaneá)" autocomplete="off">`)}
+          </div>
+          <div class="acciones-fila donde-acciones" style="margin-top:10px"><button class="btn" data-act="buscarFicha">Buscar</button><button class="btn sec" data-act="escanear" data-campo="buscar">${ic('qr', 16)} Escanear</button></div>
+          ${msgHTML('inicio')}
+        </section>
+        <div class="acciones-grandes">
+          <button class="btn sec" data-act="vista" data-v="codigo"><strong>Ingresar</strong><span>Poner objetos en un lugar</span></button>
+          <button class="btn sec" data-act="vista" data-v="mover"><strong>Mover</strong><span>De un lugar a otro</span></button>
+          <button class="btn sec" data-act="vista" data-v="stock"><strong>Sacar</strong><span>Quitar del depósito</span></button>
+          <button class="btn sec" data-act="vista" data-v="codigo"><strong>Contar</strong><span>Igualar con lo que hay</span></button>
+        </div>
+      </div>
+      <div class="inicio-col">${alertasHTML(d) || '<p class="dim">Sin alertas por ahora.</p>'}</div>
+    </div>`;
+}
+
+// Ficha: todo lo que se sabe de un lugar o de un objeto, con sus acciones.
+export function vistaFicha() {
+  const d = ctx.dep;
+  if (!d.eid) return sinCliente();
+  const atras = `<button class="btn sec sm" data-act="vista" data-v="inicio">← Inicio</button>`;
+  const f = S.ficha;
+  if (f?.tipo === 'lugar') {
+    const l = d.porId(f.id);
+    if (!l) return `${atras}<p class="dim" style="margin-top:12px">Ese lugar ya no existe.</p>`;
+    if (!d.esHoja(l)) {
+      const hijos = d.hijos(l.id);
+      return `${atras}
+        <h1>${esc(d.dir(l))}</h1>
+        <p class="sub">Elegí adentro qué mirar.</p>
+        <section class="panel"><ul class="lista-ficha">${hijos.map(h => `<li><button class="btn sec sm" data-act="abrirFicha" data-tipo="lugar" data-id="${h.id}">${esc(d.dir(h))}</button></li>`).join('')}</ul></section>
+        ${msgHTML('ficha')}`;
+    }
+    const dentro = d.objetosDe(l.id);
+    return `${atras}
+      <h1>${esc(d.dir(l))}</h1>
+      <p class="sub">Lugar donde se guardan los objetos.</p>
+      <section class="panel">
+        <h2>Hay acá</h2>
+        ${dentro.length ? `<ul class="lista-ficha">${dentro.map(o => `<li><span><strong>${esc(o.descripcion || o.codigo_interno)}</strong> <span class="dim">${esc(o.codigo_interno)}</span></span><strong>${d.cantidadEn(o.id, l.id)}</strong></li>`).join('')}</ul>` : '<p class="dim">No hay nada acá.</p>'}
+        <div class="acciones-fila donde-acciones" style="margin-top:12px"><button class="btn" data-act="ingresarEn" data-id="${l.id}">Ingresar acá</button><button class="btn sec" data-act="contarEn" data-id="${l.id}">Contar</button></div>
+      </section>
+      ${msgHTML('ficha')}`;
+  }
+  if (f?.tipo === 'objeto') {
+    const o = d.objetoPorId(f.id);
+    if (!o) return `${atras}<p class="dim" style="margin-top:12px">Ese objeto ya no existe.</p>`;
+    const ub = d.ubicacionesDe(o.id);
+    const prox = d.proximoVencimiento(o.id);
+    const esProducto = o.tipo === 'producto';
+    return `${atras}
+      <h1>${esc(o.descripcion || o.codigo_interno)}</h1>
+      <p class="sub">${esc(o.codigo_interno)}${o.codigo_propio ? ` · ${esc(o.codigo_propio)}` : ''} · ${esProducto ? 'Producto' : 'Unidad'}${esProducto ? ` · en total: <strong>${d.existenciaTotal(o.id)}</strong>` : ''}</p>
+      ${prox ? `<p><span class="chip ${prox.vencido ? 'falta' : ''}">${prox.vencido ? 'Vencido' : 'Vence'} ${prox.fecha.toLocaleDateString('es-UY')}</span></p>` : ''}
+      <section class="panel">
+        <h2>Dónde está</h2>
+        ${ub.length ? `<ul class="lista-ficha">${ub.map(l => `<li>
+            <span>${esc(d.dir(l))}</span>
+            <span class="acciones-fila" style="margin:0"><strong>${d.cantidadEn(o.id, l.id)}</strong>
+              <button class="btn sm peligro" data-act="sacarDeFicha" data-oid="${o.id}" data-lid="${l.id}">Sacar</button>
+              <button class="btn sm" data-act="moverEnPlano" data-oid="${o.id}">Mover</button></span>
+          </li>`).join('')}</ul>` : '<p class="dim">No está en ningún lugar.</p>'}
+        ${esProducto && ub.length ? `<div class="form" style="margin-top:12px">${campo('Cantidad a sacar', `<input type="number" min="1" data-f="cantFicha" value="${esc(S.f.cantFicha || '1')}" style="width:110px;min-width:0">`)}</div>` : ''}
+        <div class="acciones-fila" style="margin-top:12px"><button class="btn" data-act="ingresarEn" data-id="${o.id}" data-tipo="objeto">Ingresar en un lugar</button></div>
+      </section>
+      ${msgHTML('obj')}${msgHTML('ficha')}`;
+  }
+  return `${atras}<p class="dim" style="margin-top:12px">Buscá un lugar o un objeto desde Inicio.</p>`;
+}
+
 export function vistaCodigo() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Por código</h1>${sinCliente()}`;
-  const bajos = d.objetos.filter(o => d.bajoMinimo(o));
-  const vencen = d.porVencer(7);
-  const listaVencen = vencen.length ? `<section class="panel" style="max-width:560px">
-      <p style="margin:0 0 8px"><strong>Por vencer</strong> · ${vencen.length} ${vencen.length === 1 ? 'lugar' : 'lugares'}</p>
-      <ul class="lista-minimo">${vencen.slice(0, 8).map(x => {
-        const o = d.objetoPorId(x.oid);
-        return `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
-        <span class="${x.vencido ? 'falta' : 'dim'}">${x.vencido ? 'Vencido' : 'vence'} ${x.fecha.toLocaleDateString('es-UY')} · ${esc(d.dir(d.porId(x.lid)))}</span></li>`;
-      }).join('')}</ul>
-      ${vencen.length > 8 ? `<p class="ayuda">Y ${vencen.length - 8} más en Stock.</p>` : ''}
-    </section>` : '';
-  const listaBajos = bajos.length ? `<section class="panel" style="max-width:560px">
-      <p style="margin:0 0 8px"><strong>Bajo mínimo</strong> · ${bajos.length} ${bajos.length === 1 ? 'objeto' : 'objetos'}</p>
-      <ul class="lista-minimo">${bajos.slice(0, 8).map(o => `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
-        <span class="dim">${d.existenciaTotal(o.id)} de ${o.minimo}</span></li>`).join('')}</ul>
-      ${bajos.length > 8 ? `<p class="ayuda">Y ${bajos.length - 8} más en Stock.</p>` : ''}
-    </section>` : '';
   return `<h1>Por código</h1>
-    ${listaBajos}
-    ${listaVencen}
     <p class="sub codigo-sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
     <section class="panel" style="max-width:560px">
       <div class="form">

@@ -4,7 +4,8 @@
 export const ctx = { dep: null, render: () => {} };
 
 export const S = {
-  vista: 'codigo',         // 'plano' (Asignación) | 'codigo' (Por código) | 'mover' | 'stock' | 'movimientos' | 'accesos'
+  vista: 'inicio',
+  ficha: null,         // { tipo: 'lugar' | 'objeto', id } que se muestra en la vista Ficha         // 'plano' (Asignación) | 'codigo' (Por código) | 'mover' | 'stock' | 'movimientos' | 'accesos'
   nodo: null,              // lugar que se mira (null = raíz de la vista)
   elegido: null,           // lugar seleccionado con un clic (doble clic = entrar). Es el destino de 'Por asignar'.
   rec: { i: 0, resaltado: null, fila: 0 },  // Recorrido: tramo del pasillo que se ve y el módulo que resalta la búsqueda

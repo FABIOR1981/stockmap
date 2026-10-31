@@ -7,7 +7,7 @@ import { api, cargarDesdeServidor, sincronizar, nuevoEstadoSincronizacion } from
 import { ctx, S, $, esc, aviso, msgHTML } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
-import { vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
+import { vistaInicio, vistaFicha, vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
 import { vistaRecorrido3D, montarRecorrido3D, desmontarRecorrido3D } from './ui/recorrido3d.js';
 import { ACCIONES } from './ui/acciones.js';
@@ -18,10 +18,10 @@ ctx.dep = new Deposito(almacen);
 let estadoSync = null;
 
 // Nombres cortos para la barra inferior del celular (en pantalla chica no entran los largos).
-const CORTO = { plano: 'Asignar', codigo: 'Código', movimientos: 'Movim.' };
+const CORTO = { inicio: 'Inicio', plano: 'Asignar', codigo: 'Código', movimientos: 'Movim.' };
 
 const NAV = [
-  ['codigo', 'Por código', 'buscar'],
+  ['inicio', 'Inicio', 'buscar'],
   ['plano', 'Asignación', 'plano'],
   ['mover', 'Mover', 'mover'],
   ['stock', 'Stock', 'caja'],
@@ -31,7 +31,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'buscarFicha', 'abrirFicha', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'asignarDesdeStock', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recBuscar', 'recInicio', 'recCajas']);
 
 function sesionHTML() {
@@ -53,7 +53,7 @@ function render() {
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido3d: vistaRecorrido3D, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
+  const vistas = { inicio: vistaInicio, ficha: vistaFicha, stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido3d: vistaRecorrido3D, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
   const cuerpo = (vistas[S.vista] || vistaPlano)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
   // El recorrido 3D dibuja en un canvas dentro de #contenido: se arma después de cada dibujo.
