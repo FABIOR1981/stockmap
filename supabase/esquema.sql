@@ -25,3 +25,12 @@ create table if not exists usuarios (
 );
 
 alter table usuarios enable row level security;
+
+-- 3) intentos fallidos de ingreso (ver migracion_intentos.sql).
+create table if not exists intentos_ingreso (
+  clave text primary key,
+  fallos integer not null default 0,
+  hasta timestamptz
+);
+
+alter table intentos_ingreso enable row level security;
