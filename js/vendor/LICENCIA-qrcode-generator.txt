@@ -1,0 +1,2 @@
+qrcode-generator 1.4.4 (Kazuhiko Arase), licencia MIT.
+Archivo: js/vendor/qrcode-generator.js, copia sin cambios del paquete npm.

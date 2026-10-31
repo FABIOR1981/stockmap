@@ -5,6 +5,7 @@ import {
 } from './dominio/depositos.js';
 import { crearRepositorioNube, crearRepositorioMemoria, ConflictoVersion, SesionVencida } from './datos/repositorio.js';
 import { escanearCamara, camaraDisponible } from './escaner.js';
+import { svgQR } from './etiquetas.js';
 import { crearDemo } from './datos/demo.js';
 
 const $ = (s) => document.querySelector(s);
@@ -184,10 +185,37 @@ function vistaObjeto() {
     ${medidas ? `<p class="marca">${esc(medidas)}</p>` : ''}
     <h3>Ubicación</h3>
     <p>${lugar ? esc(nombreLugar(lugar)) : '<span class="vacio">Sin ubicar</span>'}</p>
+    <button class="btn btn-bloque sec no-imprimir" data-act="verEtiqueta">Ver etiqueta QR</button>
     ${lugar
       ? `<button class="btn btn-bloque" data-act="elegirLugar" data-modo="mover">Mover</button>
          <button class="btn btn-bloque peligro" data-act="sacar">Sacar</button>`
       : `<button class="btn btn-bloque" data-act="elegirLugar" data-modo="ubicar">Ubicar</button>`}`;
+}
+
+function vistaEtiqueta() {
+  const o = objetoDe(S.objetoId);
+  if (!o) return '<p class="vacio">Objeto inexistente.</p>';
+  return `
+    <div class="no-imprimir fila">
+      <button class="btn sec" data-act="volverObjeto">Volver</button>
+      <button class="btn" data-act="imprimir">Imprimir</button>
+    </div>
+    <div class="etiqueta">
+      <div id="qr-slot" class="qr-slot" aria-label="Código QR de ${esc(o.codigoInterno)}"></div>
+      <strong>${esc(o.codigoInterno)}</strong>
+      <span>${esc(o.descripcion)}</span>
+    </div>`;
+}
+
+async function pintarEtiqueta() {
+  const o = objetoDe(S.objetoId);
+  const slot = $('#qr-slot');
+  if (!o || !slot) return;
+  try {
+    slot.innerHTML = await svgQR(o.codigoInterno);
+  } catch (e) {
+    slot.textContent = e.message;
+  }
 }
 
 function vistaElegirLugar() {
@@ -322,6 +350,7 @@ function render() {
     buscar: vistaBuscar,
     objeto: vistaObjeto,
     elegirLugar: vistaElegirLugar,
+    etiqueta: vistaEtiqueta,
     nuevoObjeto: vistaNuevoObjeto,
     estructura: vistaEstructura,
     conteo: vistaConteo,
@@ -330,6 +359,7 @@ function render() {
   const modoNube = Boolean(params.get('deposito'));
   const vista = S.usuario ? S.vista : (modoNube ? 'ingreso' : 'usuario');
   app.innerHTML = avisoHTML() + (vistas[vista] ? vistas[vista]() : vistaBuscar());
+  if (S.usuario && S.vista === 'etiqueta') pintarEtiqueta();
 
   nav.querySelectorAll('button').forEach((b) => {
     if (b.dataset.vista === S.vista) b.setAttribute('aria-current', 'page');
@@ -373,6 +403,8 @@ const acciones = {
   abrirObjeto: (id) => { S.objetoId = id; ir('objeto'); },
   volverObjeto: () => ir('objeto'),
   elegirLugar: (modo) => { S.modo = modo; ir('elegirLugar'); },
+  verEtiqueta: () => ir('etiqueta'),
+  imprimir: () => window.print(),
   elegir: async (lugarId) => {
     const hecho = S.modo === 'mover'
       ? await escribir((e, c) => mover(e, S.objetoId, lugarId, c), 'Movido.')
