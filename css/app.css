@@ -390,3 +390,10 @@ html:fullscreen { background: var(--sur); }
 .r3d-pad [data-tecla="ArrowRight"] { grid-area: der; }
 .r3d-pad [data-tecla="ArrowDown"] { grid-area: down; }
 @media (hover: none) and (pointer: coarse) { .r3d-pad { display: grid; } }
+
+/* Celular: "Por código" arranca con lo que se usa en el piso: buscar y escanear, en botones grandes. */
+@media (max-width: 860px) {
+  .codigo-sub { display: none; }
+  .donde-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .donde-acciones .btn { width: 100%; min-height: 48px; font-size: 16px; }
+}
