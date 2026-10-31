@@ -439,3 +439,8 @@ html:fullscreen { background: var(--sur); }
   .objetos-lugar:not(.abierto) .asignar-cuerpo { display: none; }
   .objetos-lugar { margin-top: 12px; }
 }
+
+/* Celular: el plano no tiene caja con scroll interno (cortaba las estanterías de abajo); scrollea la página. */
+@media (max-width: 860px) {
+  .plano { max-height: none; overflow: visible; }
+}
