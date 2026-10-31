@@ -178,7 +178,9 @@ export const ACCIONES = {
     const error = escanearCamara({
       alDetectar: texto => {
         S.f[campo] = texto;
-        if (campo === 'codLugar') {
+        if (campo === 'codDonde') {
+          ACCIONES.dondeEsta();
+        } else if (campo === 'codLugar') {
           S.enfocar = 'codObjeto';
         } else if (S.f.codLugar) {
           ACCIONES.asignarPorCodigo();
@@ -189,6 +191,21 @@ export const ACCIONES = {
       alError: msg => { aviso('codigo', msg); ctx.render(); },
     });
     if (error) aviso('codigo', error);
+  },
+  // "¿Dónde está?": un lugar o un objeto, escrito o escaneado (misma regla que el recorrido).
+  dondeEsta: () => {
+    const dep = d();
+    const raw = String(S.f.codDonde || '').trim();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(raw);
+    if (!q) return aviso('codigo', 'Escribí o escaneá un código de lugar u objeto.');
+    const lugar = dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q);
+    if (lugar) return aviso('codigo', null, `Lugar: ${dep.dir(lugar)}.`);
+    const obj = dep.objetos.find(o => norm(o.codigo_interno) === q || (o.codigo_propio && norm(o.codigo_propio) === q));
+    if (!obj) return aviso('codigo', `No encuentro un lugar ni un objeto con el código "${raw}".`);
+    const ubicaciones = dep.ubicacionesDe(obj.id);
+    if (!ubicaciones.length) return aviso('codigo', `${obj.codigo_interno} no está puesto en ningún lugar.`);
+    aviso('codigo', null, `${obj.codigo_interno} está en ${dep.dir(ubicaciones[0])}.`);
   },
   // Etiqueta de un solo lugar (QR = su identificador) o de un solo objeto (QR = su código interno).
   etiquetaLugar: el => {

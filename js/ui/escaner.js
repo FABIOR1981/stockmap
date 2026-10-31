@@ -1,20 +1,23 @@
-// Lector de QR con la cámara (celular o computadora con cámara).
+// Lector de códigos con la cámara: QR y códigos de barras comunes (celular o computadora con cámara).
 // Vive fuera de la interfaz que se redibuja: así la cámara no se corta cuando la pantalla se actualiza.
 // Necesita HTTPS (o localhost) para que el navegador permita usar la cámara.
+// Lee con BarcodeDetector si el navegador lo trae (Chrome en Android); si no, con jsQR (solo QR).
 
 let activo = null;
+const FORMATOS = ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'upc_a', 'upc_e'];
 
-// Abre la cámara y llama a alDetectar(texto) con el primer QR que lea. Devuelve un texto de error si no se puede abrir.
+// Abre la cámara y llama a alDetectar(texto) con el primer código que lea. Devuelve un texto de error si no se puede abrir.
 export function escanearCamara({ alDetectar, alError }) {
   if (activo) return null;
   if (!navigator.mediaDevices?.getUserMedia) return 'Este navegador no da acceso a la cámara (hace falta HTTPS).';
-  if (!window.jsQR) return 'No se cargó el lector de códigos.';
+  const detector = 'BarcodeDetector' in window ? new window.BarcodeDetector({ formats: FORMATOS }) : null;
+  if (!detector && !window.jsQR) return 'No se cargó el lector de códigos.';
 
   const capa = document.createElement('div');
   capa.className = 'escaner';
-  capa.innerHTML = `<div class="escaner-caja" role="dialog" aria-label="Escanear código QR">
+  capa.innerHTML = `<div class="escaner-caja" role="dialog" aria-label="Escanear código">
       <video playsinline muted></video>
-      <p>Apuntá la cámara al código QR.</p>
+      <p>Apuntá la cámara al código (QR o de barras).</p>
       <button class="btn sec" type="button">Cancelar</button>
     </div>`;
   document.body.append(capa);
@@ -35,18 +38,33 @@ export function escanearCamara({ alDetectar, alError }) {
   capa.querySelector('button').addEventListener('click', cerrar);
   activo = { cerrar };
 
-  const leer = () => {
+  // Primero el lector nativo de códigos de barras; si no encuentra nada, jsQR para los QR.
+  const decodificar = async () => {
+    if (detector) {
+      try {
+        const hallados = await detector.detect(lienzo);
+        if (hallados.length) return hallados[0].rawValue.trim();
+      } catch { /* sigue con jsQR */ }
+    }
+    if (window.jsQR) {
+      const imagen = dibujo.getImageData(0, 0, lienzo.width, lienzo.height);
+      const hallado = window.jsQR(imagen.data, imagen.width, imagen.height, { inversionAttempts: 'dontInvert' });
+      if (hallado?.data) return hallado.data.trim();
+    }
+    return null;
+  };
+
+  const leer = async () => {
     if (cerrado) return;
     if (video.readyState >= video.HAVE_ENOUGH_DATA && video.videoWidth) {
-      // Imagen reducida: suficiente para leer el QR y más liviana en un celular.
+      // Imagen reducida: suficiente para leer el código y más liviana en un celular.
       const escala = Math.min(1, 640 / video.videoWidth);
       lienzo.width = Math.round(video.videoWidth * escala);
       lienzo.height = Math.round(video.videoHeight * escala);
       dibujo.drawImage(video, 0, 0, lienzo.width, lienzo.height);
-      const imagen = dibujo.getImageData(0, 0, lienzo.width, lienzo.height);
-      const hallado = window.jsQR(imagen.data, imagen.width, imagen.height, { inversionAttempts: 'dontInvert' });
-      if (hallado?.data) {
-        const texto = hallado.data.trim();
+      const texto = await decodificar();
+      if (cerrado) return;
+      if (texto) {
         cerrar();
         alDetectar(texto);
         return;

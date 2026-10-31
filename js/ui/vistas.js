@@ -202,6 +202,12 @@ export function vistaCodigo() {
     <p class="sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
     <section class="panel" style="max-width:560px">
       <div class="form">
+        ${campo('¿Dónde está? (lugar u objeto)', `<input data-f="codDonde" data-enter="dondeEsta" value="${esc(S.f.codDonde || '')}" placeholder="Escribí o escaneá" autocomplete="off">`)}
+      </div>
+      <div class="acciones-fila" style="margin-top:10px"><button class="btn" data-act="dondeEsta">Buscar</button><button class="btn sec" data-act="escanear" data-campo="codDonde">${ic('qr', 16)} Escanear</button></div>
+    </section>
+    <section class="panel" style="max-width:560px">
+      <div class="form">
         ${campo('Código del lugar', `<input data-f="codLugar" data-enter="enfocar" data-campo="codObjeto" value="${esc(S.f.codLugar)}" placeholder="Ej.: 1 · A · 2 (o escaneá)" autocomplete="off">`)}
         ${campo('Código del objeto', `<input data-f="codObjeto" data-enter="asignarPorCodigo" value="${esc(S.f.codObjeto)}" placeholder="Ej.: OBJ-044502FC (o escaneá)" autocomplete="off">`)}
         ${infoObjetoPorCodigo(S.f.codObjeto)}
