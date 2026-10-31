@@ -419,3 +419,7 @@ html:fullscreen { background: var(--sur); }
 @media (min-width: 861px) { .tarjetas, .lista-mov { grid-template-columns: 1fr 1fr; } }
 .tarjetas, .lista-mov { align-items: start; }
 .tarjeta { height: auto; min-height: 0; justify-content: flex-start; align-self: start; }
+
+/* Ficha: el recorrido 3D solo en PC; la estructura solo para quien administra. */
+@media (max-width: 860px) { .solo-pc-accion { display: none !important; } }
+.sin-gestion [data-act="verEnEstructura"], .sin-gestion .solo-gestion { display: none !important; }

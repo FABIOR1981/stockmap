@@ -237,6 +237,26 @@ export const ACCIONES = {
     S.f.buscar = '';
   },
   abrirFicha: el => { S.ficha = { tipo: el.tipo, id: el.id }; S.vista = 'ficha'; S.msg = {}; },
+  // Desde la ficha: abre la estructura en el nivel donde está el lugar (o el primero donde está el objeto).
+  verEnEstructura: el => {
+    const dep = d();
+    const l = el.tipo === 'objeto' ? dep.ubicacionesDe(el.id)[0] : dep.porId(el.id);
+    if (!l) return aviso('ficha', 'Ese objeto no está en ningún lugar.');
+    const nivel = dep.esHoja(l) ? l.padre_id : l.id;
+    S.vista = 'plano';
+    ACCIONES.planoIr({ id: nivel });
+  },
+  // Desde la ficha: abre el edificio en el recorrido 3D, frente a la estantería del lugar.
+  verEnRecorrido: el => {
+    const dep = d();
+    const l = el.tipo === 'objeto' ? dep.ubicacionesDe(el.id)[0] : dep.porId(el.id);
+    if (!l) return aviso('ficha', 'Ese objeto no está en ningún lugar.');
+    S.nodo = dep.ruta(l)[0].id;
+    S.f.recBusca = dep.dir(l);
+    S.vista = 'recorrido3d';
+    S.rec = { i: 0, resaltado: null };
+    ACCIONES.recBuscar({});
+  },
   filtrarStock: el => { S.f.filtroStock = el.v; },
   filtrarMov: el => { S.f.filtroMov = el.v; },
   // Desde la ficha: saca la cantidad escrita (productos) o la unidad, del lugar indicado.

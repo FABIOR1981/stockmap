@@ -155,7 +155,7 @@ function bloqueContenido(l, estilo) {
 export function vistaPlano() {
   const d = ctx.dep;
   const mover = S.vista === 'mover';
-  if (!d.eid) return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>${sinCliente()}`;
+  if (!d.eid) return `<h1>${mover ? 'Mover' : 'Estructura'}</h1>${sinCliente()}`;
   const foco = S.nodo ? d.porId(S.nodo) : null;
   const { def } = d.nivelParaHijo(S.nodo);
   // Un lienzo con posición libre para cada bloque (edificios, o lo que hay dentro de un lugar).
@@ -175,7 +175,7 @@ export function vistaPlano() {
       const p = posDe(e, i);
       return bloquePlano(e, `left:${p.x}px;top:${p.y}px;`, `data-drag="${e.id}"`);
     }).join('');
-    return `<h1>${mover ? 'Mover' : 'Asignación'}</h1>
+    return `<h1>${mover ? 'Mover' : 'Estructura'}</h1>
       <p class="sub">Un nivel a la vez. Entrá a un edificio para ver lo que tiene adentro. Arrastrá los edificios para acomodarlos.</p>
       ${eds.length ? '' : '<p class="vacio" style="margin:0 0 16px;border:0">Todavía no hay edificios.</p>'}
       <div class="plano-marco"><div class="plano" data-raiz><div class="plano-lienzo" style="width:${ancho}px;height:${alto}px">${bloques}${bloqueSalida(posDe({}, eds.length), false)}</div></div>${leyenda()}</div>
@@ -266,6 +266,11 @@ export function vistaInicio() {
     </div>`;
 }
 
+// Enlaces de la ficha hacia el recorrido 3D (solo PC) y hacia la estructura (quien administra).
+function enlacesFicha(tipo, id) {
+  return `<div class="acciones-fila" style="margin-top:12px"><button class="btn sec sm solo-pc-accion" data-act="verEnRecorrido" data-tipo="${tipo}" data-id="${id}">Ver en el recorrido 3D</button><button class="btn sec sm" data-act="verEnEstructura" data-tipo="${tipo}" data-id="${id}">Ver en la estructura</button></div>`;
+}
+
 // Ficha: todo lo que se sabe de un lugar o de un objeto, con sus acciones.
 export function vistaFicha() {
   const d = ctx.dep;
@@ -280,7 +285,8 @@ export function vistaFicha() {
       return `${atras}
         <h1>${esc(d.dir(l))}</h1>
         <p class="sub">Elegí adentro qué mirar.</p>
-        <section class="panel"><ul class="lista-ficha">${hijos.map(h => `<li><button class="btn sec sm" data-act="abrirFicha" data-tipo="lugar" data-id="${h.id}">${esc(d.dir(h))}</button></li>`).join('')}</ul></section>
+        <section class="panel"><ul class="lista-ficha">${hijos.map(h => `<li><button class="btn sec sm" data-act="abrirFicha" data-tipo="lugar" data-id="${h.id}">${esc(d.dir(h))}</button></li>`).join('')}</ul>
+          ${enlacesFicha('lugar', l.id)}</section>
         ${msgHTML('ficha')}`;
     }
     const dentro = d.objetosDe(l.id);
@@ -291,6 +297,7 @@ export function vistaFicha() {
         <h2>Hay acá</h2>
         ${dentro.length ? `<ul class="lista-ficha">${dentro.map(o => `<li><span><strong>${esc(o.descripcion || o.codigo_interno)}</strong> <span class="dim">${esc(o.codigo_interno)}</span></span><strong>${d.cantidadEn(o.id, l.id)}</strong></li>`).join('')}</ul>` : '<p class="dim">No hay nada acá.</p>'}
         <div class="acciones-fila donde-acciones" style="margin-top:12px"><button class="btn" data-act="ingresarEn" data-id="${l.id}">Ingresar acá</button><button class="btn sec" data-act="contarEn" data-id="${l.id}">Contar</button></div>
+        ${enlacesFicha('lugar', l.id)}
       </section>
       ${msgHTML('ficha')}`;
   }
@@ -314,6 +321,7 @@ export function vistaFicha() {
           </li>`).join('')}</ul>` : '<p class="dim">No está en ningún lugar.</p>'}
         ${esProducto && ub.length ? `<div class="form" style="margin-top:12px">${campo('Cantidad a sacar', `<input type="number" min="1" data-f="cantFicha" value="${esc(S.f.cantFicha || '1')}" style="width:110px;min-width:0">`)}</div>` : ''}
         <div class="acciones-fila" style="margin-top:12px"><button class="btn" data-act="ingresarEn" data-id="${o.id}" data-tipo="objeto">Ingresar en un lugar</button></div>
+        ${ub.length ? enlacesFicha('objeto', o.id) : ''}
       </section>
       ${msgHTML('obj')}${msgHTML('ficha')}`;
   }

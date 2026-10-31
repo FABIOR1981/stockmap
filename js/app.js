@@ -18,11 +18,11 @@ ctx.dep = new Deposito(almacen);
 let estadoSync = null;
 
 // Nombres cortos para la barra inferior del celular (en pantalla chica no entran los largos).
-const CORTO = { inicio: 'Inicio', plano: 'Asignar', codigo: 'Código', movimientos: 'Movim.' };
+const CORTO = { inicio: 'Inicio', plano: 'Estructura', codigo: 'Código', movimientos: 'Movim.' };
 
 const NAV = [
   ['inicio', 'Inicio', 'buscar'],
-  ['plano', 'Asignación', 'plano'],
+  ['plano', 'Estructura', 'plano'],
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
   ['recorrido3d', 'Recorrido', 'edificio'],   // solo en PC (en celular se oculta, ver css .solo-pc)
@@ -47,7 +47,7 @@ function render() {
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
   $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
-    `<button data-act="vista" data-v="${v}" title="${txt}" class="${v.startsWith('recorrido') ? 'solo-pc' : ''}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
+    `<button data-act="vista" data-v="${v}" title="${txt}" class="${v.startsWith('recorrido') ? 'solo-pc' : v === 'plano' ? 'solo-gestion' : ''}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
