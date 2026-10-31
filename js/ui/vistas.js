@@ -222,6 +222,16 @@ export function vistaCodigo() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Por código</h1>${sinCliente()}`;
   const bajos = d.objetos.filter(o => d.bajoMinimo(o));
+  const vencen = d.porVencer(7);
+  const listaVencen = vencen.length ? `<section class="panel" style="max-width:560px">
+      <p style="margin:0 0 8px"><strong>Por vencer</strong> · ${vencen.length} ${vencen.length === 1 ? 'lugar' : 'lugares'}</p>
+      <ul class="lista-minimo">${vencen.slice(0, 8).map(x => {
+        const o = d.objetoPorId(x.oid);
+        return `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
+        <span class="${x.vencido ? 'falta' : 'dim'}">${x.vencido ? 'Vencido' : 'vence'} ${x.fecha.toLocaleDateString('es-UY')} · ${esc(d.dir(d.porId(x.lid)))}</span></li>`;
+      }).join('')}</ul>
+      ${vencen.length > 8 ? `<p class="ayuda">Y ${vencen.length - 8} más en Stock.</p>` : ''}
+    </section>` : '';
   const listaBajos = bajos.length ? `<section class="panel" style="max-width:560px">
       <p style="margin:0 0 8px"><strong>Bajo mínimo</strong> · ${bajos.length} ${bajos.length === 1 ? 'objeto' : 'objetos'}</p>
       <ul class="lista-minimo">${bajos.slice(0, 8).map(o => `<li><button class="btn sec sm" data-act="ubicarObjeto" data-codigo="${esc(o.codigo_interno)}">${esc(o.descripcion || o.codigo_interno)}</button>
@@ -230,6 +240,7 @@ export function vistaCodigo() {
     </section>` : '';
   return `<h1>Por código</h1>
     ${listaBajos}
+    ${listaVencen}
     <p class="sub codigo-sub">Escribí el código del lugar (por ejemplo 1 · A · 2) y el del objeto. El lugar tiene que ser del último nivel o quedar libre de objetos.</p>
     <section class="panel" style="max-width:560px">
       <div class="form">
@@ -283,7 +294,9 @@ export function vistaStock() {
   const filas = visibles.map(o => {
     const ub = d.ubicacionesDe(o.id);
     const total = d.existenciaTotal(o.id);
-    const alerta = d.bajoMinimo(o) ? `<span class="chip falta">Bajo mínimo (${o.minimo})</span>` : '';
+    const prox = d.proximoVencimiento(o.id);
+    const chipVence = prox ? `<span class="chip ${prox.vencido ? 'falta' : ''}">${prox.vencido ? 'Vencido' : 'Vence'} ${prox.fecha.toLocaleDateString('es-UY')}</span>` : '';
+    const alerta = (d.bajoMinimo(o) ? `<span class="chip falta">Bajo mínimo (${o.minimo})</span>` : '') + chipVence;
     const existencias = o.tipo === 'producto'
       ? `<strong>${total}</strong> ${alerta}`
       : `<span class="dim">${total ? 'Sí' : 'No'}</span>`;
@@ -406,6 +419,10 @@ export function vistaAccesos() {
     ${esGeneral ? `<div class="form" style="margin-top:16px">
       ${campo('Nuevo cliente', `<input data-f="nuevoCliente" value="${esc(S.f.nuevoCliente)}" placeholder="Nombre">`)}
       <button class="btn sm" data-act="crearCliente">Crear cliente</button>
+    </div>` : ''}
+    ${esGeneral && d.eid ? `<div class="form" style="margin-top:16px">
+      <label class="check"><input type="checkbox" data-f="vencimientosCliente" ${d.vencimientosActivos() ? 'checked' : ''}> Controlar vencimientos en este cliente</label>
+      <button class="btn sm sec" data-act="guardarVencimientos">Guardar</button>
     </div>` : ''}
     ${msgHTML('cliente')}
   </section>`;
@@ -663,6 +680,7 @@ export function ventana() {
             ${campo('Código propio (opcional)', `<input data-f="codigoP" value="${esc(S.f.codigoP)}">`)}
             ${campo('Descripción', `<input data-f="desc" value="${esc(S.f.desc)}" size="30">`)}
             ${S.f.tipoNuevo === 'producto' ? campo('Mínimo (alerta)', `<input type="number" min="0" data-f="minimoNuevo" value="${esc(S.f.minimoNuevo)}" style="width:110px;min-width:0">`) : ''}
+            ${S.f.tipoNuevo === 'producto' && ctx.dep.vencimientosActivos() ? campo('Vence a los (días)', `<input type="number" min="1" data-f="venceNuevo" value="${esc(S.f.venceNuevo || '')}" style="width:110px;min-width:0">`) : ''}
           </div>
           <p class="dim" style="font-size:13px;margin:12px 0 0">El código interno se asigna solo. Después lo podés ubicar en un lugar.</p>
           ${msgHTML('obj')}`,

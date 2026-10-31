@@ -11,9 +11,10 @@ language plpgsql as $$
 begin
   case t
   when 'establecimientos' then
-    insert into establecimientos (id, nombre)
-    values ((f->>'id')::uuid, f->>'nombre')
-    on conflict (id) do update set nombre = excluded.nombre;
+    insert into establecimientos (id, nombre, vencimientos)
+    values ((f->>'id')::uuid, f->>'nombre', coalesce((f->>'vencimientos')::boolean, false))
+    on conflict (id) do update set nombre = excluded.nombre,
+      vencimientos = case when f ? 'vencimientos' then excluded.vencimientos else establecimientos.vencimientos end;
 
   when 'membresias' then
     insert into membresias (usuario_id, establecimiento_id, rol)
@@ -44,12 +45,14 @@ begin
       formato = excluded.formato, nombre_opcional = excluded.nombre_opcional;
 
   when 'objetos' then
-    insert into objetos (id, establecimiento_id, codigo_interno, codigo_propio, descripcion, tipo, minimo)
+    insert into objetos (id, establecimiento_id, codigo_interno, codigo_propio, descripcion, tipo, minimo, vence_dias)
     values ((f->>'id')::uuid, (f->>'establecimiento_id')::uuid, f->>'codigo_interno', f->>'codigo_propio',
-            f->>'descripcion', coalesce(f->>'tipo', 'unidad'), coalesce((f->>'minimo')::int, 0))
+            f->>'descripcion', coalesce(f->>'tipo', 'unidad'), coalesce((f->>'minimo')::int, 0),
+            nullif(f->>'vence_dias', '')::int)
     on conflict (id) do update set establecimiento_id = excluded.establecimiento_id,
       codigo_interno = excluded.codigo_interno, codigo_propio = excluded.codigo_propio,
-      descripcion = excluded.descripcion, tipo = excluded.tipo, minimo = excluded.minimo;
+      descripcion = excluded.descripcion, tipo = excluded.tipo, minimo = excluded.minimo,
+      vence_dias = case when f ? 'vence_dias' then excluded.vence_dias else objetos.vence_dias end;
 
   when 'existencias' then
     insert into existencias (id, objeto_id, lugar_id, cantidad)

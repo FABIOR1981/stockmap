@@ -209,6 +209,12 @@ export const ACCIONES = {
     if (!ubicaciones.length) return aviso('donde', `${obj.codigo_interno} no está puesto en ningún lugar.`);
     aviso('donde', null, `${obj.codigo_interno} está en ${dep.dir(ubicaciones[0])}.`);
   },
+  // Activa o desactiva vencimientos para el cliente abierto (solo administrador general).
+  guardarVencimientos: () => {
+    const marcado = !!document.querySelector('input[data-f="vencimientosCliente"]')?.checked;
+    const err = d().fijarVencimientos(marcado);
+    aviso('cliente', err, marcado ? 'Vencimientos activados para este cliente.' : 'Vencimientos desactivados para este cliente.');
+  },
   // Conteo: abre el lugar y carga lo que el sistema tiene como punto de partida.
   contarLugar: () => {
     const dep = d();
@@ -361,8 +367,9 @@ export const ACCIONES = {
   abrirNuevoObjeto: () => { S.modal = 'nuevoObjeto'; S.msg = {}; },
   crearObjeto: () => {
     const r = d().crearObjeto(S.f.codigoP, S.f.desc, S.f.tipoNuevo, S.f.minimoNuevo);
+    if (r.objeto && S.f.venceNuevo) d().fijarVencimiento(r.objeto.id, S.f.venceNuevo);
     if (r.error) return aviso('obj', r.error);
-    S.f.codigoP = ''; S.f.desc = ''; S.f.minimoNuevo = '';
+    S.f.codigoP = ''; S.f.desc = ''; S.f.minimoNuevo = ''; S.f.venceNuevo = '';
     S.modal = null;
     aviso('obj', null, `Objeto creado: ${r.objeto.codigo_interno}`);
   },

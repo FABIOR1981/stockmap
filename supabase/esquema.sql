@@ -43,6 +43,7 @@ create trigger al_crear_usuario
 create table if not exists establecimientos (
   id          uuid primary key default gen_random_uuid(),
   nombre      text not null,
+  vencimientos boolean not null default false,   -- módulo de vencimientos activado para este cliente
   creado_en   timestamptz not null default now()
 );
 
@@ -104,6 +105,7 @@ create table if not exists objetos (
   descripcion         text,
   tipo                text not null default 'unidad' check (tipo in ('unidad', 'producto')),
   minimo              integer not null default 0 check (minimo >= 0),   -- alerta de stock (productos)
+  vence_dias          integer check (vence_dias is null or vence_dias > 0),   -- vida útil en días (productos, si el cliente lo activa)
   creado_en           timestamptz not null default now()
 );
 create index if not exists objetos_establecimiento on objetos (establecimiento_id);

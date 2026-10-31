@@ -641,6 +641,68 @@ export class Deposito {
     return null;
   }
 
+  // ---------- Vencimientos (módulo opcional por cliente; migracion_vencimientos.sql) ----------
+  vencimientosActivos() { return !!this.establecimientoActual()?.vencimientos; }
+
+  // Solo el administrador general lo activa para un cliente.
+  fijarVencimientos(activo) {
+    if (!this.usuarioActual()?.es_admin) return 'Solo el administrador general puede activar vencimientos.';
+    if (!this.eid) return 'Elegí un cliente.';
+    this.almacen.actualizar('establecimientos', this.eid, { vencimientos: !!activo });
+    return null;
+  }
+
+  // Días de vida útil de un producto. Vacío = no vence.
+  fijarVencimiento(oid, dias) {
+    const err = this._exigir('editar'); if (err) return err;
+    const o = this.objetoPorId(oid);
+    if (!o) return 'Objeto inexistente.';
+    if (o.tipo !== 'producto') return 'Solo los productos pueden vencer.';
+    if (dias === '' || dias === null || dias === undefined) {
+      this.almacen.actualizar('objetos', oid, { vence_dias: null });
+      return null;
+    }
+    const n = enteroPositivo(dias);
+    if (!n) return 'Los días de vencimiento tienen que ser un número entero mayor que 0.';
+    this.almacen.actualizar('objetos', oid, { vence_dias: n });
+    return null;
+  }
+
+  // Cuándo vence lo que hay de un producto en un lugar: su último ingreso al lugar + sus días de vida útil.
+  // Simplificación: no distingue lotes; si entra más en otra fecha, cuenta la última entrada.
+  fechaVence(oid, lid) {
+    const o = this.objetoPorId(oid);
+    if (!o?.vence_dias || !this.vencimientosActivos() || this.cantidadEn(oid, lid) <= 0) return null;
+    const ingresos = this.movimientos.filter(m => m.oid === oid && m.hasta === lid && (m.tipo === 'entrada' || m.tipo === 'transferencia'));
+    if (!ingresos.length) return null;
+    const ultima = ingresos.reduce((a, m) => (m.fecha > a ? m.fecha : a), ingresos[0].fecha);
+    const f = new Date(ultima);
+    f.setDate(f.getDate() + o.vence_dias);
+    return f;
+  }
+
+  // Próximo vencimiento de un producto en cualquier lugar, o null.
+  proximoVencimiento(oid) {
+    const fechas = this.asignaciones.filter(a => a.oid === oid && a.cantidad > 0)
+      .map(a => this.fechaVence(oid, a.lid)).filter(Boolean);
+    if (!fechas.length) return null;
+    const fecha = fechas.reduce((a, b) => (b < a ? b : a));
+    return { fecha, vencido: fecha.getTime() < Date.now() };
+  }
+
+  // Lo que vence en `dias` o antes (incluye lo ya vencido), ordenado por fecha.
+  porVencer(dias = 7) {
+    if (!this.vencimientosActivos()) return [];
+    const limite = Date.now() + dias * 86400000;
+    return this.asignaciones.filter(a => a.cantidad > 0)
+      .map(a => {
+        const fecha = this.fechaVence(a.oid, a.lid);
+        return fecha ? { oid: a.oid, lid: a.lid, fecha, vencido: fecha.getTime() < Date.now() } : null;
+      })
+      .filter(x => x && x.fecha.getTime() <= limite)
+      .sort((a, b) => a.fecha - b.fecha);
+  }
+
   // ---------- Datos de ejemplo ----------
   cargarEjemplo() {
     this.almacen.vaciar();
