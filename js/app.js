@@ -23,7 +23,6 @@ const CORTO = { inicio: 'Inicio', plano: 'Asignar', codigo: 'Código', movimient
 const NAV = [
   ['inicio', 'Inicio', 'buscar'],
   ['plano', 'Asignación', 'plano'],
-  ['mover', 'Mover', 'mover'],
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
   ['recorrido3d', 'Recorrido', 'edificio'],   // solo en PC (en celular se oculta, ver css .solo-pc)
@@ -31,7 +30,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'buscarFicha', 'abrirFicha', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'buscarFicha', 'abrirFicha', 'filtrarStock', 'filtrarMov', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'asignarDesdeStock', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recBuscar', 'recInicio', 'recCajas']);
 
 function sesionHTML() {

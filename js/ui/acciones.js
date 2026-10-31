@@ -237,6 +237,8 @@ export const ACCIONES = {
     S.f.buscar = '';
   },
   abrirFicha: el => { S.ficha = { tipo: el.tipo, id: el.id }; S.vista = 'ficha'; S.msg = {}; },
+  filtrarStock: el => { S.f.filtroStock = el.v; },
+  filtrarMov: el => { S.f.filtroMov = el.v; },
   // Desde la ficha: saca la cantidad escrita (productos) o la unidad, del lugar indicado.
   sacarDeFicha: el => {
     const o = d().objetoPorId(el.oid);

@@ -358,87 +358,45 @@ export function vistaCodigo() {
 export function vistaStock() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Stock</h1>${sinCliente()}`;
-  const q = S.q.trim().toLowerCase();
-
-  const buscador = `<div class="panel">
-    <input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código o descripción" aria-label="Buscar objeto">
-  </div>`;
-  // La búsqueda filtra la tabla: solo se muestran los objetos que coinciden.
-  const visibles = q ? d.objetos.filter(o => coincide(o, q)) : d.objetos;
-
   if (!d.objetos.length) {
-    return `<h1>Stock</h1><p class="sub">Unidades que se identifican una por una y productos de los que hay varias.</p>
-      ${buscador}
+    return `<h1>Stock</h1><p class="sub">Productos y unidades del cliente.</p>
       <div class="vacio" style="margin-top:16px"><p>Todavía no hay objetos en este cliente.</p>
         <button class="btn" data-act="abrirNuevoObjeto">+ Nuevo objeto</button></div>
       ${msgHTML('obj')}`;
   }
-
-  const filas = visibles.map(o => {
+  const q = S.q.trim().toLowerCase();
+  const filtro = S.f.filtroStock || 'todos';
+  const vencen = new Set(d.porVencer(7).map(x => x.oid));
+  const cumple = o => {
+    if (filtro === 'productos') return o.tipo === 'producto';
+    if (filtro === 'unidades') return o.tipo === 'unidad';
+    if (filtro === 'minimo') return d.bajoMinimo(o);
+    if (filtro === 'vence') return vencen.has(o.id);
+    return true;
+  };
+  const visibles = d.objetos.filter(o => cumple(o) && (!q || coincide(o, q)));
+  const chips = [['todos', 'Todos'], ['productos', 'Productos'], ['unidades', 'Unidades'], ['minimo', 'Bajo mínimo'],
+    ...(d.vencimientosActivos() ? [['vence', 'Por vencer']] : [])];
+  const filtros = `<div class="filtros">${chips.map(([v, t]) => `<button class="btn sm ${filtro === v ? '' : 'sec'}" data-act="filtrarStock" data-v="${v}">${t}</button>`).join('')}</div>`;
+  const tarjetas = visibles.map(o => {
     const ub = d.ubicacionesDe(o.id);
-    const total = d.existenciaTotal(o.id);
+    const alerta = d.bajoMinimo(o) ? `<span class="chip falta">Bajo mínimo (${o.minimo})</span>` : '';
     const prox = d.proximoVencimiento(o.id);
-    const chipVence = prox ? `<span class="chip ${prox.vencido ? 'falta' : ''}">${prox.vencido ? 'Vencido' : 'Vence'} ${prox.fecha.toLocaleDateString('es-UY')}</span>` : '';
-    const alerta = (d.bajoMinimo(o) ? `<span class="chip falta">Bajo mínimo (${o.minimo})</span>` : '') + chipVence;
-    const existencias = o.tipo === 'producto'
-      ? `<strong>${total}</strong> ${alerta}`
-      : `<span class="dim">${total ? 'Sí' : 'No'}</span>`;
-    const ubicaciones = ub.length
-      ? ub.map(l => {
-          const c = d.cantidadEn(o.id, l.id);
-          return `<span class="ubic">${esc(d.dir(l))}${o.tipo === 'producto' ? ` · <strong>${c}</strong>` : ''}
-            <button class="btn sm txt" data-act="sacarDeLugar" data-oid="${o.id}" data-lid="${l.id}" aria-label="Sacar ${esc(o.codigo_interno)} de ${esc(d.dir(l))}">Sacar</button>
-            </span>`;
-        }).join('')
-      : `<span class="dim">Sin ubicación</span>`;
-    const cantidad = o.tipo === 'producto'
-      ? `<input type="number" min="1" value="${esc(S.f.cantPara[o.id] || '1')}" data-cantoid="${o.id}" aria-label="Cantidad" style="width:72px;min-width:0">`
-      : '';
-    return `<tr>
-      <td><strong>${esc(o.codigo_interno)}</strong></td>
-      <td><span class="chip ${o.tipo === 'producto' ? 'obj' : 'sub'}">${TIPOS[o.tipo] || 'Unidad'}</span></td>
-      <td class="oc-celular">${esc(o.codigo_propio) || '<span class="dim">—</span>'}</td>
-      <td>${esc(o.descripcion) || '<span class="dim">—</span>'}</td>
-      <td>${existencias}</td>
-      <td>${ubicaciones}</td>
-      <td><div class="acciones-fila">
-        ${cantidad}
-        ${ub.length
-          ? `<button class="btn sm sec" data-act="moverEnPlano" data-oid="${o.id}">Mover</button>`
-          : `<button class="btn sm sec" data-act="asignarDesdeStock" data-oid="${o.id}">Asignar</button>`}
-        <button class="btn sm peligro" data-act="borrarObjeto" data-oid="${o.id}">Borrar</button>
-      </div></td>
-    </tr>`;
+    const venc = prox ? `<span class="chip ${prox.vencido ? 'falta' : ''}">${prox.vencido ? 'Vencido' : 'Vence'} ${prox.fecha.toLocaleDateString('es-UY')}</span>` : '';
+    return `<button class="tarjeta" data-act="abrirFicha" data-tipo="objeto" data-id="${o.id}">
+      <span><strong>${esc(o.descripcion || o.codigo_interno)}</strong> <span class="dim">${esc(o.codigo_interno)}${o.codigo_propio ? ' · ' + esc(o.codigo_propio) : ''}</span></span>
+      <span class="tarjeta-datos">${o.tipo === 'producto' ? `<strong>${d.existenciaTotal(o.id)}</strong> en total · ` : ''}${ub.length ? esc(ub.map(l => d.dir(l)).join(', ')) : 'sin lugar'}</span>
+      ${alerta || venc ? `<span class="tarjeta-alertas">${alerta}${venc}</span>` : ''}
+    </button>`;
   }).join('');
-
-  const cuerpo = visibles.length
-    ? `<tbody>${filas}</tbody>`
-    : `<tbody><tr><td colspan="7"><p class="vacio" style="border:0;margin:0;padding:12px">No hay objetos que coincidan con "${esc(S.q)}".</p></td></tr></tbody>`;
   return `<h1>Stock</h1>
-    <p class="sub">${d.objetos.length} ${d.objetos.length === 1 ? 'objeto' : 'objetos'} en ${esc(d.establecimientoActual()?.nombre || '')}.</p>
-    ${buscador}
-    <section class="panel" style="margin-top:16px;padding:0;overflow:auto">
-      <table>
-        <thead><tr><th>Interno</th><th>Tipo</th><th class="oc-celular">Propio</th><th>Descripción</th><th>Existencias</th><th>Ubicación</th><th>Acciones</th></tr></thead>
-        ${cuerpo}
-      </table>
-    </section>
+    <p class="sub">${d.objetos.length} ${d.objetos.length === 1 ? 'objeto' : 'objetos'} en ${esc(d.establecimientoActual()?.nombre || 'este cliente')}. Tocá uno para verlo.</p>
+    <div class="panel"><input class="buscar" data-in="q" value="${esc(S.q)}" placeholder="Buscar por código o descripción" aria-label="Buscar objeto"></div>
+    ${filtros}
+    ${visibles.length ? `<div class="tarjetas">${tarjetas}</div>` : '<div class="vacio"><p>No hay objetos que coincidan.</p></div>'}
     ${msgHTML('obj')}`;
 }
 
-// Debajo del código: qué objeto es, para confirmarlo antes de asignar. Vacío si no se escribió nada.
-function infoObjetoPorCodigo(texto) {
-  const d = ctx.dep;
-  const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  const c = norm(texto);
-  if (!c) return '';
-  const o = d.objetos.find(x => norm(x.codigo_interno) === c || (x.codigo_propio && norm(x.codigo_propio) === c));
-  return o
-    ? `<p class="ayuda" style="margin:-4px 0 0">Objeto: <strong>${esc(o.descripcion || o.codigo_propio || o.codigo_interno)}</strong> (${o.tipo === 'producto' ? 'producto' : 'unidad'})</p>`
-    : `<p class="ayuda" style="margin:-4px 0 0;color:#b91c1c">No encuentro un objeto con ese código.</p>`;
-}
-
-// Coincidencia de búsqueda: código interno, código propio o descripción (sin mayúsculas).
 function coincide(o, q) {
   return [o.codigo_interno, o.codigo_propio, o.descripcion].some(x => x && x.toLowerCase().includes(q));
 }
@@ -458,34 +416,36 @@ export function resultadosBusqueda(q) {
 export function vistaMovimientos() {
   const d = ctx.dep;
   if (!d.eid) return `<h1>Movimientos</h1>${sinCliente()}`;
-  const lista = d.movimientosRecientes(200);
-  if (!lista.length) {
+  const todos = d.movimientosRecientes(300);
+  if (!todos.length) {
     return `<h1>Movimientos</h1><p class="sub">Historial de entradas, salidas y transferencias.</p>
       <div class="vacio"><p>Todavía no hay movimientos.</p><small>Cada vez que se agrega, saca o mueve stock, queda registrado acá.</small></div>`;
   }
-  const nombreObj = id => { const o = d.objetoPorId(id); return o ? `${o.codigo_interno}${o.codigo_propio ? ' · ' + o.codigo_propio : ''}` : '(borrado)'; };
-  const lugar = id => id ? esc(d.porId(id) ? d.dir(d.porId(id)) : '—') : '<span class="dim">—</span>';
-  const filas = lista.map(m => `<tr>
-    <td>${fecha(m.fecha)}</td>
-    <td><span class="chip ${m.tipo === 'salida' ? 'falta' : m.tipo === 'entrada' ? 'libre' : 'obj'}">${m.tipo}</span></td>
-    <td>${esc(nombreObj(m.oid))}</td>
-    <td>${lugar(m.desde)}</td>
-    <td>${lugar(m.hasta)}</td>
-    <td><strong>${m.cantidad}</strong></td>
-    <td>${esc(d.nombreUsuario(m.uid))}</td>
-    <td class="dim">${esc(m.nota)}</td>
-  </tr>`).join('');
+  const filtro = S.f.filtroMov || 'todos';
+  const lista = filtro === 'todos' ? todos : todos.filter(m => m.tipo === filtro);
+  const chips = [['todos', 'Todos'], ['entrada', 'Entradas'], ['salida', 'Salidas'], ['transferencia', 'Transferencias']];
+  const filtros = `<div class="filtros">${chips.map(([v, t]) => `<button class="btn sm ${filtro === v ? '' : 'sec'}" data-act="filtrarMov" data-v="${v}">${t}</button>`).join('')}</div>`;
+  const lugar = id => { const l = id ? d.porId(id) : null; return l ? esc(d.dir(l)) : '—'; };
+  const items = lista.map(m => {
+    const o = d.objetoPorId(m.oid);
+    const ruta = m.tipo === 'entrada' ? `→ ${lugar(m.hasta)}` : m.tipo === 'salida' ? `${lugar(m.desde)} →` : `${lugar(m.desde)} → ${lugar(m.hasta)}`;
+    const clase = m.tipo === 'salida' ? 'falta' : m.tipo === 'entrada' ? 'libre' : 'obj';
+    return `<li class="mov-fila">
+      <span class="chip ${clase}">${m.tipo}</span>
+      <span class="mov-cuerpo">
+        <span><strong>${esc(o ? (o.descripcion || o.codigo_interno) : '(borrado)')}</strong> · <strong>${m.cantidad}</strong></span>
+        <span class="dim">${ruta}</span>
+        <span class="dim">${fecha(m.fecha)} · ${esc(d.nombreUsuario(m.uid))}${m.nota ? ' · ' + esc(m.nota) : ''}</span>
+      </span>
+      ${o ? `<button class="btn sm sec" data-act="abrirFicha" data-tipo="objeto" data-id="${o.id}">Ver</button>` : ''}
+    </li>`;
+  }).join('');
   return `<h1>Movimientos</h1>
     <p class="sub">${lista.length} ${lista.length === 1 ? 'movimiento' : 'movimientos'}, del más reciente al más antiguo.</p>
-    <section class="panel" style="padding:0;overflow:auto">
-      <table>
-        <thead><tr><th>Fecha</th><th>Tipo</th><th>Objeto</th><th>Desde</th><th>Hasta</th><th>Cant.</th><th>Usuario</th><th>Nota</th></tr></thead>
-        <tbody>${filas}</tbody>
-      </table>
-    </section>`;
+    ${filtros}
+    ${lista.length ? `<ul class="lista-mov">${items}</ul>` : '<div class="vacio"><p>No hay movimientos de ese tipo.</p></div>'}`;
 }
 
-// ---------- Accesos: clientes, usuarios y roles ----------
 export function vistaAccesos() {
   const d = ctx.dep;
   const u = d.usuarioActual();

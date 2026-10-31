@@ -132,14 +132,15 @@ prueba('Girar 90° en la vista aérea gira la estantería elegida y lo guarda', 
   assert.deepEqual(errores, []);
 });
 
-prueba('Stock: la búsqueda filtra la tabla y "Sacar" saca el objeto de su lugar', async () => {
+prueba('Stock: la búsqueda filtra la lista y desde la ficha "Sacar" saca el objeto de su lugar', async () => {
   await page.click('button[data-v="stock"]'); await page.waitForTimeout(400);
   await page.fill('input[data-in="q"]', 'zzz-no-existe'); await page.waitForTimeout(200);
-  assert.equal(await page.locator('tbody tr').count(), 1, 'una fila con el aviso de que no hay coincidencias');
-  assert.match(await page.textContent('tbody'), /No hay objetos que coincidan/);
+  assert.equal(await page.locator('.tarjeta').count(), 0, 'ninguna tarjeta');
+  assert.match(await page.textContent('#contenido'), /No hay objetos que coincidan/);
   await page.fill('input[data-in="q"]', 'OBJ-1'); await page.waitForTimeout(200);
-  assert.equal(await page.locator('tbody tr').count(), 1);
-  await page.click('button[data-act="sacarDeLugar"]'); await page.waitForTimeout(500);
+  assert.equal(await page.locator('.tarjeta').count(), 1);
+  await page.click('.tarjeta'); await page.waitForTimeout(300);
+  await page.click('button[data-act="sacarDeFicha"]'); await page.waitForTimeout(500);
   // El objeto de prueba es un producto con 2 unidades en el hueco: "Sacar" saca 1 (la cantidad por defecto).
   const quedan = tablas.existencias.filter(e => e.objeto_id === OBJ).reduce((n, e) => n + e.cantidad, 0);
   assert.equal(quedan, 1, 'queda 1 unidad en el hueco');

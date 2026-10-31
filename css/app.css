@@ -407,3 +407,15 @@ html:fullscreen { background: var(--sur); }
 .lista-ficha { list-style: none; margin: 0; padding: 0; }
 .lista-ficha li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--lin); flex-wrap: wrap; }
 @media (min-width: 861px) { .inicio-grid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+
+/* Stock y Movimientos como listas de tarjetas: en celular una columna, en PC dos. */
+.filtros { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 12px; }
+.tarjetas, .lista-mov { display: grid; gap: 8px; grid-template-columns: 1fr; list-style: none; margin: 0; padding: 0; }
+.tarjeta { display: flex; flex-direction: column; gap: 4px; text-align: left; width: 100%; padding: 12px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); color: var(--ink); font: inherit; cursor: pointer; }
+.tarjeta-datos { color: var(--mut); font-size: 13px; }
+.tarjeta-alertas { display: flex; gap: 6px; flex-wrap: wrap; }
+.mov-fila { display: flex; gap: 10px; align-items: flex-start; padding: 10px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); }
+.mov-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+@media (min-width: 861px) { .tarjetas, .lista-mov { grid-template-columns: 1fr 1fr; } }
+.tarjetas, .lista-mov { align-items: start; }
+.tarjeta { height: auto; min-height: 0; justify-content: flex-start; align-self: start; }
