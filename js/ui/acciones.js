@@ -4,32 +4,52 @@
 
 import { ctx, S, aviso } from './estado.js';
 import { correrPruebas } from '../core/pruebas.js';
+import { metrosACm } from '../core/medidas.js';
 import { api } from '../almacen/nube.js';
 import { sonAledanos } from './plano.js';
 import { abrirEtiquetas } from './etiquetas.js';
+import { escanearCamara } from './escaner.js';
+import { accionesRecorrido3d } from './recorrido3d.js';
 
 const d = () => ctx.dep;
 
 // Cantidades de la estructura, si el usuario la eligió (vacío = sin estructura).
+const medidasDelFormulario = () => metrosACm(S.f.ancho, S.f.largo, S.f.alto);
+
 const cuentasDelFormulario = () => S.f.usarEstructura
   ? d().nivelesBajo(S.nodo).map((_, i) => Number(S.f['cuenta' + i]))
   : [];
 
-const limpiarModal = () => { S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.elegirOrigen = null; S.msg = {}; };
+// Pide confirmación con una ventana de la app (en vez del cuadro del navegador). La acción confirmada es `accion`.
+const pedirConfirmacion = (titulo, texto, accion, datos, boton) => { S.confirmar = { titulo, texto, accion, datos, boton }; S.modal = 'confirmar'; S.msg = {}; };
+const limpiarModal = () => { S.confirmar = null; S.modal = null; S.editar = null; S.clon = null; S.verObj = null; S.elegirPara = null; S.elegirNodo = null; S.elegirLugares = []; S.elegirOrigen = null; S.msg = {}; };
 const cerrarElegir = mensaje => { limpiarModal(); aviso('obj', null, mensaje); };
 
 export const ACCIONES = {
+  ...accionesRecorrido3d,
   // Navegación
-  // Entre Asignación y Mover se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
+  // Entre Asignación, Mover y Recorrido se conserva el lugar que se está mirando; a las demás vistas se va a la raíz.
   vista:   el => {
-    const enPlano = v => v === 'plano' || v === 'mover';
+    const enPlano = v => ['plano', 'mover', 'recorrido3d'].includes(v);
     if (!(enPlano(S.vista) && enPlano(el.v))) S.nodo = null;
+    // El lugar seleccionado es el destino de 'Por asignar': al cambiar de vista no se hereda uno de adentro
+    // (por ejemplo, un hueco encontrado en el recorrido). El destino vuelve a ser el edificio que se está mirando.
+    S.elegido = null;
     S.vista = el.v; S.msg = {};
   },
-  nodo:    el => { S.vista = 'estructura'; S.nodo = el.id || null; S.msg = {}; },
-  planoIr: el => { S.vista = S.vista === 'mover' ? 'mover' : 'plano'; S.nodo = el.id || null; S.msg = {}; },
+  // Entrar a un lugar se queda en la vista donde se está (Asignación o Mover).
+  planoIr: el => {
+    S.vista = S.vista === 'mover' ? 'mover' : 'plano';
+    S.nodo = el.id || null; S.elegido = null; S.rec = { i: 0, resaltado: null }; S.msg = {};
+    // Al cambiar de nivel se corta cualquier selección pendiente (por ejemplo, elegir un lugar para un objeto).
+    S.elegirPara = null; S.elegirOrigen = null; S.elegirNodo = null; S.elegirLugares = [];
+  },
+  // Doble clic en la tarjeta Contenido: muestra en un modal los objetos puestos en ese lugar.
+  verContenido: el => { S.verObj = el.id; S.modal = 'contenido'; S.msg = {}; },
+  // Un clic en un lugar lo selecciona: es el destino de 'Por asignar'.
+  planoSeleccionar: el => { S.elegido = el.id || null; S.msg = {}; },
   // Vuelve un nivel arriba en el plano (al padre; si era de primer nivel, a la raíz).
-  subirNivel: () => { const l = d().porId(S.nodo); S.nodo = l?.padre_id || null; S.msg = {}; },
+  subirNivel: () => { const l = d().porId(S.nodo); S.nodo = l?.padre_id || null; S.elegido = null; S.msg = {}; },
 
   // Sesión: usuario y cliente
   usuario: el => {
@@ -75,9 +95,12 @@ export const ACCIONES = {
   // Crear lugares
   abrirCrear: () => { S.modal = 'crear'; S.msg = {}; },
   crear: () => {
-    const r = d().crearArbol(S.nodo, S.f.codigo, S.f.nombre, cuentasDelFormulario());
+    // Medidas (opcionales, solo para edificios): se indican en metros y se guardan en cm.
+    const medidas = medidasDelFormulario();
+    if (medidas && medidas.error) return aviso('crear', medidas.error);
+    const r = d().crearArbol(S.nodo, S.f.codigo, S.f.nombre, cuentasDelFormulario(), medidas);
     aviso('crear', r.error, r.creados > 1 ? `Creados: ${r.creados}.` : 'Creado.');
-    if (!r.error) { S.f.codigo = ''; S.f.nombre = ''; }
+    if (!r.error) { S.f.codigo = ''; S.f.nombre = ''; S.f.ancho = ''; S.f.largo = ''; S.f.alto = ''; }
   },
   verVarios: () => { S.f.verVarios = !S.f.verVarios; S.msg = {}; },
   lote: () => {
@@ -91,10 +114,10 @@ export const ACCIONES = {
     const l = d().porId(el.id);
     if (!l) return;
     const dentro = d().descendientes(l).length;
-    const pregunta = `¿Borrar "${d().dir(l)}"?` + (dentro ? ` Se borran también ${dentro} lugares que tiene adentro.` : '');
-    if (!window.confirm(pregunta)) return;
-    aviso('borrar', d().borrarLugar(el.id), 'Borrado.');
+    const texto = `Se borra "${d().dir(l)}".` + (dentro ? ` También se borran los ${dentro} lugares que tiene adentro.` : '') + ' No se puede deshacer.';
+    pedirConfirmacion('Borrar lugar', texto, 'borrarLugarOk', { id: el.id }, 'Borrar lugar');
   },
+  borrarLugarOk: el => { limpiarModal(); aviso('borrar', d().borrarLugar(el.id), 'Borrado.'); },
   toggleNiveles: () => { S.editarNiveles = !S.editarNiveles; S.msg = {}; },
   abrirNiveles: () => { S.editarNiveles = true; S.modal = 'niveles'; S.msg = {}; },
   nivelesTipicos: () => aviso('niveles', d().ponerNivelesTipicos(S.nodo), 'Niveles definidos.'),
@@ -124,13 +147,10 @@ export const ACCIONES = {
   // Objetos dentro de un lugar (ventana)
   verObjetos: el => { S.verObj = el.id; S.modal = 'objetos'; S.msg = {}; },
   // Lugar elegido para un objeto sin lugar (selector de un estante o estantería).
-  ponerEn: el => { S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: el.value || null }; },
+  // Tocar un objeto de 'Por asignar' lo pone en el lugar destino (el seleccionado, o el lugar en el que estás).
   ponerObjeto: el => {
-    const lid = S.f.ponerEn?.[el.oid];
-    if (!lid) return aviso('objetos', 'Elegí el lugar donde va.');
-    const err = d().asignar(el.oid, lid);
+    const err = d().asignar(el.oid, el.lugar);
     aviso('objetos', err, 'Puesto en el lugar.');
-    if (!err) S.f.ponerEn = { ...S.f.ponerEn, [el.oid]: null };
   },
   // Por código: el lugar se busca por su identificador (QR) o por su código visible, y el objeto por su código.
   // Enter en el lugar pasa al objeto; Enter en el objeto asigna. El lugar queda elegido para seguir escaneando.
@@ -151,6 +171,154 @@ export const ACCIONES = {
     if (!err) S.f.codObjeto = '';
   },
   enfocar: el => { S.enfocar = el.campo || null; },
+  // Lee con la cámara el QR del lugar (campo codLugar) o del objeto (campo codObjeto).
+  // Al leer el objeto, si ya hay un lugar cargado, asigna sin tener que tocar nada más.
+  escanear: el => {
+    const campo = el.campo;
+    const error = escanearCamara({
+      alDetectar: texto => {
+        S.f[campo] = texto;
+        if (campo === 'buscar') {
+          ACCIONES.buscarFicha();
+        } else if (campo === 'codContar') {
+          ACCIONES.contarLugar();
+        } else if (campo === 'codDonde') {
+          ACCIONES.dondeEsta();
+        } else if (campo === 'codLugar') {
+          S.enfocar = 'codObjeto';
+        } else if (S.f.codLugar) {
+          ACCIONES.asignarPorCodigo();
+        }
+        ctx.render();
+        if (ctx.sesion) ctx.sincronizar();
+      },
+      alError: msg => { aviso('codigo', msg); ctx.render(); },
+    });
+    if (error) aviso('codigo', error);
+  },
+  // "¿Dónde está?": un lugar o un objeto, escrito o escaneado (misma regla que el recorrido).
+  dondeEsta: () => {
+    const dep = d();
+    const raw = String(S.f.codDonde || '').trim();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(raw);
+    if (!q) return aviso('donde', 'Escribí o escaneá un código de lugar u objeto.');
+    const lugar = dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q);
+    if (lugar) return aviso('donde', null, `Lugar: ${dep.dir(lugar)}.`);
+    const obj = dep.objetos.find(o => norm(o.codigo_interno) === q || (o.codigo_propio && norm(o.codigo_propio) === q));
+    if (!obj) return aviso('donde', `No encuentro un lugar ni un objeto con el código "${raw}".`);
+    const ubicaciones = dep.ubicacionesDe(obj.id);
+    if (!ubicaciones.length) return aviso('donde', `${obj.codigo_interno} no está puesto en ningún lugar.`);
+    aviso('donde', null, `${obj.codigo_interno} está en ${dep.dir(ubicaciones[0])}.`);
+  },
+  // Activa o desactiva vencimientos para el cliente abierto (solo administrador general).
+  guardarVencimientos: () => {
+    const marcado = !!document.querySelector('input[data-f="vencimientosCliente"]')?.checked;
+    const err = d().fijarVencimientos(marcado);
+    aviso('cliente', err, marcado ? 'Vencimientos activados para este cliente.' : 'Vencimientos desactivados para este cliente.');
+  },
+  // Inicio: busca un lugar o un objeto (código exacto, o descripción si es única) y abre su ficha.
+  buscarFicha: () => {
+    const dep = d();
+    const raw = String(S.f.buscar || '').trim();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(raw);
+    if (!q) return aviso('inicio', 'Escribí o escaneá un código o descripción.');
+    const lugar = dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q);
+    let obj = lugar ? null : dep.objetos.find(o => norm(o.codigo_interno) === q || (o.codigo_propio && norm(o.codigo_propio) === q));
+    if (!lugar && !obj) {
+      const parecidos = dep.objetos.filter(o => norm(o.descripcion).includes(q) || norm(o.codigo_interno).includes(q));
+      if (parecidos.length === 1) obj = parecidos[0];
+      else if (parecidos.length > 1) return aviso('inicio', `Hay ${parecidos.length} objetos con "${raw}". Escribí el código para elegir uno.`);
+      else return aviso('inicio', `No encuentro un lugar ni un objeto con "${raw}".`);
+    }
+    S.ficha = lugar ? { tipo: 'lugar', id: lugar.id } : { tipo: 'objeto', id: obj.id };
+    S.vista = 'ficha'; S.msg = {};
+    S.f.buscar = '';
+  },
+  abrirFicha: el => { S.ficha = { tipo: el.tipo, id: el.id }; S.vista = 'ficha'; S.msg = {}; },
+  // Desde la ficha: abre la estructura en el nivel donde está el lugar (o el primero donde está el objeto).
+  verEnEstructura: el => {
+    const dep = d();
+    const l = el.tipo === 'objeto' ? dep.ubicacionesDe(el.id)[0] : dep.porId(el.id);
+    if (!l) return aviso('ficha', 'Ese objeto no está en ningún lugar.');
+    const nivel = dep.esHoja(l) ? l.padre_id : l.id;
+    S.vista = 'plano';
+    ACCIONES.planoIr({ id: nivel });
+  },
+  // Desde la ficha: abre el edificio en el recorrido 3D, frente a la estantería del lugar.
+  verEnRecorrido: el => {
+    const dep = d();
+    const l = el.tipo === 'objeto' ? dep.ubicacionesDe(el.id)[0] : dep.porId(el.id);
+    if (!l) return aviso('ficha', 'Ese objeto no está en ningún lugar.');
+    S.nodo = dep.ruta(l)[0].id;
+    S.f.recBusca = dep.dir(l);
+    S.vista = 'recorrido3d';
+    S.rec = { i: 0, resaltado: null };
+    ACCIONES.recBuscar({});
+  },
+  filtrarStock: el => { S.f.filtroStock = el.v; },
+  // En celular, el panel de objetos por asignar se abre y cierra con su botón (no tapa el plano).
+  toggleAsignar: () => { S.f.asignarAbierto = !S.f.asignarAbierto; },
+  filtrarMov: el => { S.f.filtroMov = el.v; },
+  // Desde la ficha: saca la cantidad escrita (productos) o la unidad, del lugar indicado.
+  sacarDeFicha: el => {
+    const o = d().objetoPorId(el.oid);
+    const cant = o?.tipo === 'producto' ? (S.f.cantFicha || '1') : '1';
+    aviso('obj', d().retirar(el.oid, el.lid, cant), 'Sacado del depósito.');
+  },
+  // Desde la ficha: lleva a Ingresar con el lugar (o el objeto) ya escrito.
+  ingresarEn: el => {
+    const dep = d();
+    if (el.tipo === 'objeto') {
+      const o = dep.objetoPorId(el.id);
+      if (!o) return;
+      S.f.codObjeto = o.codigo_interno;
+    } else {
+      const l = dep.porId(el.id);
+      if (!l) return;
+      S.f.codLugar = dep.dir(l);
+    }
+    S.vista = 'codigo'; S.msg = {};
+  },
+  // Desde la ficha de un lugar: lo cuenta ahora.
+  contarEn: el => {
+    const l = d().porId(el.id);
+    if (!l) return;
+    S.f.codContar = d().dir(l);
+    ACCIONES.contarLugar();
+    S.vista = 'codigo';
+  },
+  // Conteo: abre el lugar y carga lo que el sistema tiene como punto de partida.
+  contarLugar: () => {
+    const dep = d();
+    const raw = String(S.f.codContar || '').trim();
+    const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const q = norm(raw);
+    const lugar = q ? dep.lugares.find(l => l.id === raw || norm(dep.dir(l)) === q) : null;
+    if (!lugar) return aviso('conteo', raw ? `No encuentro un lugar con el código "${raw}".` : 'Escribí o escaneá el código del lugar.');
+    if (!dep.esHoja(lugar)) return aviso('conteo', 'Para contar, elegí un lugar del último nivel (donde se guardan los objetos).');
+    S.conteo = lugar.id;
+    dep.objetosDe(lugar.id).forEach(o => { S.f['conteo_' + o.id] = String(dep.cantidadEn(o.id, lugar.id)); });
+  },
+  cancelarConteo: () => { S.conteo = null; },
+  // Guarda lo contado: el sistema queda igual a lo que hay de verdad, con un movimiento por cada diferencia.
+  guardarConteo: () => {
+    const dep = d();
+    const lid = S.conteo;
+    if (!lid) return;
+    const cuentas = {};
+    dep.objetosDe(lid).forEach(o => { cuentas[o.id] = S.f['conteo_' + o.id] ?? String(dep.cantidadEn(o.id, lid)); });
+    const err = dep.contar(lid, cuentas);
+    if (err) return aviso('conteo', err);
+    S.conteo = null;
+    aviso('conteo', null, 'Conteo guardado. Las diferencias quedaron en Movimientos.');
+  },
+  // Tocar un objeto de la lista "Bajo mínimo": dice dónde está.
+  ubicarObjeto: el => {
+    S.f.codDonde = el.codigo || '';
+    ACCIONES.dondeEsta();
+  },
   // Etiqueta de un solo lugar (QR = su identificador) o de un solo objeto (QR = su código interno).
   etiquetaLugar: el => {
     const dep = d();
@@ -202,6 +370,13 @@ export const ACCIONES = {
     S.elegirNodo = null; S.elegirLugares = []; S.modal = 'elegirLugar'; S.msg = {};
   },
   elegirOrigen: el => { S.elegirOrigen = el.id || null; S.msg = {}; },
+  // Desde Stock: lleva a Por código con el objeto ya cargado; solo falta tocar el lugar.
+  asignarDesdeStock: el => {
+    const o = d().objetoPorId(el.oid);
+    S.f.codObjeto = o?.codigo_interno || '';
+    S.f.codLugar = '';
+    S.vista = 'codigo'; S.msg = {}; S.enfocar = 'codLugar';
+  },
   elegirIr: el => { S.elegirNodo = el.id || null; S.msg = {}; },
   // Una unidad va en un solo lugar: se asigna de una vez. Un producto puede ir en varios lugares
   // aledaños: el primero que se toca manda, y los siguientes tienen que estar cerca de él.
@@ -251,19 +426,35 @@ export const ACCIONES = {
     cerrarElegir(`${d().objetoPorId(oid).codigo_interno} agregado en ${ids.length} ${ids.length > 1 ? 'lugares' : 'lugar'}.`);
   },
 
+  cargarPaquetesPrueba: () => {
+    const r = d().cargarPaquetesPrueba();
+    aviso('objetos', r.error, `Paquetes de prueba agregados: ${r.creados}.`);
+  },
+  ubicarPaquetesPrueba: () => {
+    const r = d().ubicarPaquetesPrueba();
+    aviso('objetos', r.error, `Paquetes de prueba ubicados en lugares al azar: ${r.ubicados}${r.noPudieron ? `. No hubo lugar para ${r.noPudieron}` : ''}.`);
+  },
+  devolverPaquetesPrueba: () => {
+    const r = d().devolverPaquetesPrueba();
+    aviso('objetos', r.error, `Paquetes de prueba devueltos a pendientes: ${r.sacados}.`);
+  },
   abrirNuevoObjeto: () => { S.modal = 'nuevoObjeto'; S.msg = {}; },
   crearObjeto: () => {
     const r = d().crearObjeto(S.f.codigoP, S.f.desc, S.f.tipoNuevo, S.f.minimoNuevo);
+    if (r.objeto && S.f.venceNuevo) d().fijarVencimiento(r.objeto.id, S.f.venceNuevo);
     if (r.error) return aviso('obj', r.error);
-    S.f.codigoP = ''; S.f.desc = ''; S.f.minimoNuevo = '';
+    S.f.codigoP = ''; S.f.desc = ''; S.f.minimoNuevo = ''; S.f.venceNuevo = '';
     S.modal = null;
     aviso('obj', null, `Objeto creado: ${r.objeto.codigo_interno}`);
   },
   borrarObjeto: el => {
     const o = d().objetoPorId(el.oid);
-    if (o && !window.confirm(`¿Borrar el objeto ${o.codigo_interno}?`)) return;
-    aviso('obj', d().borrarObjeto(el.oid), 'Objeto borrado.');
+    if (!o) return;
+    // Con stock no se puede borrar: se avisa antes de pedir confirmación.
+    if (d().existenciaTotal(o.id) > 0) return aviso('obj', 'Ese objeto tiene existencias. Sacalas antes de borrarlo.');
+    pedirConfirmacion('Borrar objeto', `Se borra ${o.codigo_interno} y todo lo que tiene registrado. No se puede deshacer.`, 'borrarObjetoOk', { oid: el.oid }, 'Borrar objeto');
   },
+  borrarObjetoOk: el => { limpiarModal(); aviso('obj', d().borrarObjeto(el.oid), 'Objeto borrado.'); },
 
   // Ventanas y pruebas
   modalCerrar:   () => limpiarModal(),

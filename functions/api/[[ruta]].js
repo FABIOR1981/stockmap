@@ -15,11 +15,11 @@
 //   POST /api/sincronizar   { ops: [ { op: 'upsert', tabla, fila } | { op: 'delete', tabla, clave } ] }
 
 const TABLAS = {
-  establecimientos: { columnas: ['id', 'nombre'], clave: ['id'] },
+  establecimientos: { columnas: ['id', 'nombre', 'vencimientos'], clave: ['id'] },
   membresias:       { columnas: ['usuario_id', 'establecimiento_id', 'rol'], clave: ['usuario_id', 'establecimiento_id'] },
-  lugares:          { columnas: ['id', 'establecimiento_id', 'padre_id', 'codigo', 'nombre', 'pos_x', 'pos_y'], clave: ['id'] },
+  lugares:          { columnas: ['id', 'establecimiento_id', 'padre_id', 'codigo', 'nombre', 'pos_x', 'pos_y', 'vista_x', 'vista_z', 'vista_giro', 'dim_ancho', 'dim_largo', 'dim_alto'], clave: ['id'] },
   niveles_edificio: { columnas: ['edificio_id', 'orden', 'nombre', 'formato', 'nombre_opcional'], clave: ['edificio_id', 'orden'] },
-  objetos:          { columnas: ['id', 'establecimiento_id', 'codigo_interno', 'codigo_propio', 'descripcion', 'tipo', 'minimo'], clave: ['id'] },
+  objetos:          { columnas: ['id', 'establecimiento_id', 'codigo_interno', 'codigo_propio', 'descripcion', 'tipo', 'minimo', 'vence_dias'], clave: ['id'] },
   existencias:      { columnas: ['id', 'objeto_id', 'lugar_id', 'cantidad'], clave: ['id'] },
   movimientos:      { columnas: ['id', 'establecimiento_id', 'objeto_id', 'tipo', 'desde_lugar_id', 'hasta_lugar_id', 'cantidad', 'usuario_id', 'nota', 'creado_en'], clave: ['id'] }
 };
@@ -280,8 +280,8 @@ function filaLimpia(tabla, fila) {
     const v = fila[col];
     if (v === null) { salida[col] = null; continue; }
     if (col === 'id' || col.endsWith('_id')) salida[col] = validarUUID(v);
-    else if (col === 'orden' || col === 'cantidad' || col === 'minimo') salida[col] = validarEntero(v);
-    else if (col === 'nombre_opcional') salida[col] = v === true || v === 'true';
+    else if (col === 'orden' || col === 'cantidad' || col === 'minimo' || col === 'vence_dias' || col.startsWith('vista_') || col.startsWith('dim_')) salida[col] = validarEntero(v);
+    else if (col === 'nombre_opcional' || col === 'vencimientos') salida[col] = v === true || v === 'true';
     else if (col === 'rol') {
       if (!ROLES.includes(v)) throw new ErrorApi('Rol inválido.');
       salida[col] = v;
@@ -427,3 +427,6 @@ export async function onRequest({ request, env, params }) {
     return json({ error: 'Error interno del servidor.' }, 500);
   }
 }
+
+// Tablas que el servidor acepta (para que las pruebas comparen con el esquema SQL).
+export { TABLAS };

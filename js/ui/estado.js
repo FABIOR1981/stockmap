@@ -4,8 +4,11 @@
 export const ctx = { dep: null, render: () => {} };
 
 export const S = {
-  vista: 'plano',          // 'plano' (Asignación) | 'codigo' (Por código) | 'mover' | 'stock' | 'movimientos' | 'accesos' ('estructura' = vista de tarjetas, sin menú)
+  vista: 'inicio',
+  ficha: null,         // { tipo: 'lugar' | 'objeto', id } que se muestra en la vista Ficha         // 'plano' (Asignación) | 'codigo' (Por código) | 'mover' | 'stock' | 'movimientos' | 'accesos'
   nodo: null,              // lugar que se mira (null = raíz de la vista)
+  elegido: null,           // lugar seleccionado con un clic (doble clic = entrar). Es el destino de 'Por asignar'.
+  rec: { i: 0, resaltado: null, fila: 0 },  // Recorrido: tramo del pasillo que se ve y el módulo que resalta la búsqueda
   q: '',                   // búsqueda de objetos
   msg: {},                 // mensajes por zona
   modal: null,             // 'crear' | 'editar' | 'clonarNivel' | 'niveles' | 'objetos' | 'nuevoObjeto' | 'elegirLugar' | null
@@ -17,10 +20,10 @@ export const S = {
   editar: null, clon: null, verObj: null,
   f: {
     codigo: '', nombre: '', desde: '', hasta: '', cantClon: '1',
+    ancho: '', largo: '', alto: '',       // medidas del edificio nuevo, en metros
     codigoP: '', desc: '', tipoNuevo: 'producto', minimoNuevo: '',
     edCodigo: '', edNombre: '', objAqui: '',
     cantPara: {},                         // por objeto (cantidad a asignar desde la fila de stock)
-    ponerEn: {},                          // por objeto sin lugar: lugar elegido para ponerlo (desde un estante)
     codLugar: '', codObjeto: '', codCant: '1',   // asignación por código
     moverA: {},                           // por 'objeto|lugar': lugar al que se mueve ese objeto desde ese lugar
     nuevoCliente: '', nuevoUsuario: '', nuevoUsuarioEmail: '', nuevoUsuarioClave: '', nuevoUsuarioAdmin: false,

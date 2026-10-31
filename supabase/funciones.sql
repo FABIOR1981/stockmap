@@ -11,9 +11,10 @@ language plpgsql as $$
 begin
   case t
   when 'establecimientos' then
-    insert into establecimientos (id, nombre)
-    values ((f->>'id')::uuid, f->>'nombre')
-    on conflict (id) do update set nombre = excluded.nombre;
+    insert into establecimientos (id, nombre, vencimientos)
+    values ((f->>'id')::uuid, f->>'nombre', coalesce((f->>'vencimientos')::boolean, false))
+    on conflict (id) do update set nombre = excluded.nombre,
+      vencimientos = case when f ? 'vencimientos' then excluded.vencimientos else establecimientos.vencimientos end;
 
   when 'membresias' then
     insert into membresias (usuario_id, establecimiento_id, rol)
@@ -21,13 +22,20 @@ begin
     on conflict (usuario_id, establecimiento_id) do update set rol = excluded.rol;
 
   when 'lugares' then
-    insert into lugares (id, establecimiento_id, padre_id, codigo, nombre, pos_x, pos_y)
+    insert into lugares (id, establecimiento_id, padre_id, codigo, nombre, pos_x, pos_y, vista_x, vista_z, vista_giro,
+                         dim_ancho, dim_largo, dim_alto)
     values ((f->>'id')::uuid, (f->>'establecimiento_id')::uuid, nullif(f->>'padre_id', '')::uuid,
             f->>'codigo', coalesce(f->>'nombre', ''),
-            nullif(f->>'pos_x', '')::integer, nullif(f->>'pos_y', '')::integer)
+            nullif(f->>'pos_x', '')::integer, nullif(f->>'pos_y', '')::integer,
+            nullif(f->>'vista_x', '')::integer, nullif(f->>'vista_z', '')::integer, nullif(f->>'vista_giro', '')::smallint,
+            nullif(f->>'dim_ancho', '')::integer, nullif(f->>'dim_largo', '')::integer, nullif(f->>'dim_alto', '')::integer)
     on conflict (id) do update set establecimiento_id = excluded.establecimiento_id,
       padre_id = excluded.padre_id, codigo = excluded.codigo, nombre = excluded.nombre,
-      pos_x = coalesce(excluded.pos_x, lugares.pos_x), pos_y = coalesce(excluded.pos_y, lugares.pos_y);
+      dim_ancho = coalesce(excluded.dim_ancho, lugares.dim_ancho), dim_largo = coalesce(excluded.dim_largo, lugares.dim_largo),
+      dim_alto = coalesce(excluded.dim_alto, lugares.dim_alto),
+      pos_x = coalesce(excluded.pos_x, lugares.pos_x), pos_y = coalesce(excluded.pos_y, lugares.pos_y),
+      vista_x = coalesce(excluded.vista_x, lugares.vista_x), vista_z = coalesce(excluded.vista_z, lugares.vista_z),
+      vista_giro = coalesce(excluded.vista_giro, lugares.vista_giro);
 
   when 'niveles_edificio' then
     insert into niveles_edificio (edificio_id, orden, nombre, formato, nombre_opcional)
@@ -37,12 +45,14 @@ begin
       formato = excluded.formato, nombre_opcional = excluded.nombre_opcional;
 
   when 'objetos' then
-    insert into objetos (id, establecimiento_id, codigo_interno, codigo_propio, descripcion, tipo, minimo)
+    insert into objetos (id, establecimiento_id, codigo_interno, codigo_propio, descripcion, tipo, minimo, vence_dias)
     values ((f->>'id')::uuid, (f->>'establecimiento_id')::uuid, f->>'codigo_interno', f->>'codigo_propio',
-            f->>'descripcion', coalesce(f->>'tipo', 'unidad'), coalesce((f->>'minimo')::int, 0))
+            f->>'descripcion', coalesce(f->>'tipo', 'unidad'), coalesce((f->>'minimo')::int, 0),
+            nullif(f->>'vence_dias', '')::int)
     on conflict (id) do update set establecimiento_id = excluded.establecimiento_id,
       codigo_interno = excluded.codigo_interno, codigo_propio = excluded.codigo_propio,
-      descripcion = excluded.descripcion, tipo = excluded.tipo, minimo = excluded.minimo;
+      descripcion = excluded.descripcion, tipo = excluded.tipo, minimo = excluded.minimo,
+      vence_dias = case when f ? 'vence_dias' then excluded.vence_dias else objetos.vence_dias end;
 
   when 'existencias' then
     insert into existencias (id, objeto_id, lugar_id, cantidad)

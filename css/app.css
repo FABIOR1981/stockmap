@@ -62,6 +62,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .crumbs a { color: var(--acc-tx); cursor:pointer; text-decoration:none; }
 .crumbs a:hover { text-decoration: underline; }
 .crumbs .sep { color: var(--mut-2); }
+.crumbs:empty { display: none; }
 .crumbs b { color: var(--ink); font-weight: 600; }
 .contenido { padding: 28px 32px 56px; max-width: 1180px; width:100%; animation: subir .24s cubic-bezier(.2,.7,.3,1); }
 h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em; }
@@ -79,6 +80,23 @@ h1 { font-size: 22px; margin: 0 0 4px; font-weight: 650; letter-spacing: -.01em;
 .btn.txt { background: transparent; border-color: transparent; color: var(--acc-tx); padding: 6px 8px; font-weight: 500; }
 .btn.peligro { background: transparent; border-color: transparent; color: var(--peligro); padding: 6px 8px; font-weight: 500; }
 .btn.sm { padding: 5px 10px; font-size: 13px; }
+.acciones-fila .btn.peligro { margin-left: 8px; }
+/* Ventana de confirmación: el botón de borrar se ve como acción destructiva. */
+.btn.peligro-lleno { background: var(--peligro); border-color: var(--peligro); color: #fff; }
+.btn.peligro-lleno:hover { filter: brightness(.92); background: var(--peligro); border-color: var(--peligro); }
+/* Accesos: clientes y accesos a su lado; usuarios abajo a lo ancho. */
+.acc-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+.acc-grid .panel + .panel { margin-top: 0; }
+.acc-ancho { margin-top: 16px; }
+@media (max-width: 860px) { .acc-grid { grid-template-columns: 1fr; } }
+/* Formularios: los botones tienen la misma altura que los campos; la casilla va alineada con su texto. */
+.form .btn.sm { padding: 8px 14px; font-size: 14px; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); min-height: 36px; cursor: pointer; }
+.rec-edificios { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.rec-ed { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; font: inherit; color: var(--ink); background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); padding: 18px; cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease; }
+.rec-ed:hover, .rec-ed:focus-visible { border-color: var(--acc); box-shadow: var(--sombra); }
+.rec-ed strong { font-size: 15px; font-weight: 650; }
+.rec-ed small { color: var(--acc-tx); font-size: 13px; font-weight: 500; }
 .btn.x { background: transparent; border: 0; color: var(--mut); font-size: 18px; line-height: 1; padding: 4px 8px; }
 
 /* ---------- Superficies ---------- */
@@ -149,7 +167,7 @@ tbody tr:hover { background: var(--hov-2); }
 
 /* ---------- Plano ---------- */
 .plano-y-panel { display:flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
-.plano-y-panel > .plano { flex: 0 0 auto; }
+.plano-y-panel > .plano-marco { flex: 0 0 auto; }
 .objetos-lugar { flex: 1 1 280px; max-width: 420px; margin: 0; }
 .sub-titulo { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--mut); margin: 18px 0 8px; font-weight: 600; }
 .plano { position: relative; width: fit-content; max-width: 100%; background-color: var(--sur-2); background-image: radial-gradient(var(--punto) 1px, transparent 1px); background-size: 18px 18px; border: 1px solid var(--lin); border-radius: var(--r); height: auto; max-height: min(66vh, 620px); overflow: auto; }
@@ -199,7 +217,8 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 @media (max-width: 860px) {
   body { flex-direction: column; }
   .side { width: auto; height: auto; position: static; border-right: 0; border-bottom: 1px solid var(--lin); flex-direction: row; flex-wrap: wrap; align-items: center; padding: 12px 16px; gap: 12px; }
-  .nav { flex-direction: row; }
+  .nav { flex-direction: row; flex-wrap: wrap; }
+  .nav button { width: auto; }
   .side h4 { display:none; }
   .top { position: static; flex-wrap: wrap; padding: 14px 16px; }
   .contenido { padding: 20px 16px 40px; }
@@ -233,6 +252,14 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
 
 .cab-niveles { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 
+/* ---------- Lector de QR con cámara ---------- */
+.solo-lectura [data-act="escanear"] { display: none !important; }
+.escaner { position: fixed; inset: 0; z-index: 10; background: rgba(0,0,0,.88); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.escaner-caja { width: min(440px, 100%); display: flex; flex-direction: column; gap: 14px; align-items: center; color: #fff; }
+.escaner video { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 18px; background: #000; }
+.escaner p { margin: 0; font-size: 15px; }
+.escaner .btn { min-width: 160px; }
+
 /* ---------- Ingreso ---------- */
 /* El body es una fila: la pantalla de ingreso tiene que ocupar todo el ancho para centrar la tarjeta. */
 .ingreso { flex: 1; width: 100%; }
@@ -249,4 +276,171 @@ dialog#modal::backdrop { background: var(--backdrop); backdrop-filter: blur(4px)
   .contenido, dialog#modal { animation: none; }
   .btn, .tarjeta { transition: background-color .18s ease, border-color .18s ease, box-shadow .18s ease; }
   .btn:active, .tarjeta:hover { transform: none; }
+}
+
+/* ---------- Vista de elementos (rama desarrollo) ----------
+   Escritorio: barra lateral de íconos, el plano ocupa la pantalla y las acciones aparecen al pasar el cursor.
+   Celular: sin cambios (la barra y el plano siguen como en main). */
+.cuenta { display: contents; }
+.rail-mas { display: none; }
+
+@media (min-width: 861px) {
+  .side { width: 232px; padding: 20px 14px; align-items: stretch; background: var(--sur); border-right: 1px solid var(--lin); z-index: 3; overflow: visible; }
+  .marca { font-size: 16px; font-weight: 700; color: var(--ink); padding: 4px 10px 12px; margin: 0; }
+  .marca::before { content: none; }
+  .nav { align-items: stretch; gap: 2px; }
+  .nav button { width: 100%; height: auto; justify-content: flex-start; padding: 9px 10px; border-radius: 8px; font-size: 14px; }
+  .nav button .largo { display: inline; }
+  .nav button .corto { display: none; }
+  .nav button[aria-current="page"] { box-shadow: none; }
+
+  .rail-mas { display: flex; align-items: center; gap: 10px; margin-top: auto; width: 100%; height: auto; padding: 9px 10px; border: 0; border-radius: 8px; background: none; color: var(--mut); cursor: pointer; font: inherit; font-size: 14px; }
+  .rail-mas:hover, .rail-mas:focus { background: var(--hov); color: var(--ink); }
+  .cuenta { display: none; position: absolute; left: 248px; bottom: 16px; width: 252px; background: var(--sur); border: 1px solid var(--lin); border-radius: 16px; box-shadow: var(--sombra-h); padding: 16px; flex-direction: column; gap: 16px; z-index: 5; }
+  .rail-mas:focus + .cuenta, .cuenta:focus-within { display: flex; }
+
+  .top { background: transparent; border-bottom: 0; padding: 18px 28px 0; min-height: 0; }
+  .crumbs { background: var(--sur); border: 1px solid var(--lin); border-radius: 999px; padding: 7px 16px; box-shadow: var(--sombra); }
+  .crumbs:empty { display: none; }
+  .top #acciones { margin-left: auto; }
+  .contenido { padding: 14px 28px 40px; }
+  .plano { max-height: none; height: calc(100vh - 230px); min-height: 460px; border-radius: 24px; background-size: 22px 22px; }
+  .plano { width: 100%; }
+  .contenido.elementos h1 { display: none; }
+  .contenido.elementos .sub { font-size: 13px; margin: 0 0 12px; }
+  .plano-y-panel > .plano-marco { flex: 1 1 520px; width: auto; min-width: 0; }
+  .objetos-lugar { flex: 0 1 300px; max-width: 340px; }
+  .bloque, .tarjeta { border-radius: 18px; box-shadow: var(--sombra-h); }
+  .bloque .codigo, .tarjeta .codigo { letter-spacing: -.03em; }
+}
+
+/* Las acciones de cada elemento se ven al pasar el cursor (en pantallas táctiles siempre están). */
+@media (min-width: 861px) and (hover: hover) {
+  .bloque .acc, .tarjeta .acc { opacity: 0; transition: opacity .15s ease; }
+  .bloque:hover .acc, .bloque:focus-within .acc, .tarjeta:hover .acc, .tarjeta:focus-within .acc { opacity: 1; }
+}
+
+/* ---------- Leyenda flotando sobre el plano ---------- */
+.plano-marco { position: relative; max-width: 100%; }
+.plano-marco > .leyenda { position: absolute; right: 12px; bottom: 12px; margin: 0; padding: 6px 10px; background: var(--sur); border: 1px solid var(--lin); border-radius: 999px; box-shadow: var(--sombra); z-index: 2; }
+
+/* ---------- Botones de escaneo grandes (Por código) ---------- */
+.escaneo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.escaneo .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 10px; font-size: 15px; }
+
+/* ---------- Celular: navegación inferior, cuenta arriba a la derecha, acciones en una fila ---------- */
+@media (max-width: 860px) {
+  body { padding-bottom: 76px; }
+  .side { flex-direction: row; align-items: center; justify-content: space-between; padding: 10px 16px; gap: 8px; }
+  .marca { padding: 0 4px; }
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4; flex-direction: row; flex-wrap: nowrap; justify-content: space-around; gap: 2px; background: var(--sur); border-top: 1px solid var(--lin); padding: 6px 4px calc(6px + env(safe-area-inset-bottom)); }
+  .nav button { flex: 1 1 0; min-width: 0; width: auto; flex-direction: column; justify-content: center; gap: 2px; padding: 6px 2px; border-radius: 10px; }
+  .nav button .largo { display: none; }
+  .rail-mas span { display: none; }
+  .nav button span { display: block; font-size: 10px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .rail-mas { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 12px; background: none; color: var(--mut); cursor: pointer; margin-left: auto; }
+  .cuenta { display: none; position: fixed; top: 58px; right: 12px; left: 12px; width: auto; bottom: auto; background: var(--sur); border: 1px solid var(--lin); border-radius: 16px; box-shadow: var(--sombra-h); padding: 16px; flex-direction: column; gap: 16px; z-index: 6; }
+  .rail-mas:focus + .cuenta, .cuenta:focus-within { display: flex; }
+  .cuenta h4 { display: block; }
+  .top #acciones { display: flex; gap: 8px; width: 100%; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .top #acciones > * { flex: 0 0 auto; }
+  .plano-marco { max-width: 100%; }
+  .plano-marco > .leyenda { position: static; margin: 12px 0 0; padding: 0; background: none; border: 0; box-shadow: none; }
+  .escaneo { grid-template-columns: 1fr; }
+  .oc-celular { display: none; }
+}
+
+/* Selección en el plano y objetos que se asignan con un clic */
+.obj-asignable { cursor: pointer; }
+.obj-asignable:hover { background: var(--hov); }
+.obj-asignable:focus-visible { outline: 2px solid var(--foco); outline-offset: -2px; }
+
+/* ---------- Recorrido 3D (solo PC) ---------- */
+.rec-cab { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.rec-barra { display: flex; gap: 8px; margin: 0 0 12px; max-width: 520px; }
+.rec-barra input { flex: 1; min-width: 0; }
+/* Recorrido 3D: el canvas de Three.js ocupa todo el marco. */
+.r3d-marco { max-width: 960px; position: relative; }
+.r3d-ampliar { position: absolute; top: 10px; right: 10px; z-index: 2; }
+.r3d-buscar { position: absolute; top: 10px; left: 10px; z-index: 2; display: flex; gap: 6px; align-items: center; padding: 6px; max-width: calc(100% - 150px); background: color-mix(in srgb, var(--sur) 88%, transparent); border: 1px solid var(--lin); border-radius: var(--r); }
+.r3d-buscar input { width: 190px; min-width: 0; padding: 4px 8px; font-size: 13px; }
+.r3d { width: 100%; height: 520px; border: 1px solid var(--lin); border-radius: var(--r); overflow: hidden; background: #1e293b; }
+.r3d canvas { display: block; width: 100% !important; height: 100% !important; }
+html:fullscreen .r3d-marco { position: fixed; inset: 0; z-index: 50; max-width: none; margin: 0; padding: 12px; background: var(--sur); display: flex; flex-direction: column; }
+html:fullscreen .r3d { flex: 1; min-height: 0; height: auto; }
+.rec-controles { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.rec-tramo { color: var(--mut); font-size: 14px; }
+.rec-lista { margin: 8px 0 14px; padding-left: 18px; }
+html:fullscreen { background: var(--sur); }
+@media (max-width: 860px) { .nav .solo-pc { display: none; } }
+
+/* En celular, un toque se registra al instante (sin zoom de doble toque que retrase el segundo toque). */
+.bloque, .tarjeta, .celda, .celda-cab, .celda-total { touch-action: manipulation; }
+.rec-medidas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
+.rec-medidas label { display: flex; gap: 4px; align-items: center; font-size: 14px; color: var(--mut); }
+.rec-medidas input { width: 72px; padding: 4px 6px; font-size: 14px; }
+
+/* Botones para caminar en el recorrido 3D: solo en pantallas táctiles. */
+.r3d canvas { touch-action: none; }
+.r3d-pad { position: absolute; left: 10px; bottom: 10px; z-index: 2; display: none; grid-template-areas: ". up ." "izq . der" ". down ."; gap: 6px; }
+.r3d-pad button { width: 52px; height: 52px; border-radius: 12px; border: 1px solid var(--lin); background: color-mix(in srgb, var(--sur) 88%, transparent); color: var(--ink); font-size: 18px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.r3d-pad button:active { background: var(--acc-s); }
+.r3d-pad [data-tecla="ArrowUp"] { grid-area: up; }
+.r3d-pad [data-tecla="ArrowLeft"] { grid-area: izq; }
+.r3d-pad [data-tecla="ArrowRight"] { grid-area: der; }
+.r3d-pad [data-tecla="ArrowDown"] { grid-area: down; }
+@media (hover: none) and (pointer: coarse) { .r3d-pad { display: grid; } }
+
+/* Celular: "Por código" arranca con lo que se usa en el piso: buscar y escanear, en botones grandes. */
+@media (max-width: 860px) {
+  .codigo-sub { display: none; }
+  .donde-acciones { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .donde-acciones .btn { width: 100%; min-height: 48px; font-size: 16px; }
+}
+
+/* Inicio: buscador y acciones grandes. En PC, dos columnas. */
+.inicio-grid { display: grid; gap: 16px; }
+.inicio-col { min-width: 0; }
+.acciones-grandes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.acciones-grandes .btn { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 76px; padding: 12px; text-align: left; }
+.acciones-grandes .btn span { font-size: 12px; color: var(--mut); font-weight: 400; }
+.lista-ficha { list-style: none; margin: 0; padding: 0; }
+.lista-ficha li { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--lin); flex-wrap: wrap; }
+@media (min-width: 861px) { .inicio-grid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+
+/* Stock y Movimientos como listas de tarjetas: en celular una columna, en PC dos. */
+.filtros { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 12px; }
+.tarjetas, .lista-mov { display: grid; gap: 8px; grid-template-columns: 1fr; list-style: none; margin: 0; padding: 0; }
+.tarjeta { display: flex; flex-direction: column; gap: 4px; text-align: left; width: 100%; padding: 12px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); color: var(--ink); font: inherit; cursor: pointer; }
+.tarjeta-datos { color: var(--mut); font-size: 13px; }
+.tarjeta-alertas { display: flex; gap: 6px; flex-wrap: wrap; }
+.mov-fila { display: flex; gap: 10px; align-items: flex-start; padding: 10px; background: var(--sur); border: 1px solid var(--lin); border-radius: var(--r); }
+.mov-cuerpo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: 14px; }
+@media (min-width: 861px) { .tarjetas, .lista-mov { grid-template-columns: 1fr 1fr; } }
+.tarjetas, .lista-mov { align-items: start; }
+.tarjeta { height: auto; min-height: 0; justify-content: flex-start; align-self: start; }
+
+/* Ficha: el recorrido 3D solo en PC; la estructura solo para quien administra. */
+@media (max-width: 860px) { .solo-pc-accion { display: none !important; } }
+.sin-gestion [data-act="verEnEstructura"], .sin-gestion .solo-gestion { display: none !important; }
+
+/* Estructura en celular: las tarjetas van en dos columnas (sin las posiciones del plano, que se encimaban). */
+@media (max-width: 860px) {
+  .plano-lienzo { width: auto !important; height: auto !important; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .plano-lienzo > .bloque { position: relative !important; left: auto !important; top: auto !important; }
+  .plano-lienzo > .bloque[data-contenido] { display: none; }
+}
+
+/* Celular: "Por asignar" plegado por defecto; se abre con su botón y no tapa el plano. */
+.asignar-toggle { display: none; }
+@media (max-width: 860px) {
+  .objetos-lugar > h2 { display: none; }
+  .asignar-toggle { display: flex; width: 100%; justify-content: space-between; }
+  .objetos-lugar:not(.abierto) .asignar-cuerpo { display: none; }
+  .objetos-lugar { margin-top: 12px; }
+}
+
+/* Celular: el plano no tiene caja con scroll interno (cortaba las estanterías de abajo); scrollea la página. */
+@media (max-width: 860px) {
+  .plano { max-height: none; overflow: visible; }
 }

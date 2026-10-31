@@ -7,8 +7,9 @@ import { api, cargarDesdeServidor, sincronizar, nuevoEstadoSincronizacion } from
 import { ctx, S, $, esc, aviso, msgHTML } from './ui/estado.js';
 import { ic } from './ui/iconos.js';
 import { migasHTML, accionPrincipal } from './ui/componentes.js';
-import { vistaStock, vistaCodigo, vistaPlano, vistaEstructura, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
+import { vistaInicio, vistaFicha, vistaStock, vistaCodigo, vistaPlano, vistaMovimientos, vistaAccesos, bloquePruebas, ventana } from './ui/vistas.js';
 import { instalarArrastre } from './ui/plano.js';
+import { vistaRecorrido3D, montarRecorrido3D, desmontarRecorrido3D } from './ui/recorrido3d.js';
 import { ACCIONES } from './ui/acciones.js';
 
 // El almacén en memoria es la copia de trabajo; la verdad está en el servidor.
@@ -16,18 +17,21 @@ const almacen = crearAlmacenMemoria();
 ctx.dep = new Deposito(almacen);
 let estadoSync = null;
 
+// Nombres cortos para la barra inferior del celular (en pantalla chica no entran los largos).
+const CORTO = { inicio: 'Inicio', plano: 'Estructura', codigo: 'Código', movimientos: 'Movim.' };
+
 const NAV = [
-  ['plano', 'Asignación', 'plano'],
-  ['codigo', 'Por código', 'buscar'],
-  ['mover', 'Mover', 'mover'],
+  ['inicio', 'Inicio', 'buscar'],
+  ['plano', 'Estructura', 'plano'],
   ['stock', 'Stock', 'caja'],
   ['movimientos', 'Movimientos', 'estante'],
+  ['recorrido3d', 'Recorrido', 'edificio'],   // solo en PC (en celular se oculta, ver css .solo-pc)
   ['accesos', 'Accesos', 'mas']
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'nodo', 'planoIr', 'subirNivel', 'ponerEn', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
-  'elegirEnPlano', 'moverEnPlano', 'elegirIr', 'elegirOrigen']);
+const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'buscarFicha', 'abrirFicha', 'filtrarStock', 'filtrarMov', 'toggleAsignar', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+  'elegirEnPlano', 'moverEnPlano', 'asignarDesdeStock', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recBuscar', 'recInicio', 'recCajas']);
 
 function sesionHTML() {
   const d = ctx.dep;
@@ -43,14 +47,18 @@ function render() {
   document.body.classList.toggle('sin-gestion', !ctx.dep.puedeGestionar());
   $('#sesion').innerHTML = sesionHTML();
   $('#nav').innerHTML = NAV.map(([v, txt, icono]) =>
-    `<button data-act="vista" data-v="${v}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span>${txt}</span></button>`
+    `<button data-act="vista" data-v="${v}" title="${txt}" class="${v.startsWith('recorrido') ? 'solo-pc' : v === 'plano' ? 'solo-gestion' : ''}" ${S.vista === v ? 'aria-current="page"' : ''}>${ic(icono, 18)}<span class="largo">${txt}</span><span class="corto">${CORTO[v] || txt}</span></button>`
   ).join('');
   $('#crumbs').innerHTML = migasHTML();
   $('#acciones').innerHTML = accionPrincipal();
 
-  const vistas = { stock: vistaStock, plano: vistaPlano, mover: vistaPlano, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos, estructura: vistaEstructura };
-  const cuerpo = (vistas[S.vista] || vistaEstructura)();
+  const vistas = { inicio: vistaInicio, ficha: vistaFicha, stock: vistaStock, plano: vistaPlano, mover: vistaPlano, recorrido3d: vistaRecorrido3D, codigo: vistaCodigo, movimientos: vistaMovimientos, accesos: vistaAccesos };
+  const cuerpo = (vistas[S.vista] || vistaPlano)();
   $('#contenido').innerHTML = msgHTML('global') + bloquePruebas() + cuerpo;
+  // El recorrido 3D dibuja en un canvas dentro de #contenido: se arma después de cada dibujo.
+  if (S.vista === 'recorrido3d') montarRecorrido3D(); else desmontarRecorrido3D();
+  // En las vistas de elementos, el título ya lo dice la ruta de arriba: se oculta en escritorio (ver css).
+  $('#contenido').classList.toggle('elementos', ['plano', 'mover'].includes(S.vista));
 
   if (S.enfocar) { document.querySelector(`[data-f="${S.enfocar}"]`)?.focus(); S.enfocar = null; }
   const dlg = $('#modal');
@@ -142,13 +150,27 @@ $('#formIngreso').addEventListener('submit', async e => {
 });
 
 // ---------- Eventos ----------
+// Un clic en un lugar lo selecciona. Dos clics seguidos sobre el mismo lugar (o un doble toque) lo abren.
+// Se detecta acá y no con el evento dblclick, porque el primer clic vuelve a dibujar la pantalla.
+let ultimoLugar = { id: null, t: 0 };
 document.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]');
   if (!b || b.matches('select, input')) return;
-  const fn = ACCIONES[b.dataset.act];
+  let accion = b.dataset.act;
+  if (accion === 'planoSeleccionar') {
+    const ahora = Date.now();
+    // Doble clic (o doble toque) abre el lugar. Un toque sobre el lugar que ya está seleccionado también lo abre:
+    // en celular el doble toque no siempre llega, y así no depende del tiempo entre toques.
+    const doble = ultimoLugar.id === b.dataset.id && ahora - ultimoLugar.t < 600;
+    const yaElegido = S.elegido === b.dataset.id;
+    ultimoLugar = doble ? { id: null, t: 0 } : { id: b.dataset.id, t: ahora };
+    // En la tarjeta Contenido abre su lista; en cualquier otro lugar, entra.
+    if (doble || yaElegido) accion = b.dataset.contenido ? 'verContenido' : 'planoIr';
+  }
+  const fn = ACCIONES[accion];
   if (fn) await fn(b.dataset);
   render();
-  if (!SIN_SYNC.has(b.dataset.act) && ctx.sesion) sincronizarAhora();
+  if (!SIN_SYNC.has(accion) && ctx.sesion) sincronizarAhora();
 });
 
 // Campos con data-enter: Enter llama a su acción (por ejemplo, el lector de códigos USB manda Enter al final).

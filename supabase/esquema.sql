@@ -43,6 +43,7 @@ create trigger al_crear_usuario
 create table if not exists establecimientos (
   id          uuid primary key default gen_random_uuid(),
   nombre      text not null,
+  vencimientos boolean not null default false,   -- módulo de vencimientos activado para este cliente
   creado_en   timestamptz not null default now()
 );
 
@@ -64,6 +65,12 @@ create table if not exists lugares (
   nombre              text not null default '',
   pos_x               integer,   -- posición libre en el plano (null = sin mover)
   pos_y               integer,
+  vista_x             integer,   -- centro en el piso del recorrido 3D, en cm (null = por defecto)
+  vista_z             integer,
+  vista_giro          smallint,  -- cuartos de vuelta: 0 a 3
+  dim_ancho           integer,   -- solo edificios: ancho, en cm (null = sin medir)
+  dim_largo           integer,   -- largo, en cm
+  dim_alto            integer,   -- altura, en cm
   creado_en           timestamptz not null default now()
 );
 
@@ -98,6 +105,7 @@ create table if not exists objetos (
   descripcion         text,
   tipo                text not null default 'unidad' check (tipo in ('unidad', 'producto')),
   minimo              integer not null default 0 check (minimo >= 0),   -- alerta de stock (productos)
+  vence_dias          integer check (vence_dias is null or vence_dias > 0),   -- vida útil en días (productos, si el cliente lo activa)
   creado_en           timestamptz not null default now()
 );
 create index if not exists objetos_establecimiento on objetos (establecimiento_id);
@@ -229,9 +237,6 @@ begin
   if v_padre is null then
     raise exception 'Los edificios no tienen objetos directos.';
   end if;
-  if exists (select 1 from lugares where padre_id = new.lugar_id) then
-    raise exception 'Este lugar tiene subdivisiones. Los objetos van dentro de ellas.';
-  end if;
   if v_tipo = 'unidad' and new.cantidad <> 1 then
     raise exception 'Una unidad ocupa cantidad 1.';
   end if;
@@ -242,6 +247,42 @@ drop trigger if exists existencias_validar on existencias;
 create trigger existencias_validar
   before insert or update on existencias
   for each row execute function validar_existencia();
+
+-- 2) La regla de ocupación se evalúa al confirmar la transacción (diferida), así una sincronización
+--    que mueve objetos entre lugares se valida con el resultado final.
+create or replace function validar_ocupacion() returns trigger
+language plpgsql as $$
+begin
+  -- Ningún lugar de arriba puede tener objetos.
+  if exists (
+    with recursive arriba as (
+      select padre_id as id from lugares where id = new.lugar_id and padre_id is not null
+      union all
+      select l.padre_id from lugares l join arriba a on l.id = a.id where l.padre_id is not null
+    )
+    select 1 from existencias e join arriba a on e.lugar_id = a.id
+  ) then
+    raise exception 'Un lugar de arriba tiene un objeto puesto. Sacalo antes de usar este lugar.';
+  end if;
+  -- Ningún lugar de adentro puede tener objetos.
+  if exists (
+    with recursive adentro as (
+      select id from lugares where padre_id = new.lugar_id
+      union all
+      select l.id from lugares l join adentro a on l.padre_id = a.id
+    )
+    select 1 from existencias e join adentro a on e.lugar_id = a.id
+  ) then
+    raise exception 'Hay objetos en lugares de adentro. Sacalos antes de poner algo acá.';
+  end if;
+  return null;
+end $$;
+
+drop trigger if exists existencias_ocupacion on existencias;
+create constraint trigger existencias_ocupacion
+  after insert or update on existencias
+  deferrable initially deferred
+  for each row execute function validar_ocupacion();
 
 -- No se borra un objeto que tiene existencias.
 create or replace function validar_borrado_objeto() returns trigger

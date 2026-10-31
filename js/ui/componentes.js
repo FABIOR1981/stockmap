@@ -10,8 +10,9 @@ const tieneAlgo = (d, l) => d.objetosDe(l.id).length > 0 || d.descendientes(l).s
 export function estadoDe(l) {
   const d = ctx.dep;
   const hijos = d.hijos(l.id);
-  // Lleno: tiene lugares adentro y cada uno tiene algo (en cualquier nivel).
-  const lleno = hijos.length > 0 && hijos.every(h => tieneAlgo(d, h));
+  // Lleno: todos sus lugares del último nivel tienen objetos. Un solo hueco libre ya no es lleno.
+  const huecos = d.descendientes(l).filter(x => d.hijos(x.id).length === 0);
+  const lleno = huecos.length > 0 && huecos.every(h => d.objetosDe(h.id).length > 0);
   const ocupado = tieneAlgo(d, l);
   if (d.prof(l) === 0) return { cls: lleno ? 'lleno' : ocupado ? 'obj' : 'libre', chip: 'Edificio' };
   if (hijos.length) {
@@ -27,38 +28,18 @@ export function estadoDe(l) {
   return { cls: 'libre', chip: 'Libre' };
 }
 
-// Tarjeta cuadrada: vista de configuración.
-// La tarjeta entera abre el lugar. Borrar solo aparece si el lugar y todo lo que tiene adentro están vacíos.
-export function tarjetaLugar(l) {
-  const d = ctx.dep;
-  const st = estadoDe(l), nv = d.nivelDe(l);
-  const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
-  return `<article class="tarjeta ${st.cls}" data-act="nodo" data-id="${l.id}" role="button" tabindex="0">
-    <span class="nivel">${esc(nv.nombre)}</span>
-    <div class="cab">
-      <span class="codigo">${esc(l.codigo)}</span>
-      <span class="acc">
-        <button class="btn sm txt lapiz" data-act="editarAbrir" data-id="${l.id}" aria-label="Editar ${esc(l.codigo)}" title="Editar">${ic('lapiz', 14)}</button>
-        <button class="btn sm txt" data-act="etiquetaLugar" data-id="${l.id}" aria-label="Imprimir etiqueta de ${esc(l.codigo)}" title="Imprimir etiqueta">${ic('qr', 14)}</button>
-        ${vacioAdentro ? `<button class="btn sm txt papelera" data-act="borrarLugar" data-id="${l.id}" aria-label="Borrar ${esc(l.codigo)}" title="Borrar">${ic('papelera', 14)}</button>` : ''}
-      </span>
-    </div>
-    ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
-    <span class="chip ${st.cls}">${esc(st.chip)}</span>
-  </article>`;
-}
-
 // Bloque del plano: cuadrado, siempre del mismo tamaño.
 export function bloquePlano(l, estilo = '', atributos = '') {
   const d = ctx.dep;
   const st = estadoDe(l), nv = d.nivelDe(l);
+  // El chip de un edificio va en gris: el azul ya significa 'con objetos'.
+  const claseChip = d.prof(l) === 0 ? 'sub' : st.cls;
   const objs = d.objetosDe(l.id).length;
   const hijos = d.hijos(l.id).length;
   const vacioAdentro = [l, ...d.descendientes(l)].every(x => d.objetosDe(x.id).length === 0);
-  // Clic en el bloque entra al lugar, también en el último nivel (ahí se ven y asignan los objetos).
-  // El arrastre no entra: lo filtra plano.js.
-  const clic = `data-act="planoIr" data-id="${l.id}" role="button" tabindex="0"`;
-  return `<div class="bloque ${st.cls}" ${atributos} ${clic} style="${estilo}">
+  // Un clic selecciona el lugar; dos clics seguidos lo abren (lo decide app.js). El arrastre no selecciona: lo filtra plano.js.
+  const clic = `data-act="planoSeleccionar" data-id="${l.id}" role="button" tabindex="0"`;
+  return `<div class="bloque ${st.cls}${S.elegido === l.id ? ' elegido' : ''}" ${atributos} ${clic} style="${estilo}">
     <span class="nivel">${esc(nv.nombre)}</span>
     <div class="cab">
       <span class="codigo">${esc(l.codigo)}</span>
@@ -71,21 +52,23 @@ export function bloquePlano(l, estilo = '', atributos = '') {
     ${l.nombre ? `<span class="nombre">${esc(l.nombre)}</span>` : ''}
     <div class="pie">
       ${objs && !hijos
-        ? `<button class="chip ${st.cls} chip-btn" data-act="verObjetos" data-id="${l.id}" title="Ver objetos">${esc(st.chip)}</button>`
-        : `<span class="chip ${st.cls}">${esc(st.chip)}</span>`}
+        ? `<button class="chip ${claseChip} chip-btn" data-act="verObjetos" data-id="${l.id}" title="Ver objetos">${esc(st.chip)}</button>`
+        : `<span class="chip ${claseChip}">${esc(st.chip)}</span>`}
+      ${hijos ? `<button class="btn sm sec entrar" data-act="planoIr" data-id="${l.id}" aria-label="Entrar a ${esc(l.codigo)}">Entrar →</button>` : ''}
     </div>
   </div>`;
 }
 
-const NOMBRES_VISTA = { estructura: 'Edificios', plano: 'Asignación', codigo: 'Por código', mover: 'Mover', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
+const NOMBRES_VISTA = { plano: 'Estructura', codigo: 'Por código', mover: 'Mover', recorrido3d: 'Recorrido', stock: 'Stock', movimientos: 'Movimientos', accesos: 'Accesos' };
 
 export function migasHTML() {
   const d = ctx.dep;
-  if (!['estructura', 'plano', 'mover'].includes(S.vista)) return `<b>${NOMBRES_VISTA[S.vista] || ''}</b>`;
+  // Las vistas de primer nivel ya se nombran en el título de la página: no se repite en la barra.
+  if (!['plano', 'mover'].includes(S.vista)) return '';
   const raiz = NOMBRES_VISTA[S.vista];
   const nodo = S.nodo ? d.porId(S.nodo) : null;
   const ruta = nodo ? d.ruta(nodo) : [];
-  const accion = ['plano', 'mover'].includes(S.vista) ? 'planoIr' : 'nodo';
+  const accion = 'planoIr';
   const partes = [`<a data-act="${accion}" data-id="">${raiz}</a>`,
     ...ruta.map((l, i) => i === ruta.length - 1
       ? `<b>${esc(l.codigo)}</b>`
@@ -93,10 +76,17 @@ export function migasHTML() {
   return partes.join('<span class="sep">›</span>');
 }
 
+// Dentro de un edificio o un lugar, un botón lleva de vuelta al nivel de arriba (sin tener que recargar la página).
 export function accionPrincipal() {
+  const base = accionPrincipalBase();
+  if (!ctx.dep.eid || !['plano', 'mover'].includes(S.vista) || !S.nodo) return base;
+  return `<button class="btn sec" data-act="planoIr" data-id="">Volver al inicio</button>${base}`;
+}
+
+function accionPrincipalBase() {
   if (!ctx.dep.eid) return '';
   if (S.vista === 'stock') return `<button class="btn" data-act="abrirNuevoObjeto">${ic('mas', 14)} Nuevo objeto</button>`;
-  if (!['estructura', 'plano', 'mover'].includes(S.vista)) return '';
+  if (!['plano', 'mover'].includes(S.vista)) return '';
   const nodo = S.nodo ? ctx.dep.porId(S.nodo) : null;
   // Los niveles de un edificio se editan en una ventana.
   const niveles = nodo && ctx.dep.prof(nodo) === 0 ? `<button class="btn sec" data-act="abrirNiveles">Niveles</button>` : '';

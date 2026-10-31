@@ -18,11 +18,12 @@ export function aFilasDb(almacen) {
   const mapas = Object.fromEntries(TABLAS.map(t => [t, new Map()]));
   const poner = (t, fila) => mapas[t].set(clave(t, fila), fila);
 
-  d.establecimientos.forEach(e => poner('establecimientos', { id: e.id, nombre: e.nombre }));
+  d.establecimientos.forEach(e => poner('establecimientos', { id: e.id, nombre: e.nombre, vencimientos: !!e.vencimientos }));
   d.membresias.forEach(m => poner('membresias', { usuario_id: m.uid, establecimiento_id: m.eid, rol: m.rol }));
   d.lugares.forEach(l => {
     poner('lugares', { id: l.id, establecimiento_id: l.eid, padre_id: l.padre_id ?? null, codigo: l.codigo, nombre: l.nombre ?? '',
-      pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null });
+      pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null, vista_x: l.vista_x ?? null, vista_z: l.vista_z ?? null, vista_giro: l.vista_giro ?? null,
+      dim_ancho: l.dim_ancho ?? null, dim_largo: l.dim_largo ?? null, dim_alto: l.dim_alto ?? null });
     if (!l.padre_id) {
       (l.niveles || []).forEach((n, i) => poner('niveles_edificio', {
         edificio_id: l.id, orden: i + 1, nombre: n.nombre, formato: n.formato, nombre_opcional: !!n.nombreOpcional
@@ -31,7 +32,7 @@ export function aFilasDb(almacen) {
   });
   d.objetos.forEach(o => poner('objetos', {
     id: o.id, establecimiento_id: o.eid, codigo_interno: o.codigo_interno, codigo_propio: o.codigo_propio ?? null,
-    descripcion: o.descripcion ?? null, tipo: o.tipo, minimo: o.minimo ?? 0
+    descripcion: o.descripcion ?? null, tipo: o.tipo, minimo: o.minimo ?? 0, vence_dias: o.vence_dias ?? null
   }));
   d.asignaciones.forEach(a => poner('existencias', { id: a.id, objeto_id: a.oid, lugar_id: a.lid, cantidad: a.cantidad }));
   d.movimientos.forEach(m => poner('movimientos', {
@@ -52,17 +53,18 @@ export function aEstadoModelo(datos) {
 
   return {
     datos: {
-      establecimientos: (datos.establecimientos || []).map(e => ({ id: e.id, nombre: e.nombre })),
+      establecimientos: (datos.establecimientos || []).map(e => ({ id: e.id, nombre: e.nombre, vencimientos: !!e.vencimientos })),
       usuarios: (datos.perfiles || []).map(p => ({ id: p.id, nombre: p.nombre, es_admin: p.es_admin })),
       membresias: (datos.membresias || []).map(m => ({ id: `${m.usuario_id}|${m.establecimiento_id}`, uid: m.usuario_id, eid: m.establecimiento_id, rol: m.rol })),
       lugares: (datos.lugares || []).map(l => ({
         id: l.id, eid: l.establecimiento_id, padre_id: l.padre_id, codigo: l.codigo, nombre: l.nombre ?? '',
-        pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null,
+        pos_x: l.pos_x ?? null, pos_y: l.pos_y ?? null, vista_x: l.vista_x ?? null, vista_z: l.vista_z ?? null, vista_giro: l.vista_giro ?? null,
+        dim_ancho: l.dim_ancho ?? null, dim_largo: l.dim_largo ?? null, dim_alto: l.dim_alto ?? null,
         niveles: l.padre_id ? [] : (niveles[l.id] || []).map(({ nombre, formato, nombreOpcional }) => ({ nombre, formato, nombreOpcional }))
       })),
       objetos: (datos.objetos || []).map(o => ({
         id: o.id, eid: o.establecimiento_id, codigo_interno: o.codigo_interno, codigo_propio: o.codigo_propio,
-        descripcion: o.descripcion, tipo: o.tipo, minimo: o.minimo
+        descripcion: o.descripcion, tipo: o.tipo, minimo: o.minimo, vence_dias: o.vence_dias ?? null
       })),
       asignaciones: (datos.existencias || []).map(a => ({ id: a.id, oid: a.objeto_id, lid: a.lugar_id, cantidad: a.cantidad })),
       movimientos: (datos.movimientos || []).map(m => ({

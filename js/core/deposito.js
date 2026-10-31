@@ -12,6 +12,7 @@
 //   - Movimiento: registro de entrada, salida o transferencia. Es el historial de todo cambio de stock.
 
 import { FORMATOS, NIVEL_EDIFICIO } from './formatos.js';
+import { validarMedidas, aEsquinaCm } from './medidas.js';
 
 const ROLES = ['admin', 'editor', 'lector'];
 const TIPOS = ['unidad', 'producto'];
@@ -160,8 +161,13 @@ export class Deposito {
     return this.lugares.some(l => l.padre_id && this.edificioDe(l).id === edId && this.prof(l) === profundidad);
   }
 
-  crearLugar(padreId, codigo, nombre) {
+  crearLugar(padreId, codigo, nombre, medidas = null) {
     const err = this._exigir('editar'); if (err) return { error: err };
+    // Medidas del edificio (cm): solo para edificios (raíz).
+    if (medidas && padreId) return { error: 'Las medidas se indican solo al crear un edificio.' };
+    const medidasOk = validarMedidas(medidas);
+    if (medidasOk.error) return { error: medidasOk.error };
+    const dims = medidasOk.valores || {};
     const { def, ed } = this.nivelParaHijo(padreId);
     if (!def) return { error: `Este edificio no tiene nivel para esta profundidad. Agregalo en "Niveles de ${ed.codigo}".` };
     const F = FORMATOS[def.formato];
@@ -176,9 +182,28 @@ export class Deposito {
     this.almacen.insertar('lugares', {
       id, eid: this.eid, padre_id: padreId || null, codigo: cod,
       nombre: (def.nombreOpcional && nombre) ? nombre.trim() : '',
-      niveles: []
+      niveles: [], ...dims
     });
     return { id };
+  }
+
+  // Guarda las medidas (cm) de un edificio ya creado.
+  medirEdificio(id, medidas) {
+    const err = this._exigir('editar'); if (err) return err;
+    const l = this.porId(id);
+    if (!l || l.padre_id) return 'Solo se miden los edificios.';
+    const v = validarMedidas(medidas);
+    if (v.error) return v.error;
+    if (!v.valores) return 'Indicá ancho, largo y alto.';
+    // Si el edificio no tenía medidas, sus estanterías estaban guardadas centradas: se pasan a la esquina para que no se muevan.
+    const tenia = !!(l.dim_ancho && l.dim_largo);
+    if (!tenia) {
+      for (const h of this.hijos(id)) {
+        if (h.vista_x != null) this.almacen.actualizar('lugares', h.id, { vista_x: aEsquinaCm(h.vista_x, v.valores.dim_ancho) });
+      }
+    }
+    this.almacen.actualizar('lugares', id, v.valores);
+    return null;
   }
 
   // Niveles que tendría dentro un hijo nuevo de padreId (los que define el edificio debajo de él).
@@ -205,10 +230,10 @@ export class Deposito {
   }
 
   // Crea un lugar y, si hay cuentas, sus hijos y nietos según la estructura del edificio.
-  crearArbol(padreId, codigo, nombre, cuentas = []) {
+  crearArbol(padreId, codigo, nombre, cuentas = [], medidas = null) {
     const err = this.validarCuentas(padreId, cuentas);
     if (err) return { error: err };
-    const r = this.crearLugar(padreId, codigo, nombre);
+    const r = this.crearLugar(padreId, codigo, nombre, medidas);
     if (r.error) return r;
     let creados = 1;
     const hijos = (padre, k) => {
@@ -288,6 +313,15 @@ export class Deposito {
     }
     if (cambios.nombre !== undefined) cambio.nombre = def.nombreOpcional ? (cambios.nombre || '').trim() : '';
     this.almacen.actualizar('lugares', id, cambio);
+    return null;
+  }
+
+  // Posición y giro de una estantería en la vista aérea del recorrido 3D (x, z en centímetros; giro en cuartos de vuelta).
+  posicionarVista(id, x, z, giro) {
+    const err = this._exigir('editar'); if (err) return err;
+    if (!this.porId(id)) return 'Lugar inexistente.';
+    if (!Number.isInteger(x) || !Number.isInteger(z) || !Number.isInteger(giro) || giro < 0 || giro > 3) return 'Posición inválida.';
+    this.almacen.actualizar('lugares', id, { vista_x: x, vista_z: z, vista_giro: giro });
     return null;
   }
 
@@ -425,6 +459,50 @@ export class Deposito {
     return this.asignaciones.filter(a => a.lid === lid && a.cantidad > 0)
       .map(a => this.objetoPorId(a.oid)).filter(Boolean);
   }
+  // Paquetes de prueba (código PEND-01 a PEND-12): quedan sin lugar, o sea pendientes de asignación.
+  static PAQUETES_PRUEBA = [
+    'Caja de tornillos M8', 'Rollo de cinta de embalar', 'Caja de guantes talle M', 'Bolsa de clavos 2"',
+    'Caja de filtros de aire', 'Bolsa de cemento 25 kg', 'Caja de lámparas LED', 'Juego de llaves Allen',
+    'Paquete de etiquetas térmicas', 'Caja de cable UTP', 'Bidón de aceite 5 L', 'Caja de pilas AA',
+  ];
+  cargarPaquetesPrueba() {
+    const err = this._exigir('editar'); if (err) return { error: err };
+    let creados = 0;
+    Deposito.PAQUETES_PRUEBA.forEach((desc, i) => {
+      const cp = `PEND-${String(i + 1).padStart(2, '0')}`;
+      if (this.objetos.some(o => o.codigo_propio === cp)) return;
+      if (!this.crearObjeto(cp, desc).error) creados++;
+    });
+    return { creados };
+  }
+  // Pone cada paquete de prueba que está sin lugar en un lugar al azar, igual que "Asignar" por código:
+  // si el lugar no admite el objeto, prueba otro. Devuelve cuántos quedaron y cuántos no pudieron.
+  ubicarPaquetesPrueba() {
+    const err = this._exigir('editar'); if (err) return { error: err };
+    const destinos = this.lugares.filter(l => typeof this.lugarDestino(l.id) !== 'string');
+    if (!destinos.length) return { error: 'No hay lugares donde guardar objetos.' };
+    const sinLugar = this.objetos.filter(o => (o.codigo_propio || '').startsWith('PEND-') && this.ubicacionesDe(o.id).length === 0);
+    let ubicados = 0, noPudieron = 0;
+    for (const o of sinLugar) {
+      const orden = [...destinos].sort(() => Math.random() - 0.5);
+      const ok = orden.some(lugar => !this.asignar(o.id, lugar.id));
+      ok ? ubicados++ : noPudieron++;
+    }
+    return { ubicados, noPudieron };
+  }
+  // Saca de sus lugares a los paquetes de prueba: vuelven a quedar pendientes de asignación.
+  devolverPaquetesPrueba() {
+    const err = this._exigir('editar'); if (err) return { error: err };
+    const de = this.objetos.filter(o => (o.codigo_propio || '').startsWith('PEND-')).map(o => o.id);
+    let sacados = 0;
+    for (const a of this.asignaciones.filter(a => de.includes(a.oid) && a.cantidad > 0)) {
+      const e = this.retirar(a.oid, a.lid, a.cantidad);
+      if (e) return { error: e, sacados };
+      sacados++;
+    }
+    return { sacados };
+  }
+
   ubicacionesDe(oid) {
     return this.asignaciones.filter(a => a.oid === oid && a.cantidad > 0)
       .map(a => this.porId(a.lid)).filter(Boolean);
@@ -526,6 +604,103 @@ export class Deposito {
     this._sumar(oid, hasta, n);
     this._registrar('transferencia', oid, desde, hasta, n, nota);
     return null;
+  }
+
+  // Conteo de un lugar: iguala lo que hay en el sistema con lo contado (cuentas: { oid: cantidad }).
+  // Lo que está en el lugar y no se contó cuenta como 0. Cada diferencia deja una entrada o salida con nota "Conteo".
+  contar(lid, cuentas) {
+    const err = this._exigir('editar'); if (err) return err;
+    const l = this.porId(lid);
+    if (!l) return 'Lugar inexistente.';
+    const pedidos = new Map();
+    for (const [oid, valor] of Object.entries(cuentas)) {
+      const o = this.objetoPorId(oid);
+      if (!o) return 'Objeto inexistente.';
+      if (valor === '' || valor === null || valor === undefined) return `Falta la cantidad de ${o.codigo_interno}.`;
+      const n = Number(valor);
+      if (!Number.isInteger(n) || n < 0) return `La cantidad de ${o.codigo_interno} tiene que ser un número entero, 0 o más.`;
+      if (o.tipo === 'unidad' && n > 1) return `${o.codigo_interno} es una unidad: se cuenta como 1 (está) o 0 (no está).`;
+      if (o.tipo === 'unidad' && n === 1 && this.ubicacionesDe(oid).some(x => x.id !== lid)) {
+        return `${o.codigo_interno} está en otro lugar: movelo antes de contarlo acá.`;
+      }
+      pedidos.set(oid, n);
+    }
+    for (const a of this.asignaciones.filter(x => x.lid === lid && x.cantidad > 0)) {
+      if (!pedidos.has(a.oid)) pedidos.set(a.oid, 0);
+    }
+    for (const [oid, n] of pedidos) {
+      const hay = this.cantidadEn(oid, lid);
+      if (n > hay) {
+        this._sumar(oid, lid, n - hay);
+        this._registrar('entrada', oid, null, lid, n - hay, 'Conteo');
+      } else if (n < hay) {
+        this._restar(oid, lid, hay - n);
+        this._registrar('salida', oid, lid, null, hay - n, 'Conteo');
+      }
+    }
+    return null;
+  }
+
+  // ---------- Vencimientos (módulo opcional por cliente; migracion_vencimientos.sql) ----------
+  vencimientosActivos() { return !!this.establecimientoActual()?.vencimientos; }
+
+  // Solo el administrador general lo activa para un cliente.
+  fijarVencimientos(activo) {
+    if (!this.usuarioActual()?.es_admin) return 'Solo el administrador general puede activar vencimientos.';
+    if (!this.eid) return 'Elegí un cliente.';
+    this.almacen.actualizar('establecimientos', this.eid, { vencimientos: !!activo });
+    return null;
+  }
+
+  // Días de vida útil de un producto. Vacío = no vence.
+  fijarVencimiento(oid, dias) {
+    const err = this._exigir('editar'); if (err) return err;
+    const o = this.objetoPorId(oid);
+    if (!o) return 'Objeto inexistente.';
+    if (o.tipo !== 'producto') return 'Solo los productos pueden vencer.';
+    if (dias === '' || dias === null || dias === undefined) {
+      this.almacen.actualizar('objetos', oid, { vence_dias: null });
+      return null;
+    }
+    const n = enteroPositivo(dias);
+    if (!n) return 'Los días de vencimiento tienen que ser un número entero mayor que 0.';
+    this.almacen.actualizar('objetos', oid, { vence_dias: n });
+    return null;
+  }
+
+  // Cuándo vence lo que hay de un producto en un lugar: su último ingreso al lugar + sus días de vida útil.
+  // Simplificación: no distingue lotes; si entra más en otra fecha, cuenta la última entrada.
+  fechaVence(oid, lid) {
+    const o = this.objetoPorId(oid);
+    if (!o?.vence_dias || !this.vencimientosActivos() || this.cantidadEn(oid, lid) <= 0) return null;
+    const ingresos = this.movimientos.filter(m => m.oid === oid && m.hasta === lid && (m.tipo === 'entrada' || m.tipo === 'transferencia'));
+    if (!ingresos.length) return null;
+    const ultima = ingresos.reduce((a, m) => (m.fecha > a ? m.fecha : a), ingresos[0].fecha);
+    const f = new Date(ultima);
+    f.setDate(f.getDate() + o.vence_dias);
+    return f;
+  }
+
+  // Próximo vencimiento de un producto en cualquier lugar, o null.
+  proximoVencimiento(oid) {
+    const fechas = this.asignaciones.filter(a => a.oid === oid && a.cantidad > 0)
+      .map(a => this.fechaVence(oid, a.lid)).filter(Boolean);
+    if (!fechas.length) return null;
+    const fecha = fechas.reduce((a, b) => (b < a ? b : a));
+    return { fecha, vencido: fecha.getTime() < Date.now() };
+  }
+
+  // Lo que vence en `dias` o antes (incluye lo ya vencido), ordenado por fecha.
+  porVencer(dias = 7) {
+    if (!this.vencimientosActivos()) return [];
+    const limite = Date.now() + dias * 86400000;
+    return this.asignaciones.filter(a => a.cantidad > 0)
+      .map(a => {
+        const fecha = this.fechaVence(a.oid, a.lid);
+        return fecha ? { oid: a.oid, lid: a.lid, fecha, vencido: fecha.getTime() < Date.now() } : null;
+      })
+      .filter(x => x && x.fecha.getTime() <= limite)
+      .sort((a, b) => a.fecha - b.fecha);
   }
 
   // ---------- Datos de ejemplo ----------
