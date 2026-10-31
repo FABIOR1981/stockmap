@@ -30,7 +30,7 @@ const NAV = [
 ];
 
 // Acciones que no cambian datos: no disparan sincronización.
-const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'buscarFicha', 'abrirFicha', 'filtrarStock', 'filtrarMov', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
+const SIN_SYNC = new Set(['vista', 'planoIr', 'verContenido', 'planoSeleccionar', 'subirNivel', 'moverEn', 'enfocar', 'imprimirEtiquetas', 'etiquetaLugar', 'etiquetaObjeto', 'escanear', 'dondeEsta', 'ubicarObjeto', 'buscarFicha', 'abrirFicha', 'filtrarStock', 'filtrarMov', 'toggleAsignar', 'contarLugar', 'cancelarConteo', 'modalCerrar', 'cerrarPruebas', 'pruebas', 'salir', 'toggleNiveles',
   'elegirEnPlano', 'moverEnPlano', 'asignarDesdeStock', 'elegirIr', 'elegirOrigen', 'recIr', 'recSubir', 'recPaso', 'recBuscar', 'recInicio', 'recCajas']);
 
 function sesionHTML() {

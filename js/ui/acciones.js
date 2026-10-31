@@ -258,6 +258,8 @@ export const ACCIONES = {
     ACCIONES.recBuscar({});
   },
   filtrarStock: el => { S.f.filtroStock = el.v; },
+  // En celular, el panel de objetos por asignar se abre y cierra con su botón (no tapa el plano).
+  toggleAsignar: () => { S.f.asignarAbierto = !S.f.asignarAbierto; },
   filtrarMov: el => { S.f.filtroMov = el.v; },
   // Desde la ficha: saca la cantidad escrita (productos) o la unidad, del lugar indicado.
   sacarDeFicha: el => {

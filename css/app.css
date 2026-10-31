@@ -430,3 +430,12 @@ html:fullscreen { background: var(--sur); }
   .plano-lienzo > .bloque { position: relative !important; left: auto !important; top: auto !important; }
   .plano-lienzo > .bloque[data-contenido] { display: none; }
 }
+
+/* Celular: "Por asignar" plegado por defecto; se abre con su botón y no tapa el plano. */
+.asignar-toggle { display: none; }
+@media (max-width: 860px) {
+  .objetos-lugar > h2 { display: none; }
+  .asignar-toggle { display: flex; width: 100%; justify-content: space-between; }
+  .objetos-lugar:not(.abierto) .asignar-cuerpo { display: none; }
+  .objetos-lugar { margin-top: 12px; }
+}

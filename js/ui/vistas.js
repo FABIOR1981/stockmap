@@ -189,7 +189,11 @@ export function vistaPlano() {
   return `<button class="btn sec sm" data-act="subirNivel" style="margin-bottom:10px">← Volver</button>
     <h1>${esc(d.nivelDe(foco).nombre)} ${esc(foco.codigo)}</h1>
     <p class="sub">${def ? `Dentro de ${esc(d.dir(foco))}: ${esc(plural(def.nombre.toLowerCase()))}. Arrastrá para acomodarlos.` : `Último nivel: acá se guardan los objetos de ${esc(d.dir(foco))}.`}</p>
-    <div class="plano-y-panel">${plano}<section class="panel objetos-lugar"><h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>${mover ? contenidoMover(foco) : contenidoAsignacion(foco, destino)}</section></div>
+    <div class="plano-y-panel">${plano}<section class="panel objetos-lugar${S.f.asignarAbierto ? ' abierto' : ''}">
+      <h2>${mover ? 'Objetos de este lugar' : 'Por asignar'}</h2>
+      <button class="btn sec sm asignar-toggle" data-act="toggleAsignar" aria-expanded="${S.f.asignarAbierto ? 'true' : 'false'}">${mover ? 'Objetos de este lugar' : 'Por asignar'} ${S.f.asignarAbierto ? '▴' : '▾'}</button>
+      <div class="asignar-cuerpo">${mover ? contenidoMover(foco) : contenidoAsignacion(foco, destino)}</div>
+    </section></div>
     ${msgHTML('borrar')}`;
 }
 
